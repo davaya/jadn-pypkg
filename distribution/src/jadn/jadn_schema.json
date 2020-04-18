@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "$id": "http://oasis-open.org/openc2/jadn/v1.0",
+  "type": "object",
+  "required": ["types"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["module"],
+      "additionalProperties": false,
+      "properties": {
+        "module": {"type": "string"},
+        "patch": {"type": "string"},
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "imports": {"$ref": "#/definitions/Imports"},
+        "exports": {"$ref": "#/definitions/Exports"},
+        "config": {"$ref": "#/definitions/Config"}
+      }
+    },
+    "types": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 4,
+        "maxItems": 5,
+        "items": [
+          {"$ref": "#/definitions/TypeName"},
+          {"$ref": "#/definitions/BaseType"},
+          {"$ref": "#/definitions/Options"},
+          {"$ref": "#/definitions/Description"},
+          {"anyOf": [
+            {"$ref": "#/definitions/Items"},
+            {"$ref": "#/definitions/Fields"}
+          ]}
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "Imports": {
+      "type": "object",
+      "propertyNames": {"$ref": "#/definitions/NSID"},
+      "patternProperties": {
+        "": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "Exports": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "Config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "$MaxBinary": {"type": "integer", "minValue": 1},
+        "$MaxString": {"type": "integer", "minValue": 1},
+        "$MaxElements": {"type": "integer", "minValue": 1},
+        "$Sys": {"type": "string", "minLength": 1, "maxLength": 1},
+        "$TypeName": {"type": "string", "minLength": 1, "maxLength": 127},
+        "$FieldName": {"type": "string", "minLength": 1, "maxLength": 127},
+        "$NSID": {"type": "string", "minLength": 1, "maxLength": 127}
+      }
+    },
+    "Items": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 3,
+        "maxItems": 3,
+        "items": [
+          {"type": "integer"},
+          {"type": "string"},
+          {"$ref": "#/definitions/Description"}
+        ]
+      }
+    },
+    "Fields": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 5,
+        "maxItems": 5,
+        "items": [
+          {"type": "integer"},
+          {"$ref": "#/definitions/FieldName"},
+          {"$ref": "#/definitions/TypeRef"},
+          {"$ref": "#/definitions/Options"},
+          {"$ref": "#/definitions/Description"}
+        ]
+      }
+    },
+    "NSID": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]{0,7}$",
+      "description": "Namespace Identifier, defined in Imports, used in type references"
+    },
+    "TypeName": {
+      "type": "string",
+      "pattern": "^[A-Z][-$A-Za-z0-9]{0,31}$",
+      "description": "Default Type Name per section 3.1.1 Name Formats"
+    },
+    "TypeRef": {
+      "type": "string",
+      "pattern": "^([a-z][a-z0-9]{0,7}:)?[A-Z][-$A-Za-z0-9]{0,31}$",
+      "description": "TypeName with optional namespace ID prefix, MUST agree with NSID and TypeName"
+    },
+    "FieldName": {
+      "type": "string",
+      "pattern": "^[$A-Za-z][-_:A-Za-z0-9]{0,31}$",
+      "description": "Default Field Name per section 3.1.1 Name Formats, updated for JADN meta-schema and OC2 v1.0"
+    },
+    "BaseType": {
+      "type": "string",
+      "enum": ["Binary", "Boolean", "Integer", "Number", "Null", "String",
+               "Enumerated", "Choice",
+               "Array", "ArrayOf", "Map", "MapOf", "Record"]
+    },
+    "Options": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "Description": {
+      "type": "string"
+    }
+  }
+}

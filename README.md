@@ -1,2 +1,2 @@
-# jadn-pypkg
-Python distribution package for JSON Abstract Data Notation (JADN) schemas
+# JSON Abstract Data Notation (JADN)
+Python distribution package for JADN schema proocessing and data validation.
