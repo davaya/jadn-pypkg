@@ -66,6 +66,7 @@ def jadn_simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema exte
                             typeopts.append(fdef[FieldOptions].pop(get_optx(fdef[FieldOptions], o)))
                         newname = name if name else tdef[TypeName] + sys + fdef[FieldName]
                         if newname not in [t[TypeName] for t in new_types]:
+                            assert is_builtin(fdef[FieldType])      # Don't create a bad type definition
                             new_types.append([newname, fdef[FieldType], typeopts, fdef[FieldDesc]])
                         fdef[FieldType] = newname
         return new_types
@@ -76,17 +77,19 @@ def jadn_simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema exte
             if has_fields(tdef[BaseType]):
                 for fdef in tdef[Fields]:
                     fo, fto = ftopts_s2d(fdef[FieldOptions])
-                    if ('maxc' in fo and fo['maxc'] != 1) or ('minc' in fo and fo['minc'] > 1):
+                    if ('maxc' in fo and fo['maxc'] != 1):
                         newname = tdef[TypeName] + sys + fdef[FieldName]
                         minc = fo['minc'] if 'minc' in fo else 1
-                        newopts = {'vtype': fdef[FieldType], 'minv': max(minc, 1)}  # Don't allow empty ArrayOf
+                        newopts = {'vtype': fdef[FieldType], 'minv': max(minc, 1)}      # Don't allow empty ArrayOf
                         newopts.update({'maxv': fo['maxc']} if fo['maxc'] > 1 else {})  # maxv defaults to 0
+                        newopts.update({'unique': True} if 'unique' in fto else {})     # Move unique option to ArrayOf
                         new_types.append([newname, 'ArrayOf', opts_d2s(newopts), fdef[FieldDesc]])
-                        fdef[FieldType] = newname  # Point existing field to new ArrayOf
-                        f = fdef[FieldOptions]
+                        fdef[FieldType] = newname   # Point existing field to new ArrayOf
+                        f = fdef[FieldOptions]      # Remove unused FieldOptions
                         del_opt(f, 'maxc')
                         if minc != 0:
                             del_opt(f, 'minc')
+                        del_opt(f, 'unique')
         return new_types
 
     def simplify_derived_enum():             # Generate Enumerated list of fields or JSON Pointers
@@ -148,10 +151,10 @@ def jadn_simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema exte
     sys = '$'                                   # Character reserved for tool-generated TypeNames
     sc = copy.deepcopy(schema)                  # Don't modify original schema
     tdefs = sc['types']
-    if 'AnonymousType' in extensions:           # Expand inline definitions into named type definitions
-        tdefs += simplify_anonymous_types()
     if 'Multiplicity' in extensions:            # Expand repeated types into ArrayOf defintions
         tdefs += simplify_multiplicity()
+    if 'AnonymousType' in extensions:           # Expand inline definitions into named type definitions
+        tdefs += simplify_anonymous_types()
     typex = {t[TypeName]: n for n, t in enumerate(tdefs)}       # Build type index
     if 'DerivedEnum' in extensions:             # Generate Enumerated list of fields or JSON Pointers
         types = {t[TypeName]: t for t in tdefs}

@@ -33,7 +33,7 @@ The JADN schema language is defined in https://github.com/oasis-tcs/openc2-jadn/
 Quickstart
 ##########
 
-The quickstart.py script in https://github.com/davaya/jadn-software/tree/master/distribution
+The quickstart.py script in https://github.com/davaya/jadn-pypkg/tree/master/distribution
 illustrates how to use these functions:
 
 * define and validate a small schema

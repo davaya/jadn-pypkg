@@ -16,7 +16,7 @@ def jidl_dumps(jadn):
         if hi == 1:
             return '' if lo == 1 else (' optional' if optional else ' [0..1]')
         h = '*' if hi == 0 else str(hi)
-        return ' [' + lo + '..' + h + ']'
+        return ' [' + str(lo) + '..' + str(h) + ']'
 
     def _fieldstr(typestr, opts):
         if 'minc' in opts or 'maxc' in opts:

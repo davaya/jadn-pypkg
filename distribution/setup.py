@@ -7,11 +7,11 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='jadn',
-    version='0.5.0b7',
+    version='0.5.0b9',
     description='JADN schema tools',
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    url='https://github.com/davaya/jadn-software',
+    url='https://github.com/davaya/jadn-pypkg',
     author='David Kemp',
     author_email='dk190a@gmail.com',
     classifiers=[
