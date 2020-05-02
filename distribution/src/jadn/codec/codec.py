@@ -15,7 +15,7 @@ import numbers
 import re
 from jadn.definitions import *
 from jadn.utils import topts_s2d, ftopts_s2d, get_config
-from jadn.transform.transform import jadn_simplify
+from jadn.transform import simplify
 from jadn.codec.format_validate import format_validators, get_format_validate_function
 from jadn.codec.format_serialize_json import json_format_codecs, get_format_encode_function, get_format_decode_function
 
@@ -62,7 +62,7 @@ class Codec:
 
     def __init__(self, schema, verbose_rec=False, verbose_str=False, config=None):
         assert set(enctab) == set(CORE_TYPES)
-        self.schema = jadn_simplify(schema)             # Convert extensions to core definitions
+        self.schema = simplify(schema)             # Convert extensions to core definitions
         conf = config if config else schema
         self.config = get_config(conf['meta'] if 'meta' in conf else None)
         self.format_validate = format_validators()      # Initialize format validation functions

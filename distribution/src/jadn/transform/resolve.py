@@ -1,8 +1,56 @@
 import copy
+import json
 import os
 from collections import defaultdict
 from jadn.definitions import *
-from jadn.core import SchemaModule
+import jadn
+
+
+class SchemaModule:
+    def __init__(self, source):     # Read schema data, get module name
+        self.source = None          # Filename or URL
+        self.module = None          # Namespace unique name
+        self.schema = None          # JADN data
+        self.imports = None         # Copy of meta['imports'] or empty {}
+        self.tx = None              # Type index: {type name: type definition in schema}
+        self.deps = None            # Internal dependencies: {type1: {t2, t3}, type2: {t3, t4, t5}}
+        self.refs = None            # External references {namespace1: {type1: {t2, t3}, ...}}
+        self.used = None            # Types from this module that have been referenced {t2, t3}
+        if isinstance(source, dict):    # If schema is provided, save data
+            self.schema = source
+        elif isinstance(source, str):   # If filename or URL is provided, load data and record source
+            if '://' in source:
+                pass                    # TODO: read schema from URL
+            else:
+                with open(source, encoding='utf-8') as f:
+                    self.schema = json.load(f)
+            self.source = source
+
+        if 'meta' in self.schema:
+            self.module = self.schema['meta']['module']
+            self.imports = self.schema['meta']['imports'] if 'imports' in self.schema['meta'] else {}
+        else:
+            jadn.raise_error('Schema module must have a module ID')
+        self.clear()
+
+    def load(self):                 # Validate schema, build type dependencies and external references
+        if not self.deps:           # Ignore if already loaded
+            jadn.check(self.schema)
+            self.tx = {t[TypeName]: t for t in self.schema['types']}
+            self.deps = jadn.build_deps(self.schema)
+            self.refs = defaultdict(lambda: defaultdict(set))
+            for tn in self.deps:
+                for dn in self.deps[tn].copy():     # Iterate over copy so original can be modified safely
+                    if ':' in dn:
+                        self.deps[tn].remove(dn)
+                        nsid, typename = dn.split(':', maxsplit=1)
+                        self.refs[self.imports[nsid]][tn].add(typename)
+
+    def clear(self):
+        self.used = set()
+
+    def add_used(self, type):
+        self.used.add(type)
 
 
 def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types to schema. dirname => other schema files

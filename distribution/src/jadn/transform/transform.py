@@ -3,7 +3,7 @@ from jadn.definitions import *
 from jadn.utils import topts_s2d, ftopts_s2d
 
 
-def jadn_strip(schema, width=0):             # Strip or truncate comments from schema
+def strip_comments(schema, width=0):             # Strip or truncate comments from schema
     def estrip(s, n):
         return s[:n-2] + (s[n-2:], '..')[len(s) > n] if n > 1 else s[:n]
 
@@ -17,7 +17,7 @@ def jadn_strip(schema, width=0):             # Strip or truncate comments from s
     return sc
 
 
-def jadn_simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema extensions
+def simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema extensions
     """
     Given an input schema, return a simplified schema with schema extensions removed.
 
@@ -162,20 +162,6 @@ def jadn_simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema exte
     if 'MapOfEnum' in extensions:               # Generate explicit Map from MapOf
         simplify_map_of_enum()
     return sc
-
-
-def get_pointers(tdef, types):
-    def ptr(fdef):
-        if OPTION_ID['dir'] in [o[0] for o in fdef[FieldOptions]]:
-            return [fdef[FieldName] + '/' + p for p in get_pointers(types[fdef[FieldType]], types)]
-        else:
-            return fdef[FieldName]
-
-    if has_fields(tdef[BaseType]):
-        return [ptr(f) for f in tdef[Fields]]
-    else:
-        return []
-
 
 def get_enum_items(tdef, topts, types):
     def ptr(fdef):

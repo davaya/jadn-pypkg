@@ -7,6 +7,11 @@ Support functions for JADN codec
 from functools import reduce
 from jadn.definitions import *
 
+
+def raise_error(*s):                     # Handle errors
+    raise ValueError(*s)
+
+
 # Dict conversion utilities
 
 
@@ -71,10 +76,20 @@ def dlist(src):
     return src
 
 
-def multiplicity(minc, maxc):
-    if minc == 1 and maxc == 1:
-        return '1'
-    return str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
+def build_deps(schema):         # Build a Dependency dict: {TypeName: {Dep1, Dep2, ...}}
+    def get_refs(tdef):         # Return all type references from a type definition
+        oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and'], OPTION_ID['or']]  # Options whose value is/has a type name
+        oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]                       # Options that enumerate fields
+        refs = [to[1:] for to in tdef[TypeOptions] if to[0] in oids and not is_builtin(to[1:])]
+        refs += [to for to in tdef[TypeOptions] if to[0] in oids2]
+        if has_fields(tdef[BaseType]):
+            for f in tdef[Fields]:
+                if not is_builtin(f[FieldType]):
+                    refs.append(f[FieldType])                               # Add reference to type name
+                refs += get_refs(['', f[FieldType], f[FieldOptions], ''])   # Get refs from type opts in field (extension)
+        return refs
+
+    return {t[TypeName]: get_refs(t) for t in schema['types']}
 
 
 def topo_sort(items):
@@ -148,6 +163,12 @@ def ftopts_s2d(ostr):       # Convert list of field definition option strings to
         except KeyError:
             topts.update(topts_s2d([o]))
     return fopts, topts
+
+
+def multiplicity(minc, maxc):
+    if minc == 1 and maxc == 1:
+        return '1'
+    return str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
 
 
 def typestring(typename, typeopts):            # Convert typename and options to string.

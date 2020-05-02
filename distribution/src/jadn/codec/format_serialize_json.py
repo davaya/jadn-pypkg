@@ -6,7 +6,7 @@ import string
 from jadn.definitions import *
 
 """
-Create a table listing the validation and serialization functions for each format keyword
+Create a table listing the serialization functions for each format keyword
 """
 
 

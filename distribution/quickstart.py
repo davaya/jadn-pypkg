@@ -1,8 +1,9 @@
 import json
-from jadn.core import jadn_check, jadn_dumps, Codec
-from jadn.convert.w_jidl import jidl_dumps
-from jadn.translate.w_jsonschema import json_schema_dumps
-from jadn.transform.transform import jadn_strip
+import jadn
+from jadn.codec import Codec
+from jadn.transform import strip_comments
+from jadn.convert import jidl_dumps
+from jadn.translate import json_schema_dumps
 
 """
 Define and validate a JADN schema
@@ -16,7 +17,7 @@ schema_data = {
         ]
     ]]
 }
-schema = jadn_check(schema_data)
+schema = jadn.check(schema_data)
 assert schema == schema_data            # jadn_check returns unmodified schema for chaining
 
 """
@@ -25,11 +26,11 @@ Convert schema to alternate formats
 print('\nSchema (Generic JSON):\n----------------------')
 print(json.dumps(schema, indent=1))     # Display schema as generic JSON data
 print('\nSchema (JADN-formatted JSON):\n-----------------------------')
-print(jadn_dumps(schema))               # Display schema as JADN-formatted JSON data
+print(jadn.dumps(schema))               # Display schema as JADN-formatted JSON data
 print('\nSchema (JADN IDL):\n------------------')
 print(jidl_dumps(schema))               # Display schema as IDL text
 print('\nSchema (JADN IDL with truncated comments):\n------------------')
-print(jidl_dumps(jadn_strip(schema, width=32)))
+print(jidl_dumps(strip_comments(schema, width=32)))
 
 print('\nSchema (JSON Schema):\n------------------')
 schema.update({                         # JSON Schema conversion needs a designated root type (Person)
