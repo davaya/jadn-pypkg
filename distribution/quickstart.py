@@ -1,8 +1,9 @@
 import json
 import jadn
+import os
 from jadn.codec import Codec
 from jadn.transform import strip_comments
-from jadn.convert import jidl_dumps
+from jadn.convert import jidl_dumps, table_dumps, html_dumps
 from jadn.translate import json_schema_dumps
 
 """
@@ -18,7 +19,7 @@ schema_data = {
     ]]
 }
 schema = jadn.check(schema_data)
-assert schema == schema_data            # jadn_check returns unmodified schema for chaining
+assert schema == schema_data            # jadn.check returns unmodified schema for chaining
 
 """
 Convert schema to alternate formats
@@ -31,6 +32,13 @@ print('\nSchema (JADN IDL):\n------------------')
 print(jidl_dumps(schema))               # Display schema as IDL text
 print('\nSchema (JADN IDL with truncated comments):\n------------------')
 print(jidl_dumps(strip_comments(schema, width=32)))
+print('\nSchema (HTML):\n------------------')
+print(html_dumps(schema))
+with open(os.path.join(jadn.schema_dir(), 'dtheme.css')) as f:
+    print(' (Use with:', f.read(50), '...)')
+print('\nSchema (Markdown):\n------------------')
+print(table_dumps(schema))
+
 
 print('\nSchema (JSON Schema):\n------------------')
 schema.update({                         # JSON Schema conversion needs a designated root type (Person)

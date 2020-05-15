@@ -163,6 +163,7 @@ def simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema extension
         simplify_map_of_enum()
     return sc
 
+
 def get_enum_items(tdef, topts, types):
     def ptr(fdef):
         if OPTION_ID['dir'] in fdef[FieldOptions]:

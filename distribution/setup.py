@@ -7,7 +7,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='jadn',
-    version='0.5.1',
+    version='0.5.3',
     description='JADN schema tools',
     long_description=long_description,
     long_description_content_type='text/x-rst',
@@ -26,8 +26,8 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     python_requires='>=3.4',
-    install_requires=['jsonschema'],
+    install_requires=['jsonschema', 'lxml'],
     package_data={
-        'jadn': ['jadn_schema.jadn', 'jadn_schema.json']
+        'jadn': ['jadn_schema.jadn', 'jadn_schema.json', 'dtheme.css']
     }
 )

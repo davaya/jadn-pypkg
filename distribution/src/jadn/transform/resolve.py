@@ -26,11 +26,11 @@ class SchemaModule:
                     self.schema = json.load(f)
             self.source = source
 
-        if 'meta' in self.schema:
+        try:
             self.module = self.schema['meta']['module']
             self.imports = self.schema['meta']['imports'] if 'imports' in self.schema['meta'] else {}
-        else:
-            jadn.raise_error('Schema module must have a module ID')
+        except KeyError:
+            jadn.raise_error(f'Schema module {self.source} must have a module ID')
         self.clear()
 
     def load(self):                 # Validate schema, build type dependencies and external references

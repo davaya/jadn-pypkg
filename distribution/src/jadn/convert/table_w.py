@@ -16,7 +16,7 @@ def _fmt(s, f):
 #--------- Markdown ouput -----------------
 
 
-def doc_begin_m(title):
+def doc_begin_m():
     text = '## Schema\n'
     return text
 
@@ -68,73 +68,10 @@ def type_end_m():
     return ''
 
 
-# ---------- HTML output ------------------
-
-
-def doc_begin_h(title):
-    text = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n'
-    text += '<link rel="stylesheet" type="text/css" href="theme.css">\n'
-    text += '<title>' + title + '</title>\n</head>\n'
-    text += '<body>\n<h2>Schema</h2>\n'
-    return text
-
-
-def doc_end_h():
-    return '</body>\n'
-
-
-def sect_h(num, name):
-    hn = 'h' + str(len(num))
-    n = ''
-    # n = '.'.join([str(n) for n in num]) + ' '
-    return '<' + hn + '>' + n + name + '</' + hn + '>\n'
-
-
-def meta_begin_h():
-    return '<table>\n'
-
-
-def meta_item_h(h, val):
-    if h == "exports":
-        sval = ', '.join(val)
-    elif h in ('imports', 'config'):
-        sval = '<br>\n'.join(['<span class="b">' + k + '</span>:&nbsp;' + str(v) for k, v in val.items()])
-    else:
-        sval = val
-    rc = [[h + ':', 'h'], [sval, 's']]
-    return '<tr>' + ''.join(['<td class="' + c[1] + '">' + c[0] + '</td>' for c in rc]) + '</tr>\n'
-
-
-def meta_imps_h(imports):
-    return '<br>\n'.join([i[0] + ': ' + i[1] for i in imports])
-
-
-def meta_end_h():
-    return '</table>\n'
-
-
-def type_begin_h(tname, ttype, headers, cls):
-    assert len(headers) == len(cls)
-    to = ' (' + ttype + ')' if ttype else ''
-    tc = '<caption>' + tname + to + '</caption>' if tname else ''
-    rc = zip(headers, cls)
-    return '<table>' + tc + '<tr>' + ''.join(['<th class="' + c[1] + '">' + c[0] + '</th>' for c in rc]) + '</tr>\n'
-
-
-def type_item_h(row, cls):
-    assert len(row) == len(cls)
-    rc = zip(row, cls)
-    return '<tr>' + ''.join(['<td class="' + c[1] + '">' + c[0] + '</td>' for c in rc]) + '</tr>\n'
-
-
-def type_end_h():
-    return '</table>\n'
-
-
 # ---------- JADN Source (JAS) output ------------------
 
 
-def doc_begin_s(title):
+def doc_begin_s():
     text = ''
     return text
 
@@ -173,52 +110,10 @@ def type_end_s():
     return ''
 
 
-# ---------- JADN-IDL output ------------------
-
-
-def doc_begin_d(title):
-    text = ''
-    return text
-
-
-def doc_end_d():
-    return ''
-
-
-def sect_d(num, name):
-    return ''
-
-
-def meta_begin_d():
-    return ''
-
-
-def meta_item_d(key, val):
-    return ''
-
-
-def meta_end_d():
-    return ''
-
-
-def type_begin_d(tname, ttype, headers, cls):
-    assert len(headers) == len(cls)
-    return tname + ' = ' + ttype + '\n' if ttype else ''
-
-
-def type_item_d(row, cls):
-    assert len(row) == len(cls)
-    return ''
-
-
-def type_end_d():
-    return ''
-
-
 # ---------- CDDL output ------------------
 
 
-def doc_begin_c(title):
+def doc_begin_c():
     text = ''
     return text
 
@@ -260,7 +155,7 @@ def type_end_c():
 # ---------- Thrift output ------------------
 
 
-def doc_begin_t(title):
+def doc_begin_t():
     text = ''
     return text
 
@@ -316,14 +211,12 @@ type_end - close type definition
 
 wtab = {
     'jas': (doc_begin_s, doc_end_s, sect_s, meta_begin_s, meta_item_s, meta_end_s, type_begin_s, type_item_s, type_end_s),
-    'jidl': (doc_begin_d, doc_end_d, sect_d, meta_begin_d, meta_item_d, meta_end_d, type_begin_d, type_item_d, type_end_d),
     'cddl': (doc_begin_c, doc_end_c, sect_c, meta_begin_c, meta_item_c, meta_end_c, type_begin_c, type_item_c, type_end_c),
-    'html': (doc_begin_h, doc_end_h, sect_h, meta_begin_h, meta_item_h, meta_end_h, type_begin_h, type_item_h, type_end_h),
     'thrift': (doc_begin_t, doc_end_t, sect_t, meta_begin_t, meta_item_t, meta_end_t, type_begin_t, type_item_t, type_end_t),
     'markdown': (doc_begin_m, doc_end_m, sect_m, meta_begin_m, meta_item_m, meta_end_m, type_begin_m, type_item_m, type_end_m)
 }
 
-DEFAULT_FORMAT = 'html'
+DEFAULT_FORMAT = 'markdown'
 
 
 def table_dumps(jadn, form=DEFAULT_FORMAT):
@@ -362,18 +255,16 @@ def table_dumps(jadn, form=DEFAULT_FORMAT):
         return typestr
 
     doc_begin, doc_end, sect, meta_begin, meta_item, meta_end, type_begin, type_item, type_end = wtab[form]
-    meta = jadn['meta']
-    config = get_config(meta)
-    title = meta['module'] + (' v.' + meta['patch']) if 'patch' in meta else ''
-    text = doc_begin(title)
-    text += meta_begin()
-    meta_list = ('title', 'module', 'patch', 'description', 'exports', 'imports', 'bounds')
-    bn = ('max_msg', 'max_str', 'max_bin', 'max_fields')
-    for h in meta_list + tuple(set(meta) - set(meta_list)):
-        if h in meta:
-            mh = zip(bn, meta[h]) if h == 'bounds' else meta[h]
-            text += meta_item(h, mh)
-    text += meta_end()
+    text = doc_begin()
+    if 'meta' in jadn:
+        meta = jadn['meta']
+        text += meta_begin()
+        meta_list = ('title', 'module', 'patch', 'description', 'exports', 'imports', 'config')
+        for h in meta_list + tuple(set(meta) - set(meta_list)):
+            if h in meta:
+                mh = meta[h]
+                text += meta_item(h, mh)
+        text += meta_end()
 
     for td in jadn['types']:
         to = topts_s2d(td[TypeOptions])
