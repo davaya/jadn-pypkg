@@ -17,7 +17,7 @@ def strip_comments(schema, width=0):             # Strip or truncate comments fr
     return sc
 
 
-def simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema extensions
+def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
     """
     Given an input schema, return a simplified schema with schema extensions removed.
 
@@ -147,7 +147,7 @@ def simplify(schema, extensions=JADN_EXTENSIONS):      # Remove schema extension
                 newfields = [[f[ItemID], f[ItemValue], to['vtype'], [], f[ItemDesc]] for f in tdefs[typex[to['ktype']]][Fields]]
                 tdefs[n] = [tdef[TypeName], 'Map', [], tdef[TypeDesc], newfields]
 
-    assert extensions - JADN_EXTENSIONS == set()
+    assert extensions - EXTENSIONS == set()
     sys = '$'                                   # Character reserved for tool-generated TypeNames
     sc = copy.deepcopy(schema)                  # Don't modify original schema
     tdefs = sc['types']

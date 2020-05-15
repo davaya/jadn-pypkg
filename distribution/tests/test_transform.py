@@ -1,9 +1,8 @@
 
 from unittest import main, TestCase
 
-from jadn.core import jadn_check, JADN_EXTENSIONS
-from jadn.transform.transform import jadn_strip, jadn_simplify
-
+import jadn
+from jadn.definitions import EXTENSIONS
 
 class Resolve(TestCase):
     schema = {}  # TODO: test Merge imported definitions
@@ -41,24 +40,24 @@ class StripComments(TestCase):
 }
 
     def test_strip_comments(self):
-        jadn_check(self.schema)
-        jadn_check(self.stripped_schema)
-        ss = jadn_strip(self.schema)
+        jadn.check(self.schema)
+        jadn.check(self.stripped_schema)
+        ss = jadn.transform.strip_comments(self.schema)
         self.assertEqual(ss['types'], self.stripped_schema['types'])
 
     def test_truncate_comments(self):
-        jadn_check(self.schema)
-        jadn_check(self.c20_schema)
-        ss = jadn_strip(self.schema, width=20)
+        jadn.check(self.schema)
+        jadn.check(self.c20_schema)
+        ss = jadn.transform.strip_comments(self.schema, width=20)
         self.assertEqual(ss['types'], self.c20_schema['types'])
 
 
 class SimplifyExtensions(TestCase):
 
-    def do_simplify_test(self, extension_schema, simplified_schema, extensions=JADN_EXTENSIONS):
-        jadn_check(extension_schema)
-        jadn_check(simplified_schema)
-        ss = jadn_simplify(extension_schema, extensions)
+    def do_simplify_test(self, extension_schema, simplified_schema, extensions=EXTENSIONS):
+        jadn.check(extension_schema)
+        jadn.check(simplified_schema)
+        ss = jadn.transform.simplify(extension_schema, extensions)
         self.assertEqual(ss['types'], simplified_schema['types'])
 
     """

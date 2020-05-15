@@ -1,7 +1,8 @@
 
 from unittest import main, TestCase
 
-from jadn.core import jadn_check, Codec
+import jadn
+from jadn.codec import Codec
 
 
 # TODO: Read and Write JIDL, Write Markdown, HTML, JSON Schema, XSD, CDDL
@@ -12,7 +13,7 @@ class Basic(TestCase):
     }
 
     def setUp(self):
-        jadn_check(self.schema)
+        jadn.check(self.schema)
         self.tc = Codec(self.schema, verbose_rec=False, verbose_str=False)
 
 

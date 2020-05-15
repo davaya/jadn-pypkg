@@ -228,7 +228,7 @@ DEFAULT_CONFIG = {          # Configuration values to use if not specified in sc
     "$TypeRef": "^$"            # Placeholder.  Actual pattern is ($NSID ":")? $TypeName
 }
 
-JADN_EXTENSIONS = {
+EXTENSIONS = {
     'AnonymousType',            # TYPE_OPTIONS included in FieldOptions
     'Multiplicity',             # maxc other than 1, or minv other than 0 (optional) or 1 (required)
     'DerivedEnum',              # enum and pointer/dir options, create Enumerated type of fields or JSON Pointers

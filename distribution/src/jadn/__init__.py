@@ -5,4 +5,4 @@ import jadn.convert
 import jadn.transform
 import jadn.translate
 
-__version__ = '0.5.3'
+__version__ = '0.5.4'

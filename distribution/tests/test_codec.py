@@ -3,7 +3,8 @@ import json
 import binascii
 from unittest import main, TestCase
 
-from jadn.core import jadn_check, Codec
+import jadn
+from jadn.codec import Codec
 
 
 # Encode and decode data to verify that numeric object keys work properly when JSON converts them to strings
@@ -74,7 +75,7 @@ class BasicTypes(TestCase):
         ]}
 
     def setUp(self):
-        jadn_check(self.schema)
+        jadn.check(self.schema)
         self.tc = Codec(self.schema, verbose_rec=False, verbose_str=False)
 
     def test_primitive(self):   # Non-composed types (bool, int, num, str)
@@ -758,7 +759,7 @@ class Compound(TestCase):  # TODO: arrayOf(rec,map,array,arrayof,choice), array(
         ]}
 
     def setUp(self):
-        jadn_check(self.schema)
+        jadn.check(self.schema)
         self.tc = Codec(self.schema)
 
     C4a = {'rec': {'a': 1, 'b': 'c'}}
@@ -851,7 +852,7 @@ class Selectors(TestCase):         # TODO: bad schema - verify * field has only 
         ]}
 
     def setUp(self):
-        jadn_check(self.schema)
+        jadn.check(self.schema)
         self.tc = Codec(self.schema)
 
     arr_name1_api = ['count', 17]
@@ -1080,7 +1081,7 @@ class ListCardinality(TestCase):      # TODO: arrayOf(rec,map,array,arrayof,choi
         ]}
 
     def setUp(self):
-        jadn_check(self.schema)
+        jadn.check(self.schema)
         self.tc = Codec(self.schema)
 
     Lna = {'string': 'cat'}                     # Cardinality 0..n field omits empty list.  Use ArrayOf type to send empty list.
@@ -1253,7 +1254,7 @@ class ListTypes(TestCase):
         ]}
 
     def setUp(self):
-        jadn_check(self.schema)
+        jadn.check(self.schema)
         self.tc = Codec(self.schema)
 
     prims = [{
@@ -1284,7 +1285,7 @@ class Bounds(TestCase):        # TODO: check max and min string length, integer 
     schema = {}
 
     def setUp(self):
-        jadn_check(self.schema)
+        jadn.check(self.schema)
         self.tc = Codec(self.schema, verbose_rec=True, verbose_str=True)
 
 
@@ -1318,7 +1319,7 @@ class Format(TestCase):
     }
 
     def setUp(self):
-        jadn_check(self.schema)
+        jadn.check(self.schema)
         self.tc = Codec(self.schema)
 
     ipv4_b = binascii.a2b_hex('c6020304')           # IPv4 address
