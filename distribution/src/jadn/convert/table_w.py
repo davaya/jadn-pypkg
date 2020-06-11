@@ -2,8 +2,9 @@
 Translate JADN to HTML or Markdown property tables
 """
 
+import jadn
 from jadn.definitions import *
-from jadn.utils import multiplicity, topts_s2d, ftopts_s2d, typestring, get_config
+# from jadn import multiplicity, topts_s2d, ftopts_s2d, jadn2typestr, get_config
 from datetime import datetime
 
 
@@ -219,7 +220,7 @@ wtab = {
 DEFAULT_FORMAT = 'markdown'
 
 
-def table_dumps(jadn, form=DEFAULT_FORMAT):
+def table_dumps(schema, form=DEFAULT_FORMAT):
     """
     Translate JADN schema into other formats
 
@@ -256,8 +257,8 @@ def table_dumps(jadn, form=DEFAULT_FORMAT):
 
     doc_begin, doc_end, sect, meta_begin, meta_item, meta_end, type_begin, type_item, type_end = wtab[form]
     text = doc_begin()
-    if 'meta' in jadn:
-        meta = jadn['meta']
+    if 'meta' in schema:
+        meta = schema['meta']
         text += meta_begin()
         meta_list = ('title', 'module', 'patch', 'description', 'exports', 'imports', 'config')
         for h in meta_list + tuple(set(meta) - set(meta_list)):
@@ -266,9 +267,9 @@ def table_dumps(jadn, form=DEFAULT_FORMAT):
                 text += meta_item(h, mh)
         text += meta_end()
 
-    for td in jadn['types']:
-        to = topts_s2d(td[TypeOptions])
-        ttype = typestring(td[BaseType], to)
+    for td in schema['types']:
+        to = jadn.topts_s2d(td[TypeOptions])
+        ttype = jadn.jadn2typestr(td[BaseType], to)
         if not is_builtin(td[BaseType]):
             text += 'Error - bad type: ' + str(td) + '\n'
         elif td[BaseType] in (SIMPLE_TYPES + ('ArrayOf', 'MapOf')) or 'enum' in to or 'pointer' in to:
@@ -289,20 +290,20 @@ def table_dumps(jadn, form=DEFAULT_FORMAT):
             else:
                 text += _tbegin(to, td[TypeName], ttype, ['ID', 'Name', 'Type', '#', 'Description'], cls)
             for fd in td[Fields]:
-                ft, fto = ftopts_s2d(fd[FieldOptions])
+                ft, fto = jadn.ftopts_s2d(fd[FieldOptions])
                 fo = {'minc': 1, 'maxc': 1}
                 fo.update(ft)
-                ftype = _fieldstr(typestring(fd[FieldType], fto), fo)
+                ftype = _fieldstr(jadn.jadn2typestr(fd[FieldType], fto), fo)
                 fn = fd[FieldName] + ('/' if 'dir' in fo else '')
-                text += _titem(to, [str(fd[FieldID]), fn, ftype, multiplicity(fo['minc'], fo['maxc']), fd[FieldDesc]], cls)
+                text += _titem(to, [str(fd[FieldID]), fn, ftype, jadn.multiplicity(fo['minc'], fo['maxc']), fd[FieldDesc]], cls)
         text += type_end()
 
     text += doc_end()
     return text
 
 
-def table_dump(jadn, fname, source='', form=DEFAULT_FORMAT):
+def table_dump(schema, fname, source='', form=DEFAULT_FORMAT):
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write('<!-- Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + '-->\n')
-        f.write(table_dumps(jadn, form))
+        f.write(table_dumps(schema, form))

@@ -4,9 +4,8 @@ Translate JADN to JADN Interface Definition Language
 
 from datetime import datetime
 
+from jadn import topts_s2d, ftopts_s2d, jadn2typestr
 from jadn.definitions import *
-from jadn.utils import topts_s2d, ftopts_s2d, typestring
-
 
 def jidl_dumps(jadn):
 
@@ -45,7 +44,7 @@ def jidl_dumps(jadn):
         bt = td[BaseType]
         assert is_builtin(bt)
         to = topts_s2d(td[TypeOptions])
-        ts = typestring(bt, to)
+        ts = jadn2typestr(bt, to)
         flds = '{' if has_fields(bt) or (bt == 'Enumerated' and 'enum' not in to and 'pointer' not in to) else ''
         text += '\n' + line(44, '{} = {} {}'.format(td[TypeName], ts, flds), td[TypeDesc])
         if flds:
@@ -60,7 +59,7 @@ def jidl_dumps(jadn):
                     ft, fto = ftopts_s2d(f[FieldOptions])
                     fo = {'minc': 1, 'maxc': 1}
                     fo.update(ft)
-                    fs = _fieldstr(typestring(f[FieldType], fto), fo) + (' unique' if 'unique' in fto else '')
+                    fs = _fieldstr(jadn2typestr(f[FieldType], fto), fo) + (' unique' if 'unique' in fto else '')
                     fn = f[FieldName] + ('/' if 'dir' in fo else '')
                     content = ffmt[id].format(f[FieldID], fn, fs + sep)
                     desc = (f[FieldName] + ':: ' if id and f[FieldName] else '') + f[FieldDesc]

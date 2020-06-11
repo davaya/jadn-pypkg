@@ -4,6 +4,7 @@ Support functions for JADN codec
   Convert typedef options between dict and strings
 """
 
+import re
 from functools import reduce
 from jadn.definitions import *
 
@@ -133,18 +134,18 @@ def topts_s2d(olist):        # Convert list of type definition option strings to
     }
 
     assert set(tval) == {k for k in TYPE_OPTIONS.values()}
-    assert isinstance(olist, (list, tuple)), '%r is not a list' % olist
+    assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
     opts = {}
     for o in olist:
         try:
             k = TYPE_OPTIONS[ord(o[0])]
             opts[k] = tval[k](o[1:])
         except KeyError:
-            raise ValueError('Unknown type option: %s' % o)
+            raise ValueError(f'Unknown type option: {o}')
     return opts
 
 
-def ftopts_s2d(ostr):       # Convert list of field definition option strings to options dictionary
+def ftopts_s2d(olist):       # Convert list of field definition option strings to options dictionary
     fval = {
         'minc': lambda x: int(x),
         'maxc': lambda x: int(x),
@@ -154,9 +155,9 @@ def ftopts_s2d(ostr):       # Convert list of field definition option strings to
     }
 
     assert set(fval) == {k for k in FIELD_OPTIONS.values()}
-    assert isinstance(ostr, (list, tuple)), '%r is not a list' % ostr
+    assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
     fopts, topts = {}, {}
-    for o in ostr:
+    for o in olist:
         try:
             k = FIELD_OPTIONS[ord(o[0])]
             fopts[k] = fval[k](o[1:])
@@ -165,13 +166,58 @@ def ftopts_s2d(ostr):       # Convert list of field definition option strings to
     return fopts, topts
 
 
+def opts_d2s(to):
+    return [OPTION_ID[k] + ('' if v is True else str(v)) for k, v in to.items()]
+
+
 def multiplicity(minc, maxc):
     if minc == 1 and maxc == 1:
         return '1'
     return str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
 
 
-def typestring(typename, typeopts):            # Convert typename and options to string.
+def typestr2jadn(typestring):
+    """
+    0x3d: 'id',         # '=', none, Enumerated type and Choice/Map/Record keys are ID not Name
+    0x2a: 'vtype',      # '*', string, Value type for ArrayOf and MapOf
+    0x2b: 'ktype',      # '+', string, Key type for MapOf
+    0x23: 'enum',       # '#', string, enumeration derived from the referenced Array/Choice/Map/Record type
+    0x3e: 'pointer',    # '>', string, enumeration of pointers derived from the referenced Array/Choice/Map/Record type
+    0x2f: 'format',     # '/', string, semantic validation keyword, may affect serialization
+    0x25: 'pattern',    # '%', string, regular expression that a string must match
+    0x7b: 'minv',       # '{', integer, minimum byte or text string length, numeric value, element count
+    0x7d: 'maxv',       # '}', integer, maximum byte or text string length, numeric value, element count
+    0x71: 'unique',     # 'q', none, ArrayOf instance must not contain duplicates
+    """
+
+    def _sopts(srange):
+        if srange:
+            m = re.match(r'^.?(-?\d+)\.\.(-?\d+).?$', srange)
+        return {}
+
+    def _vopts(vrange):
+        if vrange:
+            m = re.match(r'^.*$', vrange)
+        return {}
+
+    topts = {}
+    p_name = r'^([\w$-]+)'
+    p_id = r'(.ID)?'
+    p_func = r'(\(\w+\))?'
+    p_range = r'(\{.*\})?'
+    p_mult = r'(\[.*\])?'
+    pattern = '^' + p_name + p_id + p_func + p_range + p_mult + '$'
+    m = re.match(pattern, typestring)
+    tname = m.group(1)
+    topts.update({'id': None} if m.group(2) else {})
+    topts.update({'unique': None} if False else {})
+    func = m.group(3)
+    topts.update(_vopts(m.group(4)) if tname in ('Integer', 'Number') else _sopts(m.group(4)))
+    mult = m.group(5)
+    return tname, topts
+
+
+def jadn2typestr(typename, typeopts):   # Convert typename and options to string.
 
     def _typestr(tname, opts):          # SIDE EFFECT: remove known options from opts to flag leftovers
 
@@ -182,12 +228,16 @@ def typestring(typename, typeopts):            # Convert typename and options to
                 return 'Pointer(' + optv[1:] + ')'
             return optv
 
-        def _rangestr(ops, vrange=False):  # Value range is double-ended: [*..*], Size range is single-ended: [0..*]
-            dlo = '*' if vrange else 0
-            lo = ops.pop('minv', dlo)
+        def _srange(ops):                   # Size range (single-ended) - default is {0..*}
+            lo = ops.pop('minv', 0)
+            hi = ops.pop('maxv', 0)
+            hs = '*' if hi == 0 else str(hi)
+            return str(lo) + '..' + hs if lo != 0 or hi != 0 else ''
+
+        def _vrange(ops):                   # Value range (double-ended) - default is {*..*}
+            lo = ops.pop('minv', '*')
             hi = ops.pop('maxv', '*')
-            hi = '*' if hi == 0 and not vrange else hi
-            return str(lo) + '..' + str(hi) if lo != dlo or hi != '*' else ''
+            return str(lo) + '..' + str(hi) if lo != '*' or hi != '*' else ''
 
         extra = '.ID' if opts.pop('id', None) else ''   # SIDE EFFECT!: remove known options from opts.
         if tname == 'ArrayOf':
@@ -200,7 +250,7 @@ def typestring(typename, typeopts):            # Convert typename and options to
         extra += '(Pointer(' + v + '))' if v else ''
         v = opts.pop('pattern', None)
         extra += '(%' + v + '%)' if v else ''
-        v = _rangestr(opts, tname in ('Integer', 'Number'))
+        v = _vrange(opts) if tname in ('Integer', 'Number') else _srange(opts)
         extra += '{' + v + '}' if v else ''
         v = opts.pop('format', None)
         extra += ' /' + v if v else ''

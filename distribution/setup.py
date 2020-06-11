@@ -1,5 +1,8 @@
 from setuptools import setup, find_packages
 from os import path
+import sys
+sys.path.append('src')
+import jadn
 
 here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
@@ -7,7 +10,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='jadn',
-    version='0.5.4',
+    version=jadn.__version__,
     description='JADN schema tools',
     long_description=long_description,
     long_description_content_type='text/x-rst',
@@ -26,7 +29,7 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     python_requires='>=3.4',
-    install_requires=['jsonschema', 'lxml'],
+    install_requires=['jsonschema', 'lxml', 'arpeggio'],
     package_data={
         'jadn': ['jadn_schema.jadn', 'jadn_schema.json', 'dtheme.css']
     }

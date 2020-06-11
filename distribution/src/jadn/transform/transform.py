@@ -1,6 +1,6 @@
 import copy
 from jadn.definitions import *
-from jadn.utils import topts_s2d, ftopts_s2d
+from jadn.utils import topts_s2d, ftopts_s2d, opts_d2s
 
 
 def strip_comments(schema, width=0):             # Strip or truncate comments from schema
@@ -19,13 +19,13 @@ def strip_comments(schema, width=0):             # Strip or truncate comments fr
 
 def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
     """
-    Given an input schema, return a simplified schema with schema extensions removed.
+    Given an input schema, return a simplified schema with some or all extensions removed.
 
-    1) AnonymousType:   Replace all anonymous type definitions with explicit
-    2) Multiplicity:    Replace all multiple-value fields with explicit ArrayOf type definitions
-    3) DerivedEnum:     Replace all derived enumerations with explicit Enumerated type definitions
-    4) MapOfEnum:       Replace all MapOf types with listed keys with explicit Map type definitions
-    5) Pointer:         Replace all pointer enumerations with explicit Map {json_pointer: [id_path]}
+    extensions = set of extension names to process:
+        AnonymousType:   Replace all anonymous type definitions with explicit
+        Multiplicity:    Replace all multi-value fields with explicit ArrayOf type definitions
+        DerivedEnum:     Replace all derived and pointer enumerations with explicit Enumerated type definitions
+        MapOfEnum:       Replace all MapOf types with listed keys with explicit Map type definitions
     """
 
     def get_optx(opts, oname):
@@ -37,39 +37,16 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
         if n:
             del opts[n[0]]
 
-    def opts_d2s(to):
-        return [OPTION_ID[k] + str(v) for k, v in to.items()]
-
-    def epname(topts):
+    def epx(topts):             # Return option array index of enum or pointer option
         ex = get_optx(topts, 'enum')
         px = get_optx(topts, 'pointer')
-        if ex is not None:
-            rtype = topts[ex][1:]
-            oname = 'Enum'
-        elif px is not None:
-            rtype = topts[px][1:]
-            oname = 'Pointer'
-        else:
-            return None
-        return rtype + sys + oname + ('-Id' if get_optx(topts, 'id') else '')
+        return ex if ex is not None else px
 
-    def simplify_anonymous_types():          # Replace anonymous types in fields with explicit type definitions
-        new_types = []
-        for tdef in tdefs:
-            if has_fields(tdef[BaseType]):
-                for fdef in tdef[Fields]:
-                    fo, fto = ftopts_s2d(fdef[FieldOptions])
-                    if fto:                 # If FieldOptions contains a type option, generate an explicit type
-                        name = epname(fdef[FieldOptions])       # Use derived enum typename
-                        typeopts = []
-                        for o in fto:       # Move all type options to new type
-                            typeopts.append(fdef[FieldOptions].pop(get_optx(fdef[FieldOptions], o)))
-                        newname = name if name else tdef[TypeName] + sys + fdef[FieldName]
-                        if newname not in [t[TypeName] for t in new_types]:
-                            assert is_builtin(fdef[FieldType])      # Don't create a bad type definition
-                            new_types.append([newname, fdef[FieldType], typeopts, fdef[FieldDesc]])
-                        fdef[FieldType] = newname
-        return new_types
+    def epname(topts):
+        x = epx(topts)
+        if x is not None:
+            oname = 'Enum' if topts[x][0] == OPTION_ID['enum'] else 'Pointer'
+            return topts[x][1:] + sys + oname + ('-Id' if get_optx(topts, 'id') else '')
 
     def simplify_multiplicity():            # Replace field multiplicity with explicit ArrayOf type definitions
         new_types = []
@@ -90,6 +67,25 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                         if minc != 0:
                             del_opt(f, 'minc')
                         del_opt(f, 'unique')
+        return new_types
+
+    def simplify_anonymous_types():          # Replace anonymous types in fields with explicit type definitions
+        new_types = []
+        for tdef in tdefs:
+            if has_fields(tdef[BaseType]):
+                for fdef in tdef[Fields]:
+                    fo, fto = ftopts_s2d(fdef[FieldOptions])
+                    if fto:                 # If FieldOptions contains a type option, create an explicit type
+                        newopts = []
+                        for o in fto:       # Move all type options to new type
+                            newopts.append(fdef[FieldOptions].pop(get_optx(fdef[FieldOptions], o)))
+                        name = epname(newopts)              # If enum/pointer option, use derived enum typename
+                        newname = name if name else tdef[TypeName] + sys + fdef[FieldName]
+                        if newname not in [t[TypeName] for t in new_types]:
+                            newtype = 'Enumerated' if epx(newopts) is not None else fdef[FieldType]
+                            assert is_builtin(newtype)      # Don't create a bad type definition
+                            new_types.append([newname, newtype, newopts, fdef[FieldDesc]])
+                        fdef[FieldType] = newname           # Redirect field to explicit type definition
         return new_types
 
     def simplify_derived_enum():             # Generate Enumerated list of fields or JSON Pointers
@@ -157,7 +153,6 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
         tdefs += simplify_anonymous_types()
     typex = {t[TypeName]: n for n, t in enumerate(tdefs)}       # Build type index
     if 'DerivedEnum' in extensions:             # Generate Enumerated list of fields or JSON Pointers
-        types = {t[TypeName]: t for t in tdefs}
         tdefs += simplify_derived_enum()
     if 'MapOfEnum' in extensions:               # Generate explicit Map from MapOf
         simplify_map_of_enum()

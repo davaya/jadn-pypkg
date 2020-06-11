@@ -8,12 +8,12 @@ import numbers
 import os
 from datetime import datetime
 
-from jadn.utils import topts_s2d, ftopts_s2d, build_deps, raise_error
+import jadn
 from jadn.codec import Codec
 from jadn.definitions import *
 
 
-def schema_dir():
+def data_dir():
     """
     Return directory containing JADN schema files
     """
@@ -30,21 +30,21 @@ def check(schema):
     def check_typeopts(type_name, base_type, topts):  # Check for invalid type options and undefined formats
         ro = {k for k in REQUIRED_TYPE_OPTIONS[base_type]} - {k for k in topts}
         if ro:
-            raise_error('Missing type option', type_name + ':', str(ro))
+            jadn.raise_error('Missing type option', type_name + ':', str(ro))
         uo = {k for k in topts} - {k for k in ALLOWED_TYPE_OPTIONS[base_type]}
         if uo:
-            raise_error('Unsupported type option', type_name + ' (' + base_type + '):', str(uo))
+            jadn.raise_error('Unsupported type option', type_name + ' (' + base_type + '):', str(uo))
         if 'format' in topts:
             f = topts['format']
             fm = dict(list(FORMAT_VALIDATE.items()) + list(FORMAT_JS_VALIDATE.items()) + list(FORMAT_SERIALIZE.items()))
             if f not in fm or base_type != fm[f]:
-                raise_error('Unsupported format', f, 'in', type_name, base_type)
+                jadn.raise_error('Unsupported format', f, 'in', type_name, base_type)
         if 'enum' in topts and 'pointer' in topts:
-            raise_error('Type cannot be both Enum and Pointer', type_name, base_type)
+            jadn.raise_error('Type cannot be both Enum and Pointer', type_name, base_type)
         if 'and' in topts and 'or' in topts:
-            raise_error('Unsupported union+intersection in ', type_name, base_type)
+            jadn.raise_error('Unsupported union+intersection in ', type_name, base_type)
 
-    here = schema_dir()
+    here = data_dir()
     with open(os.path.join(here, 'jadn_schema.json')) as f:       # Check using JSON Schema for JADN
         jsonschema.Draft7Validator(json.load(f)).validate(schema)
 
@@ -57,19 +57,19 @@ def check(schema):
         tn = t[TypeName]
         bt = t[BaseType]
         if tn in types:
-            raise_error('Duplicate type definition', tn)
+            jadn.raise_error('Duplicate type definition', tn)
         types |= {tn}
         if is_builtin(tn):
-            raise_error('Reserved type name', tn)
+            jadn.raise_error('Reserved type name', tn)
         if not is_builtin(bt):
-            raise_error('Invalid base type', tn + ':', bt)
-        topts = topts_s2d(t[TypeOptions])
+            jadn.raise_error('Invalid base type', tn + ':', bt)
+        topts = jadn.topts_s2d(t[TypeOptions])
         check_typeopts(tn, bt, topts)
         flen = 0 if 'enum' in topts or 'pointer' in topts else FIELD_LENGTH[bt]
         if flen and len(t) <= Fields:
-            raise_error('Missing fields', tn + '(' + bt + ')')
+            jadn.raise_error('Missing fields', tn + '(' + bt + ')')
         elif not flen and len(t) > Fields:
-            raise_error(tn + '(' + bt + ')', 'Cannot have fields')
+            jadn.raise_error(tn + '(' + bt + ')', 'Cannot have fields')
 
         if flen:                # Check fields
             fids = set()        # Field IDs
@@ -77,23 +77,23 @@ def check(schema):
             ordinal = bt in ('Array', 'Record')
             for n, f in enumerate(t[Fields]):
                 if len(f) != flen:
-                    raise_error('Bad field', n + 1, 'in', tn, 'length', len(f), 'should be', flen)
+                    jadn.raise_error('Bad field', n + 1, 'in', tn, 'length', len(f), 'should be', flen)
                 fids.update({f[FieldID]})
                 fnames.update({f[FieldName]})
                 if ordinal and f[FieldID] != n + 1:
-                    raise_error('Item tag error:', tn + '(' + bt + ')[' + f[FieldName] + '] --', f[FieldID], 'should be', n + 1)
+                    jadn.raise_error('Item tag error:', tn + '(' + bt + ')[' + f[FieldName] + '] --', f[FieldID], 'should be', n + 1)
                 if flen > FieldDesc:    # Full field, not an Enumerated item
-                    fo, fto = ftopts_s2d(f[FieldOptions])
+                    fo, fto = jadn.ftopts_s2d(f[FieldOptions])
                     if is_builtin(f[FieldType]):
                         check_typeopts(tn + '/' + f[FieldName], f[FieldType], fto)
                         if 'minc' in fo and 'maxc' in fo:
                             if fo['minc'] < 0 or (fo['maxc'] > 0 and fo['maxc'] < fo['minc']):
-                                raise_error(tn + '/', f[FieldName], 'bad cardinality', fo['minc'], fo['maxc'])
+                                jadn.raise_error(tn + '/', f[FieldName], 'bad cardinality', fo['minc'], fo['maxc'])
                     elif fto:
                         # raise_error(tn + '/' + f[FieldName] + '(' + f[FieldType] + ') cannot have Type options', fto)
                         pass    # TODO: pass 'unique' to multiplicity-based ArrayOf
             if len(t[Fields]) != len(fids) or len(t[Fields]) != len(fnames):
-                raise_error('Duplicate field', tn, len(t[Fields]), 'fields,', len(fids), 'unique tags', len(fnames), 'unique names')
+                jadn.raise_error('Duplicate field', tn, len(t[Fields]), 'fields,', len(fids), 'unique tags', len(fnames), 'unique names')
     return schema
 
 
@@ -102,7 +102,7 @@ def analyze(schema):
         nsp = name.split(':')[0]
         return nsp if nsp in nsids else name
 
-    items = build_deps(schema)
+    items = jadn.build_deps(schema)
     # out, roots = topo_sort(items)
     imports = schema['meta']['imports'] if 'imports' in schema['meta'] else {}
     exports = schema['meta']['exports'] if 'exports' in schema['meta'] else []

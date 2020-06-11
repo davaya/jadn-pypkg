@@ -34,7 +34,7 @@ print('\nSchema (JADN IDL with truncated comments):\n------------------')
 print(jidl_dumps(strip_comments(schema, width=32)))
 print('\nSchema (HTML):\n------------------')
 print(html_dumps(schema))
-with open(os.path.join(jadn.schema_dir(), 'dtheme.css')) as f:
+with open(os.path.join(jadn.data_dir(), 'dtheme.css')) as f:
     print(' (Use with:', f.read(50), '...)')
 print('\nSchema (Markdown):\n------------------')
 print(table_dumps(schema))
