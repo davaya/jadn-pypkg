@@ -5,8 +5,14 @@ JSON Abstract Data Notation (JADN)
 This package contains software to process JADN Information Models and to validate
 and serialize application data.  The software is organized by function:
 
-* **core:** Load, validate, and save a JADN schema.  Constant definitions for the JADN data format.
-* **codec:** Validate, encode, and decode application data using a JADN schema.
+* **core:** Load, validate, and save a JADN schema.
+* **codec:** Validate, encode, and decode application data using a JADN schema:
+
+  * Idiomatic (verbose) JSON
+  * Minimized (concise) JSON
+  * CBOR*
+  * XML*
+
 * **convert:** Convert JADN schema between JSON and documentation formats:
 
   * text-based Interface Definition Language (IDL)
@@ -15,10 +21,10 @@ and serialize application data.  The software is organized by function:
 
 * **transform:** Process a JADN schema to produce another JADN schema:
 
-  * resolve definitions from separate schemas into a single schema (include/import)
+  * combine definitions from separate schemas into a single schema
   * split a schema that defines multiple objects into separate schemas for each object
-  * remove unreferenced definitions
-  * remove or truncate comments
+  * remove unused definitions
+  * delete or truncate comments
 
 * **translate:** Convert a JADN schema into a concrete schema language:
 
@@ -43,8 +49,8 @@ illustrates how to use these functions:
 * define and validate a schema
 * convert the schema into documentation formats
 * truncate comments
-* translate to JSON Schema
-* validate and serialize test messages in:
+* translate JADN to JSON Schema
+* validate and serialize test messages to:
 
   * JSON data format
-  * Machine-optimized JSON data format
+  * Minimized-JSON data format
