@@ -2,11 +2,16 @@
 JSON Abstract Data Notation (JADN)
 **********************************
 
-This package contains software to process JADN Information Models and to validate
-and serialize application data.  The software is organized by function:
+`JADN
+<https://github.com/oasis-tcs/openc2-jadn/blob/working/jadn-v1.0-wd01.md>`_
+is used to process Information Models as described in
+`RFC 8477
+<https://tools.ietf.org/html/rfc8477#section-2>`_,
+and to validate and serialize Information objects.
+The software is organized by function:
 
 * **core:** Load, validate, and save a JADN schema.
-* **codec:** Validate, encode, and decode application data using a JADN schema:
+* **codec:** Validate, encode, and decode application information using a specified data format:
 
   * Idiomatic (verbose) JSON
   * Minimized (concise) JSON
@@ -34,11 +39,6 @@ and serialize application data.  The software is organized by function:
   * Protobuf*
 
 \* Planned
-
-Information Modeling is described in the IoT Semantic Interoperablity 2016 Workshop report,
-RFC 8477, https://tools.ietf.org/html/rfc8477.
-
-The JADN IM language is defined in https://github.com/oasis-tcs/openc2-jadn/blob/working/jadn-v1.0-wd01.md.
 
 Quickstart
 ##########
