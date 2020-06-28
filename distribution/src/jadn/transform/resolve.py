@@ -23,7 +23,11 @@ class SchemaModule:
                 pass                    # TODO: read schema from URL
             else:
                 with open(source, encoding='utf-8') as f:
-                    self.schema = json.load(f)
+                    try:
+                        self.schema = json.load(f)
+                    except json.JSONDecodeError as e:
+                        print("Decoding", source)
+                        raise
             self.source = source
 
         try:

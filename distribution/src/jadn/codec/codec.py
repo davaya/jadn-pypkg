@@ -13,8 +13,8 @@ http://www.apache.org/licenses/LICENSE-2.0
 
 import numbers
 import re
-from jadn.definitions import *
 from jadn.utils import topts_s2d, ftopts_s2d, get_config
+from jadn.definitions import *
 from jadn.transform import simplify
 from jadn.codec.format_validate import format_validators, get_format_validate_function
 from jadn.codec.format_serialize_json import json_format_codecs, get_format_encode_function, get_format_decode_function
@@ -42,8 +42,9 @@ S_EMAP = 9      # Encode: API field key or enum value to Encoded
 S_FLD = 10      # Field entries (definition and decoded options)
 
 # Symbol Table Field Definition fields
-S_FDEF = 0      # JADN field definition
-S_FOPT = 1      # Field Options (dict format)
+SF_DEF = 0      # JADN field definition
+SF_OPT = 1      # Field Options (dict format)
+SF_CTAG = 2     # Field containing external choice tag (tfield option)
 
 
 class Codec:
@@ -88,16 +89,20 @@ class Codec:
         return ts[S_ENCODE](ts, aval, self)     # Dispatch to type-specific encoder
 
     def set_mode(self, verbose_rec=False, verbose_str=False):
-        def symf(fld):      # Build symbol table field entries
+        def symf(fld, fa, fnames):      # Build symbol table field entries
             fo, to = ftopts_s2d(fld[FieldOptions])
             if to:
                 self._error('%s: internal error: unexpected type options: %s' % (fld[FieldName], str(to)))
             fopts = {'minc': 1, 'maxc': 1}
             fopts.update(fo)
             assert fopts['minc'] in (0, 1) and fopts['maxc'] == 1     # Other cardinalities have been simplified
+            ctag = None
+            if 'tfield' in fopts:
+                ctag = fopts['tfield'] if fa == FieldID else fnames[fopts['tfield']]
             fs = [
-                fld,        # S_FDEF: JADN field definition
-                fopts       # S_FOPT: Field options (dict)
+                fld,        # SF_DEF: JADN field definition
+                fopts,      # SF_OPT: Field options (dict)
+                ctag        # SF_CTAG: tfield option
             ]
             return fs
 
@@ -129,31 +134,29 @@ class Codec:
                 symval[S_ENCODE] = _encode_maprec   # if self.verbose_rec else _encode_array
                 symval[S_DECODE] = _decode_maprec   # if self.verbose_rec else _decode_array
                 symval[S_ENCTYPE] = dict if self.verbose_rec else list
-            fx = FieldName if verbose_str else FieldID
-            if t[BaseType] in ('Enumerated', 'Choice', 'Map', 'Record'):
-                fx, fa = (FieldID, FieldID) if 'id' in symval[S_TOPTS] else (fx, FieldName)
+            if t[BaseType] in ('Enumerated', 'Array', 'Choice', 'Map', 'Record'):
+                fx = FieldName if 'id' not in symval[S_TOPTS] and t[BaseType] != 'Array' and verbose_str else FieldID
+                fa = FieldName if 'id' not in symval[S_TOPTS] else FieldID
                 try:
                     symval[S_DMAP] = {f[fx]: f[fa] for f in t[Fields]}
                     symval[S_EMAP] = {f[fa]: f[fx] for f in t[Fields]}
+                    fnames = {f[FieldID]: f[FieldName] for f in t[Fields]}
                 except IndexError:
                     print('symval index error')
                     raise
-                if t[BaseType] in ['Choice', 'Map', 'Record']:
-                    symval[S_FLD] = {f[fx]: symf(f) for f in t[Fields]}
-            elif t[BaseType] == 'Array':
-                symval[S_FLD] = {f[FieldID]: symf(f) for f in t[Fields]}
+                if t[BaseType] != 'Enumerated':
+                    symval[S_FLD] = {f[fx]: symf(f, fa, fnames) for f in t[Fields]}
             if t[BaseType] in ('Binary', 'String', 'Array', 'ArrayOf', 'Map', 'MapOf', 'Record'):
                 opts = symval[S_TOPTS]
-                if 'pattern' not in opts:
-                    minv = opts['minv'] if 'minv' in opts else 0
-                    maxv = opts['maxv'] if 'maxv' in opts else 0
-                    if minv < 0 or maxv < 0:
-                        self._error(('%s: length cannot be negative: {}..{}' % t[TypeName], minv, maxv))
-                    if maxv == 0:
-                        maxv = self.config['$MaxBinary'] if t[BaseType] == 'Binary' else \
-                               self.config['$MaxString'] if t[BaseType] == 'String' else \
-                               self.config['$MaxElements']
-                    opts.update({'minv': max(minv, 0), 'maxv': maxv})
+                minv = opts['minv'] if 'minv' in opts else 0
+                maxv = opts['maxv'] if 'maxv' in opts else 0
+                if minv < 0 or maxv < 0:
+                    self._error(('%s: length cannot be negative: {}..{}' % t[TypeName], minv, maxv))
+                if maxv == 0:
+                    maxv = self.config['$MaxBinary'] if t[BaseType] == 'Binary' else \
+                           self.config['$MaxString'] if t[BaseType] == 'String' else \
+                           self.config['$MaxElements']
+                opts.update({'minv': minv, 'maxv': maxv})
             fmt = symval[S_TOPTS]['format'] if 'format' in symval[S_TOPTS] else ''
             symval[S_FVALIDATE] = get_format_validate_function(self.format_validate, t[BaseType], fmt)
             symval[S_FENCODE] = get_format_encode_function(self.format_codec, t[BaseType], fmt)
@@ -366,7 +369,7 @@ def _encode_choice(ts, val, codec):
     if k not in ts[S_EMAP]:
         _bad_value(ts, val)
     k = ts[S_EMAP][k]
-    f = ts[S_FLD][k][S_FDEF]
+    f = ts[S_FLD][k][SF_DEF]
     return {k: codec.encode(f[FieldType], v)}
 
 
@@ -378,7 +381,7 @@ def _decode_choice(ts, val, codec):  # Map Choice:  val == {key: value}
     k = _check_key(ts, k)
     if k not in ts[S_DMAP]:
         _bad_value(ts, val)
-    f = ts[S_FLD][k][S_FDEF]
+    f = ts[S_FLD][k][SF_DEF]
     k = ts[S_DMAP][k]
     return {k: codec.decode(f[FieldType], v)}
 
@@ -388,15 +391,15 @@ def _encode_maprec(ts, aval, codec):
     sval = ts[S_ENCTYPE]()
     assert type(sval) in (list, dict)
     fx = FieldName if codec.verbose_str else FieldID  # Verbose or minified identifier strings
-    fnames = [f[S_FDEF][FieldName] for f in ts[S_FLD].values()]
+    fnames = [f[SF_DEF][FieldName] for f in ts[S_FLD].values()]
     for f in ts[S_TDEF][Fields]:
         fs = ts[S_FLD][f[fx]]  # Symtab entry for field
-        fd = fs[S_FDEF]  # JADN field definition from symtab
+        fd = fs[SF_DEF]  # JADN field definition from symtab
         fname = fd[FieldName]  # Field name
-        fopts = fs[S_FOPT]  # Field options dict
-        if 'tfield' in fopts:  # Type of this field is specified by contents of another field
-            choice_type = aval[fopts['tfield']]
-            e = codec.encode(fd[FieldType], {choice_type: aval[fname]})
+        fopts = fs[SF_OPT]  # Field options dict
+        ctag = fs[SF_CTAG]
+        if ctag is not None:  # Type of this field is specified by contents of another field
+            e = codec.encode(fd[FieldType], {aval[ctag]: aval[fname]})
             sv = next(iter(e.values()))
         else:
             sv = codec.encode(fd[FieldType], aval[fname]) if fname in aval else None
@@ -425,8 +428,8 @@ def _decode_maprec(ts, sval, codec):
     fnames = [k for k in ts[S_FLD]]
     for f in ts[S_TDEF][Fields]:
         fs = ts[S_FLD][f[fx]]  # Symtab entry for field
-        fd = fs[S_FDEF]  # JADN field definition from symtab
-        fopts = fs[S_FOPT]  # Field options dict
+        fd = fs[SF_DEF]  # JADN field definition from symtab
+        fopts = fs[SF_OPT]  # Field options dict
         if type(val) == dict:
             fn = f[fx]
             sv = val[fn] if fn in val else None
@@ -434,10 +437,10 @@ def _decode_maprec(ts, sval, codec):
             fn = fd[FieldID] - 1
             sv = val[fn] if len(val) > fn else None
         if sv is not None:
-            if 'tfield' in fopts:  # Type of this field is specified by contents of another field
-                ctf = fopts['tfield']
-                choice_type = val[ctf] if isinstance(val, dict) else val[ts[S_EMAP][ctf] - 1]
-                av = codec.decode(fd[FieldType], {choice_type: sv})
+            ctag = fs[SF_CTAG]
+            if ctag is not None:  # Type of this field is specified by contents of another field
+                ct = ctag if type(val) == dict else ts[S_EMAP][ctag] - 1
+                av = codec.decode(fd[FieldType], {sval[ct]: sv})
                 aval[fd[FieldName]] = next(iter(av.values()))
             else:
                 aval[fd[FieldName]] = codec.decode(fd[FieldType], sv)
@@ -457,9 +460,9 @@ def _encode_array(ts, aval, codec):
     if extra:
         _extra_value(ts, aval, extra)
     for fn in ts[S_TDEF][Fields]:
-        f = ts[S_FLD][fn[FieldID]][S_FDEF]  # Use symtab field definition
+        f = ts[S_FLD][fn[FieldID]][SF_DEF]  # Use symtab field definition
         fx = f[FieldID] - 1
-        fopts = ts[S_FLD][fx + 1][S_FOPT]
+        fopts = ts[S_FLD][fx + 1][SF_OPT]
         av = aval[fx] if len(aval) > fx else None
         if av is not None:
             if 'tfield' in fopts:
@@ -486,9 +489,9 @@ def _decode_array(ts, sval, codec):  # Ordered list of types, returned as a list
     if extra:
         _extra_value(ts, val, extra)  # TODO: write sensible display of excess values
     for fn in ts[S_TDEF][Fields]:
-        f = ts[S_FLD][fn[FieldID]][S_FDEF]  # Use symtab field definition
+        f = ts[S_FLD][fn[FieldID]][SF_DEF]  # Use symtab field definition
         fx = f[FieldID] - 1
-        fopts = ts[S_FLD][fx + 1][S_FOPT]
+        fopts = ts[S_FLD][fx + 1][SF_OPT]
         sv = val[fx] if len(val) > fx else None
         if sv is not None:
             if 'tfield' in fopts:

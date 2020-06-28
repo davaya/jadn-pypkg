@@ -89,8 +89,8 @@ def has_fields(t):      # Is a type with fields listed in definition
 
 TYPE_OPTIONS = {        # ID, value type, description
     0x3d: 'id',         # '=', none, Enumerated type and Choice/Map/Record keys are ID not Name
-    0x2a: 'vtype',      # '*', string, Value type for ArrayOf and MapOf
     0x2b: 'ktype',      # '+', string, Key type for MapOf
+    0x2a: 'vtype',      # '*', string, Value type for ArrayOf and MapOf
     0x23: 'enum',       # '#', string, enumeration derived from the referenced Array/Choice/Map/Record type
     0x3e: 'pointer',    # '>', string, enumeration of pointers derived from the referenced Array/Choice/Map/Record type
     0x2f: 'format',     # '/', string, semantic validation keyword, may affect serialization
@@ -110,24 +110,44 @@ FIELD_OPTIONS = {
     0x21: 'default',    # '!', string, default value for an instance of this type
 }
 
-OPTION_ID = {           # Reverse index - must match TYPE_OPTIONS and FIELD_OPTIONS
-    'id':       chr(0x3d),
-    'vtype':    chr(0x2a),
-    'ktype':    chr(0x2b),
-    'enum':     chr(0x23),
-    'pointer':  chr(0x3e),
-    'format':   chr(0x2f),
-    'pattern':  chr(0x25),
-    'minv':     chr(0x7b),
-    'maxv':     chr(0x7d),
-    'unique':   chr(0x71),
-    'and':      chr(0x2229),
-    'or':       chr(0x222a),
-    'minc':     chr(0x5b),
-    'maxc':     chr(0x5d),
-    'tfield':   chr(0x26),
-    'dir':      chr(0x3c),
-    'default':  chr(0x21),
+OPTION_ID = {   # Pre-computed reverse index - must match TYPE_OPTIONS and FIELD_OPTIONS
+    'id':      chr(0x3d),
+    'ktype':   chr(0x2b),
+    'vtype':   chr(0x2a),
+    'enum':    chr(0x23),
+    'pointer': chr(0x3e),
+    'format':  chr(0x2f),
+    'pattern': chr(0x25),
+    'minv':    chr(0x7b),
+    'maxv':    chr(0x7d),
+    'unique':  chr(0x71),
+    'and':     chr(0x2229),
+    'or':      chr(0x222a),
+    'minc':    chr(0x5b),
+    'maxc':    chr(0x5d),
+    'tfield':  chr(0x26),
+    'dir':     chr(0x3c),
+    'default': chr(0x21),
+}
+
+OPTION_ORDER = {    # Pre-computed canonical option order - must match OPTION_ID
+    chr(0x3d): 0,
+    chr(0x2b): 1,
+    chr(0x2a): 2,
+    chr(0x23): 3,
+    chr(0x3e): 4,
+    chr(0x2f): 5,
+    chr(0x25): 6,
+    chr(0x7b): 7,
+    chr(0x7d): 8,
+    chr(0x71): 9,
+    chr(0x2229): 10,
+    chr(0x222a): 11,
+    chr(0x5b): 12,
+    chr(0x5d): 13,
+    chr(0x26): 14,
+    chr(0x3c): 15,
+    chr(0x21): 16,
 }
 
 REQUIRED_TYPE_OPTIONS = {
@@ -162,12 +182,13 @@ ALLOWED_TYPE_OPTIONS = {
     'Record': ['and', 'or', 'minv', 'maxv'],
 }
 
+# Ensure jsonschema prerequisite packages are installed, e.g., rfc3987 for uri/iri validation
 FORMAT_JS_VALIDATE = {      # Semantic validation formats defined by JSON Schema 2019-09 Sec 7.3
     'date-time': 'String',
     'date': 'String',
     'time': 'String',
     'duration': 'String',
-    # 'email': 'String',        # Python jsonschema package has deliberately buggy email - won't be fixed
+    # 'email': 'String',        # jsonschema package has deliberately buggy email - won't be fixed
     'idn-email': 'String',
     # 'hostname': 'String',     # jsonschema package needs bug fix
     'idn-hostname': 'String',

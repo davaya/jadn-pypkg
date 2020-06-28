@@ -2,8 +2,8 @@
 Translate JADN to JAS (JADN Abstract Syntax)
 """
 
+from jadn import topts_s2d, ftopts_s2d
 from jadn.definitions import *
-from jadn.utils import topts_s2d, ftopts_s2d
 from copy import deepcopy
 from datetime import datetime
 from textwrap import fill
@@ -68,10 +68,10 @@ def jas_dumps(jadn):
         ttype = td[BaseType]
         topts = topts_s2d(td[TypeOptions])
         tostr = ''
+        range = ''
         if 'minv' in topts or 'maxv' in topts:
             lo = topts['minv'] if 'minv' in topts else 0
             hi = topts['maxv'] if 'maxv' in topts else 0
-            range = ''
             if lo or hi:
                 range = '(' + str(lo) + '..' + (str(hi) if hi else 'MAX') + ')'
         for opt in tolist:
@@ -120,11 +120,11 @@ def jas_dumps(jadn):
                 if ttype.lower() == 'record':
                     fmt = '    {1:' + str(flen) + '} {2}{3}{4}'
                 items = []
-                for n, i in enumerate(titems):
+                for n, i in enumerate(titems):                          # TODO: Convert to use jadn2fielddef
                     ostr = ''
                     opts, ftopts = ftopts_s2d(i[FieldOptions])
                     if 'tfield' in opts:
-                        ostr += '.&' + opts['tfield']
+                        ostr += '(Tag(' + str(opts['tfield']) + '))'    # TODO: lookup field name
                         del opts['tfield']
                     if 'vtype' in opts:
                         ostr += '.*'

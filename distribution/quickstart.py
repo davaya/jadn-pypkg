@@ -5,7 +5,7 @@ import os
 import jadn
 from jadn.codec import Codec
 from jadn.transform import strip_comments
-from jadn.convert import jidl_dumps, table_dumps, html_dumps
+from jadn.convert import jidl_dumps, table_dumps, html_dumps, html_loads
 from jadn.translate import json_schema_dumps
 
 """
@@ -16,7 +16,7 @@ schema_data = {     # This is a Python value as returned by json.loads(), not a 
         ['Person', 'Record', [], 'JADN equivalent of structure from https://developers.google.com/protocol-buffers', [
             [1, 'name', 'String', [], ''],
             [2, 'id', 'Integer', [], ''],
-            [3, 'email', 'String', ['[0', '/email'], '']
+            [3, 'email', 'String', ['/email', '[0'], '']
         ]
     ]]
 }
@@ -36,18 +36,20 @@ print('\nSchema (JADN IDL with truncated comments):\n------------------')
 print(jidl_dumps(strip_comments(schema, width=32)))
 
 print('\nSchema (HTML):\n------------------')
-print(html_dumps(schema))
+html_doc = html_dumps(schema)
+print(html_doc)
 theme = os.path.join(jadn.data_dir(), 'dtheme.css')
 with open(theme) as f:
     print(f' (Render with {theme}: {f.read(50)} ...)')
+assert schema == html_loads(html_doc)   # Verify lossless round-trip HTML conversion, option order not significant
 
 print('\nSchema (Markdown):\n------------------')
 print(table_dumps(schema))
 
 print('\nSchema (JSON Schema):\n------------------')
-schema.update({                         # JSON Schema conversion needs a designated root type (Person)
+schema.update({                 # JSON Schema conversion needs root type (Person) and namespace $id
     'meta': {
-        'module': 'http://example.com/rolodex/v1.0',        # need a namespace $id
+        'module': 'http://example.com/rolodex/v1.0',
         'exports': ['Person']
     }
 })

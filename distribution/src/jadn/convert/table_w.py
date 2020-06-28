@@ -4,7 +4,6 @@ Translate JADN to HTML or Markdown property tables
 
 import jadn
 from jadn.definitions import *
-# from jadn import multiplicity, topts_s2d, ftopts_s2d, jadn2typestr, get_config
 from datetime import datetime
 
 
@@ -250,11 +249,6 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
             c = [cls[0]] + cls[2:]
         return type_item(f, c)
 
-    def _fieldstr(typestr, opts):
-        if 'tfield' in opts:
-            return typestr + '(&' + opts['tfield'] + ')'
-        return typestr
-
     doc_begin, doc_end, sect, meta_begin, meta_item, meta_end, type_begin, type_item, type_end = wtab[form]
     text = doc_begin()
     if 'meta' in schema:
@@ -268,8 +262,8 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
         text += meta_end()
 
     for td in schema['types']:
+        ttype = jadn.jadn2typestr(td[BaseType], td[TypeOptions])
         to = jadn.topts_s2d(td[TypeOptions])
-        ttype = jadn.jadn2typestr(td[BaseType], to)
         if not is_builtin(td[BaseType]):
             text += 'Error - bad type: ' + str(td) + '\n'
         elif td[BaseType] in (SIMPLE_TYPES + ('ArrayOf', 'MapOf')) or 'enum' in to or 'pointer' in to:
@@ -286,16 +280,12 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
             if td[BaseType] == 'Array':
                 cls2 = ['n', 's', 'n', 'd']         # Don't print ".ID" in type name but display fields as compact
                 text += _tbegin(to, td[TypeName], ttype, ['ID', 'Type', '#', 'Description'], cls2)
-                to.update({'id': True})
+                # to.update({'id': None})
             else:
                 text += _tbegin(to, td[TypeName], ttype, ['ID', 'Name', 'Type', '#', 'Description'], cls)
             for fd in td[Fields]:
-                ft, fto = jadn.ftopts_s2d(fd[FieldOptions])
-                fo = {'minc': 1, 'maxc': 1}
-                fo.update(ft)
-                ftype = _fieldstr(jadn.jadn2typestr(fd[FieldType], fto), fo)
-                fn = fd[FieldName] + ('/' if 'dir' in fo else '')
-                text += _titem(to, [str(fd[FieldID]), fn, ftype, jadn.multiplicity(fo['minc'], fo['maxc']), fd[FieldDesc]], cls)
+                fn, ftype, fmult, fdesc = jadn.utils.jadn2fielddef(fd, td)
+                text += _titem(to, [str(fd[FieldID]), fn, ftype, fmult, fdesc], cls)
         text += type_end()
 
     text += doc_end()

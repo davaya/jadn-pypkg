@@ -3,8 +3,8 @@ Translate JADN to JSON Schema
 """
 
 import json
+from jadn import topts_s2d, ftopts_s2d, get_config
 from jadn.definitions import *
-from jadn.utils import topts_s2d, ftopts_s2d, get_config
 from jadn.transform.transform import get_enum_items
 from datetime import datetime
 

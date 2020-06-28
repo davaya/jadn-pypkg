@@ -1,6 +1,6 @@
 import copy
 from jadn.definitions import *
-from jadn.utils import topts_s2d, ftopts_s2d, opts_d2s
+from jadn import topts_s2d, ftopts_s2d, opts_d2s, get_optx, del_opt
 
 
 def strip_comments(schema, width=0):             # Strip or truncate comments from schema
@@ -27,15 +27,6 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
         DerivedEnum:     Replace all derived and pointer enumerations with explicit Enumerated type definitions
         MapOfEnum:       Replace all MapOf types with listed keys with explicit Map type definitions
     """
-
-    def get_optx(opts, oname):
-        n = [i for i, x in enumerate(opts) if x[0] == OPTION_ID[oname]]
-        return n[0] if n else None
-
-    def del_opt(opts, oname):
-        n = [i for i, x in enumerate(opts) if x[0] == OPTION_ID[oname]]
-        if n:
-            del opts[n[0]]
 
     def epx(topts):             # Return option array index of enum or pointer option
         ex = get_optx(topts, 'enum')

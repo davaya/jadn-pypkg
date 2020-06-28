@@ -4,7 +4,7 @@ from datetime import datetime
 from lxml import etree, html
 from lxml.html.builder import *
 from jadn.definitions import *
-from jadn.utils import topts_s2d, ftopts_s2d, jadn2typestr, multiplicity
+from jadn import topts_s2d, ftopts_s2d, jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn
 
 
 """
@@ -87,8 +87,7 @@ def html_dumps(schema):
         he2 = etree.SubElement(het, 'div', {'class': 'tCaption'})
         he3 = etree.SubElement(he2, 'div', {'class': 'jTdef'})      # container for type definition column
         etree.SubElement(he3, 'div', {'class': 'jTname'}).text = tdef[TypeName]
-        to = topts_s2d(tdef[TypeOptions])
-        etree.SubElement(he3, 'div', {'class': 'jTstr'}).text = ' = ' + jadn2typestr(tdef[BaseType], to)
+        etree.SubElement(he3, 'div', {'class': 'jTstr'}).text = ' = ' + jadn2typestr(tdef[BaseType], tdef[TypeOptions])
         etree.SubElement(he2, 'div', {'class': 'jTdesc'}).text = ' // ' + tdef[TypeDesc] if tdef[TypeDesc] else ''
         if len(tdef) > Fields:
             he2 = etree.SubElement(het, 'div', {'class': 'tHead'})
@@ -103,13 +102,11 @@ def html_dumps(schema):
                 he3 = etree.SubElement(he2, 'div', {'class': 'tRow'})
                 if len(tdef[Fields][0]) > ItemDesc + 1:
                     etree.SubElement(he3, 'div', {'class': 'tCell jFid'}).text = str(fdef[FieldID])
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFname'}).text = fdef[FieldName]  # TODO: id option
-                    ft, fto = ftopts_s2d(fdef[FieldOptions])
-                    fo = {'minc': 1, 'maxc': 1}
-                    fo.update(ft)
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFstr'}).text = jadn2typestr(fdef[FieldType], fto)
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFmult'}).text = multiplicity(fo['minc'], fo['maxc'])
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdef[FieldDesc]
+                    fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, tdef)
+                    etree.SubElement(he3, 'div', {'class': 'tCell jFname'}).text = fname
+                    etree.SubElement(he3, 'div', {'class': 'tCell jFstr'}).text = ftyperef
+                    etree.SubElement(he3, 'div', {'class': 'tCell jFmult'}).text = fmult
+                    etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdesc
                 else:
                     etree.SubElement(he3, 'div', {'class': 'tCell jFid'}).text = str(fdef[ItemID])
                     etree.SubElement(he3, 'div', {'class': 'tCell jFname'}).text = fdef[ItemValue]  # TODO: id option
@@ -153,44 +150,34 @@ def load_type(e):
     return ['foo', 'Record', [], '']
 
 
-def html_loads(hdoc):
+def html_loads(hdoc, debug=False):
+
     html_grammar = """
         schema  = kvp* typedef* EOF
         kvp     = key value
-        key     = "jKey" us name ":"? rs
-        value   = "jVal" us any rs
-
-        name    = r"[-$\w]+"
-        us      = "!"
-        rs      = "|"
-        any     = r"[^|]*"
-
-        typedef = typename typestr typedesc? (field*/item*)
-        field   = fieldid fieldname fieldstr multi fielddesc?
-        item    = fieldid
+        typedef = tname tstr tdesc? (field+ / item+)?
+        field   = fid fname fstr fmult fdesc?
+        item    = fid fname fdesc?
         
-        typename    = "jTname" us name rs
-        typestr     = "jTstr" us "=" any rs
-        typedesc    = "jTdesc" us "//" any rs
-        fieldid     = "jFid" us r"\d+" rs
-        fieldname   = "jFname" us name rs
-        fieldstr    = "jFstr" us any rs
-        fielddesc   = "jFdesc" us any rs
-        multi       = "jFmult" us r"\d+(\.\.\d+)?" rs
+        key     = r"jKey\x21(.*):\\x7c$"
+        value   = r"jVal\x21(.*)\\x7c$"
+        tname   = r"jTname\x21(.*)\\x7c$"
+        tstr    = r"jTstr\x21\s*=\s*(.*)\\x7c$"
+        tdesc   = r"jTdesc\x21(?:\/\/)?\s*(.*)\\x7c$"
+        fid     = r"jFid\x21(.*)\\x7c$"
+        fname   = r"jFname\x21(.*)\\x7c$"
+        fstr    = r"jFstr\x21(.*)\\x7c$"
+        fmult   = r"jFmult\x21(.*)\\x7c$"
+        fdesc   = r"jFdesc\x21(.*)\\x7c$"
     """
 
-    def split_typestr(typestr):
-        return typestr, []
-
-    def split_fieldstr(fieldstr, multi):
-        return fieldstr + ('[' + multi + ']' if multi != '1' else ''), []
-
-    def jtoken(txt):    # Extract text from HTML elements with specified class attributes
+    # Extract text from HTML elements with specified class attributes; class IDs enable pre-parsing
+    # Use US(\x31) / RS(\x30) in production token stream to avoid collisions (! and | used for debug readability)
+    def jtoken(txt):
         for e in html.fromstring(txt).iter():
             cl = [c for c in e.get('class', '').split() if c[0] == 'j']
             if cl and cl[0] in ('jKey', 'jVal', 'jTname', 'jTstr', 'jTdesc', 'jFid', 'jFname', 'jFstr', 'jFmult', 'jFdesc'):
-                yield cl[0] + '!' + (e.text.strip() if e.text else '') + '|' + '\n'
-                # yield cl[0] + chr(31) + (e.text.strip() if e.text else '') + chr(30) + '\n'
+                yield cl[0] + '\x21' + (e.text.strip() if e.text else '') + '\x7c' + '\n'
 
     def walk(node, ptree='', indent=0, close=False):
         if getattr(node, '__iter__', ''):
@@ -205,9 +192,9 @@ def html_loads(hdoc):
 
     def v_schema(node, nl):
         meta = [v for d in nl for k, v in d.items() if k == 'kvp']
-        types = [v for d in nl for k, v in d.items() if k == 'typedef']
-        return {'meta': {k: v for d in meta for k, v in d.items()},
-                'types': types}
+        schema = {'meta': {k: v for d in meta for k, v in d.items()}} if meta else {}
+        schema.update({'types': [v for d in nl for k, v in d.items() if k == 'typedef']})
+        return schema
 
     def v_kvp(node, nl):
         k, v = nl[0]['key'], nl[1]['value']
@@ -218,29 +205,28 @@ def html_loads(hdoc):
         return {k: v}
 
     def v_typedef(node, nl):
-        basetype, topts = split_typestr(nl[1]['typestr'])
-        fields = [v for d in nl for k, v in d.items() if k == 'field']
-        return [nl[0]['typename'], basetype , topts, nl[2]['typedesc']] + [fields]
-
-    def v_value3(node, nl):
-        return node[3].value
+        basetype, topts = typestr2jadn(nl[1]['tstr'])
+        fields = [v for d in nl for k, v in d.items() if k in ('field', 'item')]
+        return [nl[0]['tname'], basetype , topts, nl[2]['tdesc']] + ([fields] if fields else [])
 
     def v_field(node, nl):
-        fieldtype, ftopts = split_fieldstr(nl[2]['fieldstr'], nl[3]['multi'])
-        return [int(nl[0]['fieldid']), nl[1]['fieldname'], fieldtype, ftopts, nl[4]['fielddesc']]
+        return [int(nl[0]['fid'])] + fielddef2jadn(nl[1]['fname'], nl[2]['fstr'], nl[3]['fmult'], nl[4]['fdesc'])
 
-    def v_default(node, nl):
-        if getattr(node, '__iter__', ''):
-            return node[2].value        # Get "value" for rules like ["name" sep "value" sep]
-        return node.value
+    def v_item(node, nl):
+        return [int(nl[0]['fid']), nl[1]['fname'], nl[2]['fdesc']]
+
+    def v_default(node):
+        if node.value:
+            if getattr(node, '__iter__', ''):
+                return visit(node)
+            return node.rule.regex.match(node.value).group(1)
 
     visitor = {
         'schema': v_schema,
         'kvp': v_kvp,
         'typedef': v_typedef,
-        'typestr': v_value3,
-        'typedesc': v_value3,
         'field': v_field,
+        'item': v_item,
     }
 
     def visit(node):
@@ -249,14 +235,13 @@ def html_loads(hdoc):
         if getattr(node, '__iter__', ''):
             for n in list(node):
                 nl.append(visit(n))
-        value = visitor[name](node, nl) if name in visitor else v_default(node, nl)
+        value = visitor[name](node, nl) if name in visitor else v_default(node)
         return {name: value}
 
+    # print(html_tree_dumps(hdoc))
+    parser = ParserPEG(html_grammar, 'schema', debug=debug)
     tokens = ''.join(jtoken(hdoc))
-    # print(tokens)
-    parser = ParserPEG(html_grammar, 'schema')
     parse_tree = parser.parse(tokens)
-    # print(walk(parse_tree))
     schema = visit(parse_tree)['schema']
     return schema
 

@@ -4,7 +4,7 @@ Translate JADN to JADN Interface Definition Language
 
 from datetime import datetime
 
-from jadn import topts_s2d, ftopts_s2d, jadn2typestr
+from jadn import topts_s2d, ftopts_s2d, opts_d2s, jadn2typestr
 from jadn.definitions import *
 
 def jidl_dumps(jadn):
@@ -17,12 +17,13 @@ def jidl_dumps(jadn):
         h = '*' if hi == 0 else str(hi)
         return ' [' + str(lo) + '..' + str(h) + ']'
 
-    def _fieldstr(typestr, opts):
+    def _fieldstr(typestr, opts):           # TODO: use jadn2fielddef
+        extra = ''
         if 'minc' in opts or 'maxc' in opts:
-            return typestr + _mult(opts, optional=True)
+            extra += _mult(opts, optional=True)
         if 'tfield' in opts:
-            return typestr + '(&' + opts['tfield'] + ')'
-        return typestr
+            extra += '(Tag(' + str(opts['tfield']) + '))'  # TODO: lookup field name
+        return typestr + extra
 
     def line(cw, content, desc):
         fmt = '{:' + str(cw) + '}{}'
@@ -43,8 +44,8 @@ def jidl_dumps(jadn):
     for td in jadn['types']:
         bt = td[BaseType]
         assert is_builtin(bt)
+        ts = jadn2typestr(bt, td[TypeOptions])
         to = topts_s2d(td[TypeOptions])
-        ts = jadn2typestr(bt, to)
         flds = '{' if has_fields(bt) or (bt == 'Enumerated' and 'enum' not in to and 'pointer' not in to) else ''
         text += '\n' + line(44, '{} = {} {}'.format(td[TypeName], ts, flds), td[TypeDesc])
         if flds:
@@ -59,7 +60,7 @@ def jidl_dumps(jadn):
                     ft, fto = ftopts_s2d(f[FieldOptions])
                     fo = {'minc': 1, 'maxc': 1}
                     fo.update(ft)
-                    fs = _fieldstr(jadn2typestr(f[FieldType], fto), fo) + (' unique' if 'unique' in fto else '')
+                    fs = _fieldstr(jadn2typestr(f[FieldType], opts_d2s(fto)), fo) + (' unique' if 'unique' in fto else '')
                     fn = f[FieldName] + ('/' if 'dir' in fo else '')
                     content = ffmt[id].format(f[FieldID], fn, fs + sep)
                     desc = (f[FieldName] + ':: ' if id and f[FieldName] else '') + f[FieldDesc]

@@ -117,6 +117,17 @@ def topo_sort(items):
     return out, roots
 
 
+def get_optx(opts, oname):
+    n = [i for i, x in enumerate(opts) if x[0] == OPTION_ID[oname]]
+    return n[0] if n else None
+
+
+def del_opt(opts, oname):
+    n = [i for i, x in enumerate(opts) if x[0] == OPTION_ID[oname]]
+    if n:
+        del opts[n[0]]
+
+
 def topts_s2d(olist):        # Convert list of type definition option strings to options dictionary
     tval = {
         'id': lambda x: True,
@@ -132,7 +143,6 @@ def topts_s2d(olist):        # Convert list of type definition option strings to
         'and': lambda x: x,
         'or': lambda x: x,
     }
-
     assert set(tval) == {k for k in TYPE_OPTIONS.values()}
     assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
     opts = {}
@@ -141,7 +151,7 @@ def topts_s2d(olist):        # Convert list of type definition option strings to
             k = TYPE_OPTIONS[ord(o[0])]
             opts[k] = tval[k](o[1:])
         except KeyError:
-            raise ValueError(f'Unknown type option: {o}')
+            raise_error(f'Unknown type option: {o}')
     return opts
 
 
@@ -149,11 +159,10 @@ def ftopts_s2d(olist):       # Convert list of field definition option strings t
     fval = {
         'minc': lambda x: int(x),
         'maxc': lambda x: int(x),
-        'tfield': lambda x: x,
         'dir': lambda x: True,
+        'tfield': lambda x: int(x),
         'default': lambda x: x,
     }
-
     assert set(fval) == {k for k in FIELD_OPTIONS.values()}
     assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
     fopts, topts = {}, {}
@@ -170,101 +179,119 @@ def opts_d2s(to):
     return [OPTION_ID[k] + ('' if v is True else str(v)) for k, v in to.items()]
 
 
-def multiplicity(minc, maxc):
-    if minc == 1 and maxc == 1:
-        return '1'
-    return str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
+def opts_sort(olist):      # Sort JADN option list into canonical order
+    return sorted(olist, key=lambda x: OPTION_ORDER[x[0]])
 
 
 def typestr2jadn(typestring):
-    """
-    0x3d: 'id',         # '=', none, Enumerated type and Choice/Map/Record keys are ID not Name
-    0x2a: 'vtype',      # '*', string, Value type for ArrayOf and MapOf
-    0x2b: 'ktype',      # '+', string, Key type for MapOf
-    0x23: 'enum',       # '#', string, enumeration derived from the referenced Array/Choice/Map/Record type
-    0x3e: 'pointer',    # '>', string, enumeration of pointers derived from the referenced Array/Choice/Map/Record type
-    0x2f: 'format',     # '/', string, semantic validation keyword, may affect serialization
-    0x25: 'pattern',    # '%', string, regular expression that a string must match
-    0x7b: 'minv',       # '{', integer, minimum byte or text string length, numeric value, element count
-    0x7d: 'maxv',       # '}', integer, maximum byte or text string length, numeric value, element count
-    0x71: 'unique',     # 'q', none, ArrayOf instance must not contain duplicates
-    """
-
-    def _sopts(srange):
-        if srange:
-            m = re.match(r'^.?(-?\d+)\.\.(-?\d+).?$', srange)
-        return {}
-
-    def _vopts(vrange):
-        if vrange:
-            m = re.match(r'^.*$', vrange)
-        return {}
-
     topts = {}
-    p_name = r'^([\w$-]+)'
-    p_id = r'(.ID)?'
-    p_func = r'(\(\w+\))?'
-    p_range = r'(\{.*\})?'
-    p_mult = r'(\[.*\])?'
-    pattern = '^' + p_name + p_id + p_func + p_range + p_mult + '$'
+    p_name = r'([:\w$-]+)'              # 1 type name
+    p_id = r'(.ID)?'                    # 2 'id'
+    p_func = r'(\(\w+\))?'              # 3 'ktype', 'vtype', 'enum', 'pointer'
+    p_format = r'(?:\s*\/(\w+))?'       # 4 'format'
+    p_pattern = r'(?:\s*\(%(.+)%\))?'   # 5 'pattern'
+    p_range = r'\s*(\{.*\})?'           # 6 'minv', 'maxv'
+    p_unique = r'\s*(unique)?'          # 7 'unique'
+    pattern = '^' + p_name + p_id + p_func + p_format + p_pattern + p_range + p_unique + '$'
     m = re.match(pattern, typestring)
     tname = m.group(1)
-    topts.update({'id': None} if m.group(2) else {})
-    topts.update({'unique': None} if False else {})
-    func = m.group(3)
-    topts.update(_vopts(m.group(4)) if tname in ('Integer', 'Number') else _sopts(m.group(4)))
-    mult = m.group(5)
-    return tname, topts
+    topts.update({'id': True} if m.group(2) else {})
+    func = m.group(3)                   # TODO: (ktype, vtype), Enum(), Pointer() options
+    topts.update({'format': m.group(4)} if m.group(4) else {})
+    topts.update({'pattern': m.group(5)} if m.group(5) else {})
+    if m.group(6):
+        mr = re.match(r'^\{(\d+|\*)\.\.(\d+|\*)\}$', m.group(6))
+        topts.update({} if mr.group(1) == '*' else {'minv': int(mr.group(1))})
+        topts.update({} if mr.group(2) == '*' else {'maxv': int(mr.group(2))})
+    topts.update({'unique': True} if m.group(7) else {})
+    return tname, opts_d2s(topts)
 
 
-def jadn2typestr(typename, typeopts):   # Convert typename and options to string.
+def jadn2typestr(tname, topts):     # Convert typename and options to string
 
-    def _typestr(tname, opts):          # SIDE EFFECT: remove known options from opts to flag leftovers
+    def _kvstr(optv):               # Handle ktype/vtype containing Enum options
+        if optv[0] == OPTION_ID['enum']:
+            return 'Enum(' + optv[1:] + ')'
+        elif optv[0] == OPTION_ID['pointer']:
+            return 'Pointer(' + optv[1:] + ')'
+        return optv
 
-        def _kvstr(optv):               # Handle ktype/vtype containing Enum options
-            if optv[0] == OPTION_ID['enum']:
-                return 'Enum(' + optv[1:] + ')'
-            elif optv[0] == OPTION_ID['pointer']:
-                return 'Pointer(' + optv[1:] + ')'
-            return optv
+    def _srange(ops):               # Size range (single-ended) - default is {0..*}
+        lo = ops.pop('minv', 0)
+        hi = ops.pop('maxv', 0)
+        hs = '*' if hi == 0 else str(hi)
+        return str(lo) + '..' + hs if lo != 0 or hi != 0 else ''
 
-        def _srange(ops):                   # Size range (single-ended) - default is {0..*}
-            lo = ops.pop('minv', 0)
-            hi = ops.pop('maxv', 0)
-            hs = '*' if hi == 0 else str(hi)
-            return str(lo) + '..' + hs if lo != 0 or hi != 0 else ''
+    def _vrange(ops):               # Value range (double-ended) - default is {*..*}
+        lo = ops.pop('minv', '*')
+        hi = ops.pop('maxv', '*')
+        return str(lo) + '..' + str(hi) if lo != '*' or hi != '*' else ''
 
-        def _vrange(ops):                   # Value range (double-ended) - default is {*..*}
-            lo = ops.pop('minv', '*')
-            hi = ops.pop('maxv', '*')
-            return str(lo) + '..' + str(hi) if lo != '*' or hi != '*' else ''
+    opts = topts_s2d(topts)
+    extra = '.ID' if opts.pop('id', None) else ''   # SIDE EFFECT!: remove known options from opts.
+    if tname == 'ArrayOf':
+        extra += '(' + _kvstr(opts.pop('vtype')) + ')'
+    elif tname == 'MapOf':
+        extra += '(' + _kvstr(opts.pop('ktype')) + ', ' + _kvstr(opts.pop('vtype')) + ')'
+    v = opts.pop('enum', None)
+    extra += '(Enum(' + v + '))' if v else ''
+    v = opts.pop('pointer', None)
+    extra += '(Pointer(' + v + '))' if v else ''
+    v = opts.pop('pattern', None)
+    extra += '(%' + v + '%)' if v else ''
+    v = _vrange(opts) if tname in ('Integer', 'Number') else _srange(opts)
+    extra += '{' + v + '}' if v else ''
+    v = opts.pop('format', None)
+    extra += ' /' + v if v else ''
+    v = opts.pop('unique', None)
+    extra += ' unique' if v else ''
+    v = opts.pop('and', None)           # hack set operations for now.  TODO: generalize to any number
+    extra += ' ∩ ' + v if v else ''
+    v = opts.pop('or', None)
+    extra += ' ∪ ' + v if v else ''
+    return tname + extra + (' ?' + str([str(k) for k in opts]) + '?' if opts else '')  # Flag unrecognized options
 
-        extra = '.ID' if opts.pop('id', None) else ''   # SIDE EFFECT!: remove known options from opts.
-        if tname == 'ArrayOf':
-            extra += '(' + _kvstr(opts.pop('vtype')) + ')'
-        elif tname == 'MapOf':
-            extra += '(' + _kvstr(opts.pop('ktype')) + ', ' + _kvstr(opts.pop('vtype')) + ')'
-        v = opts.pop('enum', None)
-        extra += '(Enum(' + v + '))' if v else ''
-        v = opts.pop('pointer', None)
-        extra += '(Pointer(' + v + '))' if v else ''
-        v = opts.pop('pattern', None)
-        extra += '(%' + v + '%)' if v else ''
-        v = _vrange(opts) if tname in ('Integer', 'Number') else _srange(opts)
-        extra += '{' + v + '}' if v else ''
-        v = opts.pop('format', None)
-        extra += ' /' + v if v else ''
-        v = opts.pop('unique', None)
-        extra += ' unique' if v else ''
-        v = opts.pop('and', None)           # hack set operations for now.  TODO: generalize to any number
-        extra += ' ∩ ' + v if v else ''
-        v = opts.pop('or', None)
-        extra += ' ∪ ' + v if v else ''
-        return tname + extra
 
-    o2 = typeopts.copy()                        # Don't modify opts
-    ts = _typestr(typename, o2)
-    return ts + (' ?' + str([str(k) for k in o2]) + '?' if o2 else '')  # Flag unrecognized options
+def jadn2fielddef(fdef, tdef):
+    """
+    fopts = minc, maxc, tfield, dir, default
+
+    ft, fto = ftopts_s2d(fdef[FieldOptions])
+    fo = {'minc': 1, 'maxc': 1}
+    fo.update(ft)
+    etree.SubElement(he3, 'div', {'class': 'tCell jFstr'}).text = jadn2typestr(fdef[FieldType], fto)
+    etree.SubElement(he3, 'div', {'class': 'tCell jFmult'}).text = multiplicity(fo['minc'], fo['maxc'])
+    etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdef[FieldDesc]
+    """
+
+    idt = get_optx(tdef[TypeOptions], 'id') is not None
+    fo, fto = ftopts_s2d(fdef[FieldOptions])
+    fname = ('' if idt else fdef[FieldName]) + ('/' if 'dir' in fo else '')  # TODO: process tfield
+    tfield = fo.get('tfield')
+    tf = ''
+    if tfield:
+        tf = {f[FieldID]: f[FieldName] for f in tdef[Fields]}[tfield]
+        tf = tf if tf else str(tfield)
+        tf = '(Tag(' + tf + '))'
+    ftyperef = jadn2typestr(fdef[FieldType] + tf, opts_d2s(fto))
+    minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
+    fmult = '1' if minc == 1 and maxc == 1 else str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
+    fdesc = (fdef[FieldName] + ':: ' if idt else '') + fdef[FieldDesc]
+    return fname, ftyperef, fmult, fdesc
+
+
+def fielddef2jadn(fname, fstr, fmult, fdesc):
+    ftyperef, fopts = typestr2jadn(fstr)
+    # one of: enum.id, enum, field.id, field
+    fo = topts_s2d(fopts)
+    fo.update({} if fname else {'id': True})
+    m = re.match(r'^(\d+)\.\.(\d+|\*)$', fmult)
+    if m:
+        minc = int(m.group(1))
+        maxc = 0 if m.group(2) == '*' else int(m.group(2))
+        fo.update({'minc': minc} if minc != 1 else {})
+        fo.update({'maxc': maxc} if maxc != 1 else {})
+    return [fname, ftyperef, opts_sort(opts_d2s(fo)), fdesc] if ftyperef else [fname, fdesc]
 
 
 def get_config(meta):
