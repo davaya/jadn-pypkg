@@ -16,7 +16,7 @@ def data_dir():
     """
     Return directory containing JADN schema files
     """
-    return os.path.abspath(os.path.dirname(__file__))
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
 
 
 def check(schema):

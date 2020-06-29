@@ -9,7 +9,7 @@ from jadn.codec import Codec
 class JADN(TestCase):
 
     def setUp(self):
-        fn = os.path.join(jadn.schema_dir(), 'jadn_schema.jadn')
+        fn = os.path.join(jadn.data_dir(), 'jadn_schema.jadn')
         schema = jadn.load(fn)
         self.schema = schema
         sa = jadn.analyze(schema)

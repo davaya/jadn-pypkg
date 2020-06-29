@@ -1,10 +1,9 @@
 
 import json
+import os
 import binascii
-from unittest import main, TestCase
-
+import unittest
 import jadn
-from jadn.codec import Codec
 
 
 # Encode and decode data to verify that numeric object keys work properly when JSON converts them to strings
@@ -12,7 +11,7 @@ def _j(data):
     return json.loads(json.dumps(data))
 
 
-class BasicTypes(TestCase):
+class BasicTypes(unittest.TestCase):
 
     schema = {                # JADN schema for datatypes used in Basic Types tests
         'types': [
@@ -76,7 +75,7 @@ class BasicTypes(TestCase):
 
     def setUp(self):
         jadn.check(self.schema)
-        self.tc = Codec(self.schema, verbose_rec=False, verbose_str=False)
+        self.tc = jadn.codec.Codec(self.schema, verbose_rec=False, verbose_str=False)
 
     def test_primitive(self):   # Non-composed types (bool, int, num, str)
         self.assertEqual(self.tc.decode('T-bool', True), True)
@@ -730,7 +729,7 @@ class BasicTypes(TestCase):
         ta()
 
 
-class Compound(TestCase):  # TODO: arrayOf(rec,map,array,arrayof,choice), array(), map(), rec()
+class Compound(unittest.TestCase):  # TODO: arrayOf(rec,map,array,arrayof,choice), array(), map(), rec()
 
     schema = {
         'types': [
@@ -760,7 +759,7 @@ class Compound(TestCase):  # TODO: arrayOf(rec,map,array,arrayof,choice), array(
 
     def setUp(self):
         jadn.check(self.schema)
-        self.tc = Codec(self.schema)
+        self.tc = jadn.codec.Codec(self.schema)
 
     C4a = {'rec': {'a': 1, 'b': 'c'}}
     C4m = {10: [1, 'c']}
@@ -776,8 +775,8 @@ class Compound(TestCase):  # TODO: arrayOf(rec,map,array,arrayof,choice), array(
         self.assertEqual(self.tc.encode('T-choice', self.C4a), self.C4m)
 
 
-class Selectors(TestCase):         # TODO: bad schema - verify * field has only Choice type
-                                            # TODO: add tests cases to decode multiple values for Choice (bad)
+class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field has only Choice type
+                                            # TODO: add test cases to decode multiple values for Choice (bad)
     schema = {  # JADN schema for selector tests
         'types': [
             ['T-attr-arr-tag', 'Array', [], '', [
@@ -790,7 +789,7 @@ class Selectors(TestCase):         # TODO: bad schema - verify * field has only 
             ]],
             ['T-attr-rec-name', 'Record', [], '', [
                 [1, 'type', 'Enumerated', ['#Menu'], ''],
-                [2, 'value', 'Menu', ['&type'], '']
+                [2, 'value', 'Menu', ['&1'], '']
             ]],
             ['T-property-explicit-primitive', 'Record', [], '', [
                 [1, 'foo', 'String', [], ''],
@@ -853,7 +852,7 @@ class Selectors(TestCase):         # TODO: bad schema - verify * field has only 
 
     def setUp(self):
         jadn.check(self.schema)
-        self.tc = Codec(self.schema)
+        self.tc = jadn.codec.Codec(self.schema)
 
     arr_name1_api = ['count', 17]
     arr_name2_api = ['color', 'green']
@@ -1048,7 +1047,7 @@ class Selectors(TestCase):         # TODO: bad schema - verify * field has only 
             self.tc.decode('T-property-explicit-primitive', self.pep_bad_min)
 
 
-class ListCardinality(TestCase):      # TODO: arrayOf(rec,map,array,arrayof,choice), array(), map(), rec()
+class ListCardinality(unittest.TestCase):      # TODO: arrayOf(rec,map,array,arrayof,choice), array(), map(), rec()
 
     schema = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
         'types': [
@@ -1082,7 +1081,7 @@ class ListCardinality(TestCase):      # TODO: arrayOf(rec,map,array,arrayof,choi
 
     def setUp(self):
         jadn.check(self.schema)
-        self.tc = Codec(self.schema)
+        self.tc = jadn.codec.Codec(self.schema)
 
     Lna = {'string': 'cat'}                     # Cardinality 0..n field omits empty list.  Use ArrayOf type to send empty list.
     Lsa = {'string': 'cat', 'list': 'red'}      # Always invalid, value is a string, not a list of one string.
@@ -1212,7 +1211,7 @@ class ListCardinality(TestCase):      # TODO: arrayOf(rec,map,array,arrayof,choi
         self.assertDictEqual(self.tc.decode('T-list-1-n', self.L3a), self.L3a)
 
 
-class ListTypes(TestCase):
+class ListTypes(unittest.TestCase):
     schema = {
         'types': [
             ['T-list', 'ArrayOf', ['*T-list-types'], ''],
@@ -1255,7 +1254,7 @@ class ListTypes(TestCase):
 
     def setUp(self):
         jadn.check(self.schema)
-        self.tc = Codec(self.schema)
+        self.tc = jadn.codec.Codec(self.schema)
 
     prims = [{
             'bools': [True],
@@ -1280,16 +1279,16 @@ class ListTypes(TestCase):
         self.assertListEqual(self.tc.decode('T-list', self.enums), self.enums)
 
 
-class Bounds(TestCase):        # TODO: check max and min string length, integer values, array sizes
+class Bounds(unittest.TestCase):        # TODO: check max and min string length, integer values, array sizes
                                         # TODO: Schema default and options
     schema = {}
 
     def setUp(self):
         jadn.check(self.schema)
-        self.tc = Codec(self.schema, verbose_rec=True, verbose_str=True)
+        self.tc = jadn.codec.Codec(self.schema, verbose_rec=True, verbose_str=True)
 
 
-class Format(TestCase):
+class Format(unittest.TestCase):
 
     schema = {                          # JADN schema for value constraint tests
         'types': [
@@ -1311,6 +1310,7 @@ class Format(TestCase):
             ['MAC-Addr', 'Binary', ['/eui'], ''],
             ['Email-Addr', 'String', ['/email'], ''],
             ['Hostname', 'String', ['/hostname'], ''],
+            ['URI', 'String', ['/uri'], ''],
             ['Int8', 'Integer', ['/i8'], ''],
             ['Int16', 'Integer', ['/i16'], ''],
             ['Int32', 'Integer', ['/i32'], ''],
@@ -1320,7 +1320,7 @@ class Format(TestCase):
 
     def setUp(self):
         jadn.check(self.schema)
-        self.tc = Codec(self.schema)
+        self.tc = jadn.codec.Codec(self.schema)
 
     ipv4_b = binascii.a2b_hex('c6020304')           # IPv4 address
     ipv4_s64 = 'xgIDBA'                             # Base64url encoded
@@ -1459,6 +1459,37 @@ class Format(TestCase):
         with self.assertRaises(ValueError):
             self.tc.decode('Hostname', self.email1s)
 
+    good_urls = [       # Some examples from WHATWG spec (which uses URL as a synonym for URI, so URNs are valid URLs)
+        'http://example.com/resource?foo=bar#fragment',
+        'urn:isbn:0451450523',
+        'urn:uuid:6e8bc430-9c3a-11d9-9669-0800200c9a66',
+        'https://example.com/././foo',
+        'file://loc%61lhost/',
+        'https://EXAMPLE.com/../x',
+        'https://example.org//',
+    ]
+    bad_urls = [
+        'www.example.com/index.html',       # Missing scheme
+        # 'https:example.org',                  # // is required
+        # 'https://////example.com///',
+        # 'http://www.example.com',             # Missing resource
+        'file:///C|/demo',
+        # 'https://user:password@example.org/',
+        'https://example.org/foo bar',      # Extra whitespace
+        'https://example.com:demo',         #
+        'http://[www.example.com]/',        #
+    ]
+
+    def test_uri(self):
+        for uri in self.good_urls:
+            self.assertEqual(self.tc.encode('URI', uri), uri)
+            self.assertEqual(self.tc.decode('URI', uri), uri)
+        for uri in self.bad_urls:
+            with self.assertRaises(ValueError):
+                self.tc.encode('URI', uri)
+            with self.assertRaises(ValueError):
+                self.tc.decode('URI', uri)
+
     int8v0 = 0
     int8v1 = -128
     int8v2 =  127
@@ -1541,5 +1572,136 @@ class Format(TestCase):
         with self.assertRaises(ValueError):
             self.tc.decode('Int64', self.int64v4)
 
+class JADN(unittest.TestCase):
+
+    def setUp(self):
+        fn = os.path.join(jadn.data_dir(), 'jadn_schema.jadn')
+        schema = jadn.load(fn)
+        self.schema = schema
+        sa = jadn.analyze(schema)
+        if sa['undefined']:
+            print('Warning - undefined:', sa['undefined'])
+        self.tc = jadn.codec.Codec(schema)
+
+    def test_jadn_self(self):
+        self.tc.set_mode(verbose_rec=True, verbose_str=True)
+        self.assertDictEqual(self.tc.encode('Schema', self.schema), self.schema)
+        self.assertDictEqual(self.tc.decode('Schema', self.schema), self.schema)
+
+
+class Simplify(unittest.TestCase):
+
+    schema_enum_optimized = {
+        'meta': {'module': 'http://jadn.org/unittests-enum-optimized'},
+        'types': [
+            ['Pixel', 'Record', [], '', [
+                [1, 'red', 'Integer', [], 'rojo'],
+                [2, 'green', 'Integer', [], 'verde'],
+                [3, 'blue', 'Integer', [], '']
+            ]],
+            ['Channel', 'Enumerated', ['#Pixel'], ''],      # Derived enumeration (explicitly named)
+            ['ChannelMask', 'ArrayOf', ['*#Pixel'], ''],    # Array of items from named derived enum
+
+            ['Pixel2', 'Record', [], '', [
+                [1, 'red', 'Integer', [], 'rojo'],
+                [2, 'green', 'Integer', [], 'verde'],
+                [3, 'blue', 'Integer', [], '']
+            ]],
+            ['ChannelMask2', 'ArrayOf', ['*#Pixel2'], ''],  # Array of items from generated derived enum
+
+            ['Foo', 'Array', [], '', [
+                [1, 'type', 'Enumerated', ['#Menu'], ''],
+                [2, 'value', 'String', [], '']
+            ]],
+            ['Menu', 'Choice', [], '', [
+                [1, 'open', 'String', [], ''],
+                [2, 'close', 'String', [], '']
+            ]]
+        ]
+    }
+
+    schema_enum_simplified = {
+        'meta': {'module': 'http://jadn.org/unittests-enum-simple'},
+        'types': [
+            ['Pixel', 'Record', [], '', [
+                [1, 'red', 'Integer', [], 'rojo'],
+                [2, 'green', 'Integer', [], 'verde'],
+                [3, 'blue', 'Integer', [], '']
+            ]],
+            ['Channel', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelMask', 'ArrayOf', ['*Channel'], ''],
+
+            ['Pixel2', 'Record', [], '', [
+                [1, 'red', 'Integer', [], 'rojo'],
+                [2, 'green', 'Integer', [], 'verde'],
+                [3, 'blue', 'Integer', [], '']
+            ]],
+            ['ChannelMask2', 'ArrayOf', ['*Pixel2$Enum'], ''],  # Array of items from generated derived enum
+
+            ['Foo', 'Array', [], '', [
+                [1, 'type', 'Menu$Enum', [], ''],
+                [2, 'value', 'String', [], '']
+            ]],
+            ['Menu', 'Choice', [], '', [
+                [1, 'open', 'String', [], ''],
+                [2, 'close', 'String', [], '']
+            ]],
+            ['Menu$Enum', 'Enumerated', [], '', [
+                [1, 'open', ''],
+                [2, 'close', '']
+            ]],
+            ['Pixel2$Enum', 'Enumerated', [], '', [  # Generated implicit derived enum
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]]
+        ]
+    }
+
+    def test_derived_enum(self):
+        jadn.check(self.schema_enum_optimized)
+        jadn.check(self.schema_enum_simplified)
+        ss = jadn.transform.simplify(self.schema_enum_optimized)
+        self.assertEqual(ss['types'], self.schema_enum_simplified['types'])
+
+    schema_mapof_optimized = {
+        'meta': {'module': 'http://jadn.org/unittests-mapof-optimized'},
+        'types': [
+            ['Colors-Enum', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['Colors-Map', 'MapOf', ['+Colors-Enum', '*Number'], '']
+        ]
+    }
+
+    schema_mapof_simplified = {
+        'meta': {'module': 'http://jadn.org/unittests-mapof-simple'},
+        'types': [
+            ['Colors-Enum', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['Colors-Map', 'Map', [], '', [
+                [1, 'red', 'Number', [], 'rojo'],
+                [2, 'green', 'Number', [], 'verde'],
+                [3, 'blue', 'Number', [], '']
+            ]]
+        ]
+    }
+
+    def test_mapof(self):
+        jadn.check(self.schema_mapof_optimized)
+        jadn.check(self.schema_mapof_simplified)
+        ss = jadn.transform.simplify(self.schema_mapof_optimized)
+        self.assertEqual(ss['types'], self.schema_mapof_simplified['types'])
+
+
 if __name__ == '__main__':
-    main()
+    unittest.main()

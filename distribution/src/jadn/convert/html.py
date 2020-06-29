@@ -11,9 +11,12 @@ from jadn import topts_s2d, ftopts_s2d, jadn2typestr, typestr2jadn, jadn2fieldde
 Convert JADN schema to and from HTML format
 
 Generated HTML uses "div tables" rather than HTML table elements to support responsive page design.
-JADN-specific class names are used to parse HTML to JADN, but css definitions are optional.
+Css styles for classes beginning with 't' must be defined to render correctly.
 
-CSS class names needed to render with table layout (required):
+Generated HTML includes JADN Schema classes to support parsing.
+Css styles for classes beginning with 'j' are not required
+
+CSS class definitions needed to render table layout:
 tTable:   display table
 tCaption: display table-caption
 tHead:    display table-header-group
@@ -22,18 +25,9 @@ tBody:    display table-row-group
 tRow:     display table-row
 tCell:    display table-cell (used in body)
 
-JADN column headers (styling optional):
-jHid:     FieldId
-jHname:   FieldName
-jHstr:    FieldType + FieldOptions
-jHmult:   Multiplicity
-jHdesc:   Description
-
-JADN schema elements (styling optional):
-jMeta:    metadata section root
+JADN schema elements (required for parsing, available for styling):
 jKey:     metadata key
 jVal:     metadata value
-jType:    type definition root
 jTname:   TypeName - name of a defined type
 jTstr:    String representation of BaseType and TypeOptions
 jTdesc:   TypeDesc - description of a type
@@ -42,6 +36,15 @@ jFname:   FieldName/ItemValue - name of a field or string value of an enumerated
 jFstr:    String representation of FieldType and FieldOptions (except multiplicity)
 jFmult:   String representation of multiplicity FieldOptions
 jFdesc:   FieldDesc/ItemDesc - description of a field in a container type or item in an enumerated type
+
+JADN styling classes (not used for parsing):
+jMeta:    metadata section
+jType:    type definition
+jHid:     FieldId
+jHname:   FieldName
+jHstr:    FieldType + FieldOptions
+jHmult:   Multiplicity
+jHdesc:   Description
 """
 
 """
@@ -127,28 +130,6 @@ def html_dump(schema, fname, source=''):
 Convert HTML to JADN
 """
 
-def load_meta(e):
-    key = e.text.strip(': ')
-    ev = e.getnext()
-    if 'jVal' in ev.get('class', ''):
-        val = ev.text
-        if key == 'exports':
-            val = [v for v in ev.text.split(',')]
-        elif key in ('config', 'imports'):
-            val = {k.strip(): v.strip() for item in ev.text.split(',') for k, v in (item.split(':', maxsplit=1),)}
-        return {key: val}
-
-
-def load_type(e):
-    tdef = [None, None, None, '']
-    for x in e.iter():
-        cl = x.get('class', '')
-        if 'jTname' in cl:
-            tdef[TypeName] = x.text.strip()
-        elif 'jtRow':
-            pass
-    return ['foo', 'Record', [], '']
-
 
 def html_loads(hdoc, debug=False):
 
@@ -171,7 +152,7 @@ def html_loads(hdoc, debug=False):
         fdesc   = r"jFdesc\x21(.*)\\x7c$"
     """
 
-    # Extract text from HTML elements with specified class attributes; class IDs enable pre-parsing
+    # Extract text from HTML elements with specified class attributes; class IDs used for pre-parsing
     # Use US(\x31) / RS(\x30) in production token stream to avoid collisions (! and | used for debug readability)
     def jtoken(txt):
         for e in html.fromstring(txt).iter():

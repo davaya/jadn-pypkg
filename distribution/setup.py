@@ -29,8 +29,8 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     python_requires='>=3.4',
-    install_requires=['jsonschema', 'lxml', 'arpeggio'],
+    install_requires=['jsonschema', 'rfc3987', 'lxml', 'arpeggio'],
     package_data={
-        'jadn': ['jadn_schema.jadn', 'jadn_schema.json', 'dtheme.css']
+        'jadn': ['data/*.*']
     }
 )
