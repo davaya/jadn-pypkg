@@ -8,6 +8,7 @@ from jadn.transform import strip_comments
 from jadn.convert import jidl_dumps, table_dumps, html_dumps, html_loads
 from jadn.translate import json_schema_dumps
 
+print(f'Installed JADN version: {jadn.__version__}')
 """
 Define and validate a JADN schema
 """

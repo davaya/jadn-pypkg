@@ -76,3 +76,21 @@ def jidl_dump(jadn, fname, source=''):
         if source:
             f.write('/* Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + ' */\n\n')
         f.write(jidl_dumps(jadn))
+
+
+"""
+Convert JIDL to JADN
+"""
+
+
+def jidl_loads(doc, debug=False):
+    meta = {}
+    types = []
+    schema = {'meta': meta} if meta else {}
+    schema.update({'types': types})
+    return schema
+
+
+def jidl_load(fname):
+    with open(fname, 'r') as f:
+        return jidl_loads(f.read())

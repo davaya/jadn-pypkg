@@ -137,8 +137,8 @@ def topts_s2d(olist):        # Convert list of type definition option strings to
         'pointer': lambda x: x,
         'format': lambda x: x,
         'pattern': lambda x: x,
-        'minv': lambda x: int(x),
-        'maxv': lambda x: int(x),
+        'minv': lambda x: float(x),
+        'maxv': lambda x: float(x),
         'unique': lambda x: True,
         'and': lambda x: x,
         'or': lambda x: x,
@@ -188,21 +188,21 @@ def typestr2jadn(typestring):
     p_name = r'([:\w$-]+)'              # 1 type name
     p_id = r'(.ID)?'                    # 2 'id'
     p_func = r'(\(\w+\))?'              # 3 'ktype', 'vtype', 'enum', 'pointer'
-    p_format = r'(?:\s*\/(\w+))?'       # 4 'format'
-    p_pattern = r'(?:\s*\(%(.+)%\))?'   # 5 'pattern'
-    p_range = r'\s*(\{.*\})?'           # 6 'minv', 'maxv'
+    p_range = r'(?:\s*\{(.*)\})?'       # 4 'minv', 'maxv'
+    p_format = r'(?:\s*\/(\w[-\w]*))?'  # 5 'format'
+    p_pattern = r'(?:\s*\(%(.+)%\))?'   # 6 'pattern'
     p_unique = r'\s*(unique)?'          # 7 'unique'
-    pattern = '^' + p_name + p_id + p_func + p_format + p_pattern + p_range + p_unique + '$'
+    pattern = '^' + p_name + p_id + p_func + p_range + p_format + p_pattern + p_unique + '$'
     m = re.match(pattern, typestring)
     tname = m.group(1)
     topts.update({'id': True} if m.group(2) else {})
     func = m.group(3)                   # TODO: (ktype, vtype), Enum(), Pointer() options
-    topts.update({'format': m.group(4)} if m.group(4) else {})
-    topts.update({'pattern': m.group(5)} if m.group(5) else {})
-    if m.group(6):
-        mr = re.match(r'^\{(\d+|\*)\.\.(\d+|\*)\}$', m.group(6))
-        topts.update({} if mr.group(1) == '*' else {'minv': int(mr.group(1))})
-        topts.update({} if mr.group(2) == '*' else {'maxv': int(mr.group(2))})
+    if m.group(4):
+        a, b = m.group(4).split('..', maxsplit=1)
+        topts.update({} if a == '*' else {'minv': float(a)})
+        topts.update({} if b == '*' else {'maxv': float(b)})
+    topts.update({'format': m.group(5)} if m.group(5) else {})
+    topts.update({'pattern': m.group(6)} if m.group(6) else {})
     topts.update({'unique': True} if m.group(7) else {})
     return tname, opts_d2s(topts)
 

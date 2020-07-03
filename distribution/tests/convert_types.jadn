@@ -1,0 +1,43 @@
+{
+ "meta": {
+  "module": "http://jadn.org/test/convert/v0.1",
+  "patch": "0",
+  "title": "JADN format conversion",
+  "description": "Test schema for checking conversion to different formats",
+  "exports": ["Command"],
+  "imports": {"td": "http://jadn.org/test/type_defs/v0.1"},
+  "config": {"$MaxString": 128,
+             "$Sys": "%",
+             "$NSID": "^[$*a-zA-Z]{1,4}$"}
+ },
+
+ "types": [
+  ["HostAddress", "Binary", ["/ipv4-addr"], ""],
+  ["Icon", "Binary", ["{4", "}65535"], ""],
+  ["Ship-To-Store", "Boolean", [], ""],
+  ["Width", "Integer", ["/i16"], ""],
+  ["Mass", "Number", ["{0", "}3.14", "/f32"], ""],
+  ["Vname", "String", ["%^[_$a-z0-9]{1,32}$"], ""],
+  ["URI", "String", ["/uri"], ""],
+  ["Person", "Record", [], "JADN equivalent of structure from https://developers.google.com/protocol-buffers", [
+    [1, "name", "String", [], "The person's name."],
+    [2, "id", "Integer", [], ""],
+    [3, "email", "String", ["/email", "[0"], ""]
+  ]],
+  ["Command", "Record", [], "The Command defines an Action to be performed on a Target", [
+    [1, "action", "Action", [], "The task or activity to be performed (i.e., the 'verb')."],
+    [2, "target", "Target", [], "The object of the Action. The Action is performed on the Target."],
+    [3, "args", "Args", ["[0"], "Additional information that applies to the Command."],
+    [4, "actuator", "Actuator", ["[0"], "The subject of the Action. The Actuator executes the Action on the Target."],
+    [5, "command_id", "abx:Command-ID", ["[0"], "An identifier of this Command."]
+  ]],
+  ["Action", "Enumerated", [], "Action list", [
+    [3, "query", "Initiate a request for information"],
+    [4, "report", "Configure event reporting/logging"]
+  ]],
+  ["HTTP-Status", "Enumerated", ["="], "Status code definitions",[
+    [200, "OK", "The request has succeeded"],
+    [400, "Bad Request", "The request could not be understood by the server due to malformed syntax"],
+    [404, "Not Found", "The server has not found anything matching the request URI"]
+  ]]
+]}

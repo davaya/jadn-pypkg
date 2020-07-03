@@ -44,10 +44,10 @@ def check(schema):
             jadn.raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
 
     here = data_dir()
-    with open(os.path.join(here, 'jadn_schema.json')) as f:     # Check using JSON Schema for JADN
+    with open(os.path.join(here, 'jadn_v1.0_schema.json')) as f:     # Check using JSON Schema for JADN
         jsonschema.Draft7Validator(json.load(f)).validate(schema)
 
-    with open(os.path.join(here, 'jadn_schema.jadn')) as f:     # Optional: check using JADN meta-schema
+    with open(os.path.join(here, 'jadn_v1.0_schema.jadn')) as f:     # Optional: check using JADN meta-schema
         meta_schema = jadn.codec.Codec(json.load(f), verbose_rec=True, verbose_str=True, config=schema)
         assert meta_schema.encode('Schema', schema) == schema
 

@@ -1,0 +1,91 @@
+{
+ "meta": {
+  "module": "http://oasis-open.org/jadn/v1.0/examples",
+  "description": "Example type definitions from JADN Specification"
+ },
+
+ "types": [
+  ["Person", "Record", [], "", [
+    [1, "name", "String", [], ""],
+    [2, "id", "Integer", [], ""],
+    [3, "email", "String", ["[0"], ""]
+  ]],
+
+  ["Department", "Choice", [], "", [
+    [1, "furniture", "Furniture", [], ""],
+    [2, "kitchen", "Appliance", [], ""],
+    [3, "electronics", "Device", [], ""]
+  ]],
+  ["DeptID", "Enumerated", [], "", [
+    [1, "furniture", ""],
+    [2, "kitchen", ""],
+    [3, "electronics", ""]
+  ]],
+  ["Product", "Array", [], "", [
+    [1, "dept", "DeptID", [], "Must be a valid Choice field"],
+    [2, "quantity", "Integer", [], ""],
+    [3, "details", "Department", ["&1"], "Field that selects which Choice element must be present"]
+  ]],
+
+  ["Palette", "Map", [], "", [
+    [1, "burgundy", "Rgb", [], ""],
+    [2, "grass", "Rgb", [], ""],
+    [3, "lapis", "Rgb", [], ""],
+    [4, "new", "New-Color", ["<"], "Flatten (use qualified names for the fields of New-Color)"]
+  ]],
+  ["New-Color", "Map", [], "", [
+    [1, "maize", "Rgb", [], ""],
+    [2, "aqua", "Rgb", [], ""],
+    [3, "fuschia", "Rgb", [], ""]
+  ]],
+  ["Rgb", "Record", [], "", [
+    [1, "red", "Integer", ["{0", "}255"], ""],
+    [2, "green", "Integer", ["{0", "}255"], ""],
+    [3, "blue", "Integer", ["{0", "}255"], ""]
+  ]],
+
+  ["Member", "Record", [], "", [
+    [1, "name", "String", [], ""],
+    [2, "email", "String", ["/idn-email"], ""]
+  ]],
+  ["Member2", "Record", [], "", [
+    [1, "name", "String", [], ""],
+    [2, "email", "Member2$email", [], ""]
+  ]],
+  ["Member2$email", "String", ["/idn-email"], "Tool-generated type definition."],
+  ["Roster", "Record", [], "", [
+    [1, "org_name", "String", [], ""],
+    [2, "members", "Member", ["[0", "]0"], "Optional and repeated: minc=0, maxc=0"]
+  ]],
+  ["Roster2", "Record", [], "", [
+    [1, "org_name", "String", [], ""],
+    [2, "members", "Roster2$members", ["[0"], "Optional: minc=0, maxc=1"]
+  ]],
+  ["Roster2$members", "ArrayOf", ["*Member", "{1"], "Tool-generated array: minv=1, maxv=0"],
+  ["Roster3", "Record", [], "", [
+    [1, "org_name", "String", [], ""],
+    [2, "members", "Members", [], "members field is required: default minc = 1, maxc = 1"]
+  ]],
+  ["Members", "ArrayOf", ["*Member"], "Explicitly-defined array: default minv = 0, maxv = 0"],
+
+  ["Pixel", "Map", [], "", [
+    [1, "red", "Integer", [], ""],
+    [2, "green", "Integer", [], ""],
+    [3, "blue", "Integer", [], ""]
+  ]],
+  ["Channel", "Enumerated", ["#Pixel"], "Derived Enumerated type"],
+  ["ChannelMask", "ArrayOf", ["*#Pixel"], "ArrayOf(derived enumeration)"],
+  ["Channel2", "Enumerated", [], "", [
+    [1, "red", ""],
+    [2, "green", ""],
+    [3, "blue", ""]
+  ]],
+  ["ChannelMask2", "ArrayOf", ["*Channel"], ""],
+  ["Channel3", "Enumerated", [], "", [
+    [1, "red", ""],
+    [2, "green", ""],
+    [3, "blue", ""]
+  ]],
+  ["Pixel3", "MapOf", ["*Integer", "+Channel3"], ""]
+ ]
+}

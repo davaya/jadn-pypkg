@@ -1,4 +1,5 @@
 import re
+import json
 from arpeggio.cleanpeg import ParserPEG
 from datetime import datetime
 from lxml import etree, html
@@ -75,14 +76,7 @@ def html_dumps(schema):
         for k in mlist + list(set(schema['meta']) - set(mlist)):
             he3 = etree.SubElement(he2, 'div', {'class': 'tRow'})
             etree.SubElement(he3, 'div', {'class': 'tCell jKey'}).text = k + ':'
-            v = schema['meta'][k]
-            if k == 'exports':
-                val = ', '.join(v)
-            elif k in ('imports', 'config'):
-                val = ', '.join((vk + ':\u00a0' + vv for vk, vv in v.items()))
-            else:
-                val = str(v)
-            etree.SubElement(he3, 'div', {'class': 'tCell jVal'}).text = val
+            etree.SubElement(he3, 'div', {'class': 'tCell jVal'}).text = json.dumps(schema['meta'][k])
         body.append(het)
 
     for tdef in schema['types']:            # Add type definitions
@@ -179,11 +173,7 @@ def html_loads(hdoc, debug=False):
 
     def v_kvp(node, nl):
         k, v = nl[0]['key'], nl[1]['value']
-        if k == 'exports':
-            v = v.split(',')
-        elif k in ('imports', 'config'):
-            v = dict(map(str.strip, x.split(':', maxsplit=1)) for x in v.split(','))
-        return {k: v}
+        return {k: json.loads(v)}
 
     def v_typedef(node, nl):
         basetype, topts = typestr2jadn(nl[1]['tstr'])

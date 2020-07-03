@@ -1575,7 +1575,7 @@ class Format(unittest.TestCase):
 class JADN(unittest.TestCase):
 
     def setUp(self):
-        fn = os.path.join(jadn.data_dir(), 'jadn_schema.jadn')
+        fn = os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')
         schema = jadn.load(fn)
         self.schema = schema
         sa = jadn.analyze(schema)
