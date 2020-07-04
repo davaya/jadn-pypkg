@@ -16,7 +16,7 @@
   ["Icon", "Binary", ["{4", "}65535"], ""],
   ["Ship-To-Store", "Boolean", [], ""],
   ["Width", "Integer", ["/i16"], ""],
-  ["Mass", "Number", ["{0", "}3.14", "/f32"], ""],
+  ["Mass", "Number", ["y0.0", "z3.14", "/f32"], ""],
   ["Vname", "String", ["%^[_$a-z0-9]{1,32}$"], ""],
   ["URI", "String", ["/uri"], ""],
   ["Person", "Record", [], "JADN equivalent of structure from https://developers.google.com/protocol-buffers", [

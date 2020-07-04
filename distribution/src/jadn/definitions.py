@@ -85,69 +85,53 @@ def has_fields(t):      # Is a type with fields listed in definition
 #   JADN TypeOptions and FieldOptions contain a list of strings, each of which is an option.
 #   The first character of an option string is the type ID; the remaining characters are the value.
 #   The option string is converted into a Name: Value pair before use.
-#   The tables list the unicode codepoint of the ID and the corresponding Name.
+#   The tables list the unicode codepoint of the ID and the corresponding Name and value type.
 
-TYPE_OPTIONS = {        # ID, value type, description
-    0x3d: 'id',         # '=', none, Enumerated type and Choice/Map/Record keys are ID not Name
-    0x2b: 'ktype',      # '+', string, Key type for MapOf
-    0x2a: 'vtype',      # '*', string, Value type for ArrayOf and MapOf
-    0x23: 'enum',       # '#', string, enumeration derived from the referenced Array/Choice/Map/Record type
-    0x3e: 'pointer',    # '>', string, enumeration of pointers derived from the referenced Array/Choice/Map/Record type
-    0x2f: 'format',     # '/', string, semantic validation keyword, may affect serialization
-    0x25: 'pattern',    # '%', string, regular expression that a string must match
-    0x7b: 'minv',       # '{', integer, minimum byte or text string length, numeric value, element count
-    0x7d: 'maxv',       # '}', integer, maximum byte or text string length, numeric value, element count
-    0x71: 'unique',     # 'q', none, ArrayOf instance must not contain duplicates
-    0x2229: 'and',      # '∩', string, INTERSECTION - instance must also match referenced type definition (allOf)
-    0x222a: 'or',       # '∪', string, UNION - instance must match at least one of the type definitions (anyOf)
+TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII ID
+    0x3d: ('id', lambda x: True, 1),        # '=', Enumerated type and Choice/Map/Record keys are ID not Name
+    0x2b: ('ktype', lambda x: x, 2),        # '+', Key type for MapOf
+    0x2a: ('vtype', lambda x: x, 3),        # '*', Value type for ArrayOf and MapOf
+    0x23: ('enum', lambda x: x, 4),         # '#', enumeration derived from Array/Choice/Map/Record type
+    0x3e: ('pointer', lambda x: x, 5),      # '>', enumeration of pointers derived from Array/Choice/Map/Record type
+    0x2f: ('format', lambda x: x, 6),       # '/', semantic validation keyword, may affect serialization
+    0x25: ('pattern', lambda x: x, 7),      # '%', regular expression that a string must match
+    0x79: ('minf', lambda x: float(x), 8),  # 'y', minimum Number value
+    0x7a: ('maxf', lambda x: float(x), 9),  # 'z', maximum Number value
+    0x7b: ('minv', lambda x: int(x), 10),   # '{', minimum byte or text string length, Integer value, element count
+    0x7d: ('maxv', lambda x: int(x), 11),   # '}', maximum byte or text string length, Integer value, element count
+    0x71: ('unique', lambda x: True, 12),   # 'q', ArrayOf instance must not contain duplicates
+    0x2229: ('and', lambda x: x, 13),       # '∩', INTERSECTION - instance must also match referenced type (allOf)
+    0x222a: ('or', lambda x: x, 14),        # '∪', UNION - instance must match at least one of the types (anyOf)
 }
 
 FIELD_OPTIONS = {
-    0x5b: 'minc',       # '[', integer, minimum cardinality, default = 1, 0 = field is optional
-    0x5d: 'maxc',       # ']', integer, maximum cardinality, default = 1, 0 = inherited max, not 1 = array
-    0x26: 'tfield',     # '&', string, field that specifies the type of this field
-    0x3c: 'dir',        # '<', none, pointer enumeration uses field name as path component (field is not a leaf node)
-    0x21: 'default',    # '!', string, default value for an instance of this type
+    0x5b: ('minc', lambda x: int(x), 15),   # '[', minimum cardinality, default = 1, 0 = field is optional
+    0x5d: ('maxc', lambda x: int(x), 16),   # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
+    0x26: ('tfield', lambda x: int(x), 17), # '&', field that specifies the type of this field
+    0x3c: ('dir', lambda x: True, 18),      # '<', pointer enumeration treats field as a collection
+    0x21: ('default', lambda x: x, 19),     # '!', default value for an instance of this type
 }
 
-OPTION_ID = {   # Pre-computed reverse index - must match TYPE_OPTIONS and FIELD_OPTIONS
-    'id':      chr(0x3d),
-    'ktype':   chr(0x2b),
-    'vtype':   chr(0x2a),
-    'enum':    chr(0x23),
-    'pointer': chr(0x3e),
-    'format':  chr(0x2f),
-    'pattern': chr(0x25),
-    'minv':    chr(0x7b),
-    'maxv':    chr(0x7d),
-    'unique':  chr(0x71),
-    'and':     chr(0x2229),
-    'or':      chr(0x222a),
-    'minc':    chr(0x5b),
-    'maxc':    chr(0x5d),
-    'tfield':  chr(0x26),
-    'dir':     chr(0x3c),
-    'default': chr(0x21),
-}
-
-OPTION_ORDER = {    # Pre-computed canonical option order - must match OPTION_ID
-    chr(0x3d): 0,
-    chr(0x2b): 1,
-    chr(0x2a): 2,
-    chr(0x23): 3,
-    chr(0x3e): 4,
-    chr(0x2f): 5,
-    chr(0x25): 6,
-    chr(0x7b): 7,
-    chr(0x7d): 8,
-    chr(0x71): 9,
-    chr(0x2229): 10,
-    chr(0x222a): 11,
-    chr(0x5b): 12,
-    chr(0x5d): 13,
-    chr(0x26): 14,
-    chr(0x3c): 15,
-    chr(0x21): 16,
+OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD_OPTIONS
+    'id':       chr(0x3d),
+    'ktype':    chr(0x2b),
+    'vtype':    chr(0x2a),
+    'enum':     chr(0x23),
+    'pointer':  chr(0x3e),
+    'format':   chr(0x2f),
+    'pattern':  chr(0x25),
+    'minf':     chr(0x79),
+    'maxf':     chr(0x7a),
+    'minv':     chr(0x7b),
+    'maxv':     chr(0x7d),
+    'unique':   chr(0x71),
+    'and':      chr(0x2229),
+    'or':       chr(0x222a),
+    'minc':     chr(0x5b),
+    'maxc':     chr(0x5d),
+    'tfield':   chr(0x26),
+    'dir':      chr(0x3c),
+    'default':  chr(0x21),
 }
 
 REQUIRED_TYPE_OPTIONS = {
@@ -170,7 +154,7 @@ ALLOWED_TYPE_OPTIONS = {
     'Binary': ['and', 'or', 'minv', 'maxv', 'format'],
     'Boolean': ['and', 'or'],
     'Integer': ['and', 'or', 'minv', 'maxv', 'format'],
-    'Number': ['and', 'or', 'minv', 'maxv', 'format'],
+    'Number': ['and', 'or', 'minf', 'maxf', 'format'],
     'Null': ['and', 'or'],
     'String': ['and', 'or', 'minv', 'maxv', 'format', 'pattern'],
     'Enumerated': ['and', 'or', 'id', 'enum', 'pointer'],

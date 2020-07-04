@@ -128,48 +128,25 @@ def del_opt(opts, oname):
         del opts[n[0]]
 
 
-def topts_s2d(olist):        # Convert list of type definition option strings to options dictionary
-    tval = {
-        'id': lambda x: True,
-        'vtype': lambda x: x,
-        'ktype': lambda x: x,
-        'enum': lambda x: x,
-        'pointer': lambda x: x,
-        'format': lambda x: x,
-        'pattern': lambda x: x,
-        'minv': lambda x: float(x),
-        'maxv': lambda x: float(x),
-        'unique': lambda x: True,
-        'and': lambda x: x,
-        'or': lambda x: x,
-    }
-    assert set(tval) == {k for k in TYPE_OPTIONS.values()}
+def topts_s2d(olist, frange=False):        # Convert list of type definition option strings to options dictionary
     assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
     opts = {}
     for o in olist:
         try:
             k = TYPE_OPTIONS[ord(o[0])]
-            opts[k] = tval[k](o[1:])
+            opts[k[0]] = k[1](o[1:])
         except KeyError:
             raise_error(f'Unknown type option: {o}')
     return opts
 
 
 def ftopts_s2d(olist):       # Convert list of field definition option strings to options dictionary
-    fval = {
-        'minc': lambda x: int(x),
-        'maxc': lambda x: int(x),
-        'dir': lambda x: True,
-        'tfield': lambda x: int(x),
-        'default': lambda x: x,
-    }
-    assert set(fval) == {k for k in FIELD_OPTIONS.values()}
     assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
     fopts, topts = {}, {}
     for o in olist:
         try:
             k = FIELD_OPTIONS[ord(o[0])]
-            fopts[k] = fval[k](o[1:])
+            fopts[k[0]] = k[1](o[1:])
         except KeyError:
             topts.update(topts_s2d([o]))
     return fopts, topts
@@ -180,7 +157,14 @@ def opts_d2s(to):
 
 
 def opts_sort(olist):      # Sort JADN option list into canonical order
-    return sorted(olist, key=lambda x: OPTION_ORDER[x[0]])
+    def opt_order(o):
+        try:
+            k = FIELD_OPTIONS[ord(o)][2]
+        except KeyError:
+            k = TYPE_OPTIONS[ord(o)][2]
+        return k
+
+    return sorted(olist, key=lambda x: opt_order(x[0]))
 
 
 def typestr2jadn(typestring):
@@ -199,8 +183,12 @@ def typestr2jadn(typestring):
     func = m.group(3)                   # TODO: (ktype, vtype), Enum(), Pointer() options
     if m.group(4):
         a, b = m.group(4).split('..', maxsplit=1)
-        topts.update({} if a == '*' else {'minv': float(a)})
-        topts.update({} if b == '*' else {'maxv': float(b)})
+        if tname == 'Number':
+            topts.update({} if a == '*' else {'minf': float(a)})
+            topts.update({} if b == '*' else {'maxf': float(b)})
+        else:
+            topts.update({} if a == '*' else {'minv': int(a)})
+            topts.update({} if b == '*' else {'maxv': int(b)})
     topts.update({'format': m.group(5)} if m.group(5) else {})
     topts.update({'pattern': m.group(6)} if m.group(6) else {})
     topts.update({'unique': True} if m.group(7) else {})
@@ -227,6 +215,11 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
         hi = ops.pop('maxv', '*')
         return str(lo) + '..' + str(hi) if lo != '*' or hi != '*' else ''
 
+    def _frange(ops):               # Value range (double-ended) - default is {*..*}
+        lo = ops.pop('minf', '*')
+        hi = ops.pop('maxf', '*')
+        return str(lo) + '..' + str(hi) if lo != '*' or hi != '*' else ''
+
     opts = topts_s2d(topts)
     extra = '.ID' if opts.pop('id', None) else ''   # SIDE EFFECT!: remove known options from opts.
     if tname == 'ArrayOf':
@@ -239,7 +232,7 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
     extra += '(Pointer(' + v + '))' if v else ''
     v = opts.pop('pattern', None)
     extra += '(%' + v + '%)' if v else ''
-    v = _vrange(opts) if tname in ('Integer', 'Number') else _srange(opts)
+    v = _vrange(opts) if tname == 'Integer' else (_frange(opts) if tname == 'Number' else _srange(opts))
     extra += '{' + v + '}' if v else ''
     v = opts.pop('format', None)
     extra += ' /' + v if v else ''

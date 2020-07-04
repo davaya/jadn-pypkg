@@ -1,2 +1,5 @@
-# JSON Abstract Data Notation (JADN)
-JADN Python [distribution package](distribution).
+# JADN
+
+
+Software for processing and using JADN schemas is available on [PyPi](https://pypi.org/project/jadn/)
+([source](distribution)).
