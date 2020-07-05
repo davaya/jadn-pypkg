@@ -6,16 +6,15 @@ JSON Abstract Data Notation (JADN)
 <https://github.com/oasis-tcs/openc2-jadn/blob/working/jadn-v1.0-wd01.md>`_ is an
 `information modeling
 <https://tools.ietf.org/html/rfc8477#section-2>`_ language used to define the information
-needed by applications, and to serialize that information using multiple data formats.
-It has several purposes, including definition of data structures,
+needed by applications and to serialize that information using one or more data formats.
+It has several purposes, including convenient and expressive definition of data structures,
 validation of data instances, providing hints for user interfaces working with structured data,
 and facilitating protocol internationalization. A JADN specification consists of two parts:
 an Information Model (abstract schema) that is independent of data format,
 and serialization rules that define how to represent information using a specific data format.
-A single JADN schema thus defines protocol data in multiple formats including XML and JSON,
-plus a CBOR format that achieves it's design goal of being *concise*. Serialization
-rules can be developed for additional data formats, allowing those formats to be applied
-to any JADN schema.
+A single JADN schema defines protocol data in multiple formats including XML and JSON,
+plus a CBOR format that is actually *concise*. Serialization rules can be developed
+for additional data formats, allowing any JADN specification to use them.
 
 The software in this package is organized by function:
 
