@@ -21,8 +21,8 @@ def jidl_dumps(jadn):
         extra = ''
         if 'minc' in opts or 'maxc' in opts:
             extra += _mult(opts, optional=True)
-        if 'tfield' in opts:
-            extra += '(Tag(' + str(opts['tfield']) + '))'  # TODO: lookup field name
+        if 'tagid' in opts:
+            extra += '(Tag(' + str(opts['tagid']) + '))'  # TODO: lookup field name
         return typestr + extra
 
     def line(cw, content, desc):

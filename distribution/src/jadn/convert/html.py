@@ -5,7 +5,7 @@ from datetime import datetime
 from lxml import etree, html
 from lxml.html.builder import *
 from jadn.definitions import *
-from jadn import topts_s2d, ftopts_s2d, jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn
+from jadn import topts_s2d, ftopts_s2d, jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn, cleanup_tagid
 
 
 """
@@ -146,24 +146,14 @@ def html_loads(hdoc, debug=False):
         fdesc   = r"jFdesc\x21(.*)\\x7c$"
     """
 
-    # Extract text from HTML elements with specified class attributes; class IDs used for pre-parsing
-    # Use US(\x31) / RS(\x30) in production token stream to avoid collisions (! and | used for debug readability)
+    # Extract text from HTML elements, use designated "j" class attributes as lexeme tags
+    # This token generator uses '!' (ox21) and '|' (0x7c) as separators for debugging readability
+    # Use US(\x31) / RS(\x30) in production generator and grammar lexemes to preempt any text collisions
     def jtoken(txt):
         for e in html.fromstring(txt).iter():
             cl = [c for c in e.get('class', '').split() if c[0] == 'j']
             if cl and cl[0] in ('jKey', 'jVal', 'jTname', 'jTstr', 'jTdesc', 'jFid', 'jFname', 'jFstr', 'jFmult', 'jFdesc'):
                 yield cl[0] + '\x21' + (e.text.strip() if e.text else '') + '\x7c' + '\n'
-
-    def walk(node, ptree='', indent=0, close=False):
-        if getattr(node, '__iter__', ''):
-            ptree += '\n' + '. ' * indent + node.name + ': '
-            for n in list(node):
-                ptree = walk(n, ptree, indent + 1, close)
-            ptree += '\n' + '. ' * indent if close else ''
-        else:
-            ptree += node.value + ' '
-            # ptree += '\n' + '- ' * indent + node.value
-        return ptree
 
     def v_schema(node, nl):
         meta = [v for d in nl for k, v in d.items() if k == 'kvp']
@@ -176,8 +166,8 @@ def html_loads(hdoc, debug=False):
         return {k: json.loads(v)}
 
     def v_typedef(node, nl):
-        basetype, topts = typestr2jadn(nl[1]['tstr'])
-        fields = [v for d in nl for k, v in d.items() if k in ('field', 'item')]
+        basetype, topts, fopts = typestr2jadn(nl[1]['tstr'])
+        fields = cleanup_tagid([v for d in nl for k, v in d.items() if k in ('field', 'item')])
         return [nl[0]['tname'], basetype , topts, nl[2]['tdesc']] + ([fields] if fields else [])
 
     def v_field(node, nl):
@@ -202,11 +192,11 @@ def html_loads(hdoc, debug=False):
 
     def visit(node):
         name = node.name.split()[0]
-        nl = []
+        child = []
         if getattr(node, '__iter__', ''):
             for n in list(node):
-                nl.append(visit(n))
-        value = visitor[name](node, nl) if name in visitor else v_default(node)
+                child.append(visit(n))
+        value = visitor[name](node, child) if name in visitor else v_default(node)
         return {name: value}
 
     # print(html_tree_dumps(hdoc))

@@ -44,7 +44,7 @@ S_FLD = 10      # Field entries (definition and decoded options)
 # Symbol Table Field Definition fields
 SF_DEF = 0      # JADN field definition
 SF_OPT = 1      # Field Options (dict format)
-SF_CTAG = 2     # Field containing external choice tag (tfield option)
+SF_CTAG = 2     # Field containing external choice tag (tagid option)
 
 
 class Codec:
@@ -97,12 +97,12 @@ class Codec:
             fopts.update(fo)
             assert fopts['minc'] in (0, 1) and fopts['maxc'] == 1     # Other cardinalities have been simplified
             ctag = None
-            if 'tfield' in fopts:
-                ctag = fopts['tfield'] if fa == FieldID else fnames[fopts['tfield']]
+            if 'tagid' in fopts:
+                ctag = fopts['tagid'] if fa == FieldID else fnames[fopts['tagid']]
             fs = [
                 fld,        # SF_DEF: JADN field definition
                 fopts,      # SF_OPT: Field options (dict)
-                ctag        # SF_CTAG: tfield option
+                ctag        # SF_CTAG: tagid option
             ]
             return fs
 
@@ -465,8 +465,8 @@ def _encode_array(ts, aval, codec):
         fopts = ts[S_FLD][fx + 1][SF_OPT]
         av = aval[fx] if len(aval) > fx else None
         if av is not None:
-            if 'tfield' in fopts:
-                choice_type = aval[int(fopts['tfield']) - 1]
+            if 'tagid' in fopts:
+                choice_type = aval[int(fopts['tagid']) - 1]
                 e = codec.encode(f[FieldType], {choice_type: av})
                 sv = e[next(iter(e))]
             else:
@@ -494,8 +494,8 @@ def _decode_array(ts, sval, codec):  # Ordered list of types, returned as a list
         fopts = ts[S_FLD][fx + 1][SF_OPT]
         sv = val[fx] if len(val) > fx else None
         if sv is not None:
-            if 'tfield' in fopts:
-                choice_type = val[int(fopts['tfield']) - 1]
+            if 'tagid' in fopts:
+                choice_type = val[int(fopts['tagid']) - 1]
                 d = codec.decode(f[FieldType], {choice_type: sv})  # TODO: fix str/int handling of choice
                 av = d[next(iter(d))]
             else:

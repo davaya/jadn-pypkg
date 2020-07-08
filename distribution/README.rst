@@ -12,9 +12,9 @@ validation of data instances, providing hints for user interfaces working with s
 and facilitating protocol internationalization. A JADN specification consists of two parts:
 an Information Model (abstract schema) that is independent of data format,
 and serialization rules that define how to represent information using a specific data format.
-A single JADN schema defines protocol data in multiple formats including XML and JSON,
-plus a CBOR format that is actually *concise*. Serialization rules can be developed
-for additional data formats, allowing any JADN specification to use them.
+A single JADN schema defines protocol data in multiple formats including XML, JSON, and
+an actually-concise CBOR format. Additional data formats can be defined and applied to any
+JADN schema.
 
 The software in this package is organized by function:
 

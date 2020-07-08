@@ -59,17 +59,18 @@ def jas_dumps(jadn):
     jas += '*/\n'
 
     assert set(stype_map) == set(CORE_TYPES)         # Ensure type list is up to date
-    tolist = ['id', 'vtype', 'ktype', 'enum', 'pointer', 'format', 'pattern', 'minv', 'maxv', 'unique', 'and', 'or']
-    assert set(TYPE_OPTIONS.values()) == set(tolist)                # Ensure type options list is up to date
-    folist = ['minc', 'maxc', 'tfield', 'dir', 'default']
-    assert set(FIELD_OPTIONS.values()) == set(folist)               # Ensure field options list is up to date
+    tolist = ['id', 'vtype', 'ktype', 'enum', 'pointer', 'format', 'pattern',
+              'minv', 'maxv', 'minf', 'maxf', 'unique', 'and', 'or']
+    assert {x[0] for x in TYPE_OPTIONS.values()} == set(tolist)                # Ensure type options list is up to date
+    folist = ['minc', 'maxc', 'tagid', 'dir', 'default']
+    assert {x[0] for x in FIELD_OPTIONS.values()} == set(folist)               # Ensure field options list is up to date
     for td in jadn['types']:                    # 0:type name, 1:base type, 2:type opts, 3:type desc, 4:fields
         tname = td[TypeName]
         ttype = td[BaseType]
         topts = topts_s2d(td[TypeOptions])
         tostr = ''
         range = ''
-        if 'minv' in topts or 'maxv' in topts:
+        if 'minv' in topts or 'maxv' in topts:          # TODO: use jadn2typestr
             lo = topts['minv'] if 'minv' in topts else 0
             hi = topts['maxv'] if 'maxv' in topts else 0
             if lo or hi:
@@ -123,9 +124,9 @@ def jas_dumps(jadn):
                 for n, i in enumerate(titems):                          # TODO: Convert to use jadn2fielddef
                     ostr = ''
                     opts, ftopts = ftopts_s2d(i[FieldOptions])
-                    if 'tfield' in opts:
-                        ostr += '(Tag(' + str(opts['tfield']) + '))'    # TODO: lookup field name
-                        del opts['tfield']
+                    if 'tagid' in opts:
+                        ostr += '(Tag(' + str(opts['tagid']) + '))'    # TODO: lookup field name
+                        del opts['tagid']
                     if 'vtype' in opts:
                         ostr += '.*'
                         del opts['vtype']

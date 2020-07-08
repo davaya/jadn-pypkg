@@ -167,11 +167,30 @@ def opts_sort(olist):      # Sort JADN option list into canonical order
     return sorted(olist, key=lambda x: opt_order(x[0]))
 
 
+def cleanup_tagid(fields):          # If type definition contains a TagId option, replace field name with id
+    for f in fields:
+        if len(f) > FieldOptions:
+            tx = get_optx(f[FieldOptions], 'tagid')
+            if tx is not None:
+                to = f[FieldOptions][tx]
+                try:
+                    tag = int(to)
+                except ValueError:
+                    fx = {x[FieldName]: x[FieldID] for x in fields}
+                    f[FieldOptions][tx] = to[0] + str(fx[to[1:]])
+    return fields
+
+
 def typestr2jadn(typestring):
+    def parseopt(optstr):
+        mm = re.match(r'^\s*(\w+)(?:\[([^]]+)\])?$', optstr)
+        return OPTION_ID[mm.group(1).lower()] + mm.group(2) if mm.group(2) else mm.group(1)
+
     topts = {}
+    fo = []
     p_name = r'([:\w$-]+)'              # 1 type name
     p_id = r'(.ID)?'                    # 2 'id'
-    p_func = r'(\(\w+\))?'              # 3 'ktype', 'vtype', 'enum', 'pointer'
+    p_func = r'(?:\(([^)]+)\))?'        # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
     p_range = r'(?:\s*\{(.*)\})?'       # 4 'minv', 'maxv'
     p_format = r'(?:\s*\/(\w[-\w]*))?'  # 5 'format'
     p_pattern = r'(?:\s*\(%(.+)%\))?'   # 6 'pattern'
@@ -180,28 +199,39 @@ def typestr2jadn(typestring):
     m = re.match(pattern, typestring)
     tname = m.group(1)
     topts.update({'id': True} if m.group(2) else {})
-    func = m.group(3)                   # TODO: (ktype, vtype), Enum(), Pointer() options
+    if m.group(3):                      # (ktype, vtype), Enum(), Pointer() options
+        opts = [parseopt(x) for x in m.group(3).split(',', maxsplit=1)]
+        if tname == 'MapOf':
+            topts.update({'ktype': opts[0], 'vtype': opts[1]})
+        elif tname == 'ArrayOf':
+            assert len(opts) == 1
+            topts.update({'vtype': opts[0]})
+        else:
+            assert len(opts) == 1
+            topts.update(topts_s2d([opts[0]]) if ord(opts[0][0]) in TYPE_OPTIONS else {})
+            fo.append(opts[0] if ord(opts[0][0]) in FIELD_OPTIONS else [])      # TagId option
     if m.group(4):
         a, b = m.group(4).split('..', maxsplit=1)
         if tname == 'Number':
             topts.update({} if a == '*' else {'minf': float(a)})
             topts.update({} if b == '*' else {'maxf': float(b)})
         else:
+            a = '*' if tname != 'Integer' and a != '*' and int(a) == 0 else a   # Default min size = 0
             topts.update({} if a == '*' else {'minv': int(a)})
             topts.update({} if b == '*' else {'maxv': int(b)})
     topts.update({'format': m.group(5)} if m.group(5) else {})
     topts.update({'pattern': m.group(6)} if m.group(6) else {})
     topts.update({'unique': True} if m.group(7) else {})
-    return tname, opts_d2s(topts)
+    return tname, opts_d2s(topts), fo
 
 
 def jadn2typestr(tname, topts):     # Convert typename and options to string
 
     def _kvstr(optv):               # Handle ktype/vtype containing Enum options
         if optv[0] == OPTION_ID['enum']:
-            return 'Enum(' + optv[1:] + ')'
+            return 'Enum[' + optv[1:] + ']'
         elif optv[0] == OPTION_ID['pointer']:
-            return 'Pointer(' + optv[1:] + ')'
+            return 'Pointer[' + optv[1:] + ']'
         return optv
 
     def _srange(ops):               # Size range (single-ended) - default is {0..*}
@@ -227,11 +257,11 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
     elif tname == 'MapOf':
         extra += '(' + _kvstr(opts.pop('ktype')) + ', ' + _kvstr(opts.pop('vtype')) + ')'
     v = opts.pop('enum', None)
-    extra += '(Enum(' + v + '))' if v else ''
+    extra += '(Enum[' + v + '])' if v else ''
     v = opts.pop('pointer', None)
-    extra += '(Pointer(' + v + '))' if v else ''
+    extra += '(Pointer[' + v + '])' if v else ''
     v = opts.pop('pattern', None)
-    extra += '(%' + v + '%)' if v else ''
+    extra += ' (%' + v + '%)' if v else ''
     v = _vrange(opts) if tname == 'Integer' else (_frange(opts) if tname == 'Number' else _srange(opts))
     extra += '{' + v + '}' if v else ''
     v = opts.pop('format', None)
@@ -246,26 +276,15 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
 
 
 def jadn2fielddef(fdef, tdef):
-    """
-    fopts = minc, maxc, tfield, dir, default
-
-    ft, fto = ftopts_s2d(fdef[FieldOptions])
-    fo = {'minc': 1, 'maxc': 1}
-    fo.update(ft)
-    etree.SubElement(he3, 'div', {'class': 'tCell jFstr'}).text = jadn2typestr(fdef[FieldType], fto)
-    etree.SubElement(he3, 'div', {'class': 'tCell jFmult'}).text = multiplicity(fo['minc'], fo['maxc'])
-    etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdef[FieldDesc]
-    """
-
     idt = get_optx(tdef[TypeOptions], 'id') is not None
     fo, fto = ftopts_s2d(fdef[FieldOptions])
-    fname = ('' if idt else fdef[FieldName]) + ('/' if 'dir' in fo else '')  # TODO: process tfield
-    tfield = fo.get('tfield')
+    fname = ('' if idt else fdef[FieldName]) + ('/' if 'dir' in fo else '')  # TODO: process tagid
+    tagid = fo.get('tagid')
     tf = ''
-    if tfield:
-        tf = {f[FieldID]: f[FieldName] for f in tdef[Fields]}[tfield]
-        tf = tf if tf else str(tfield)
-        tf = '(Tag(' + tf + '))'
+    if tagid:
+        tf = {f[FieldID]: f[FieldName] for f in tdef[Fields]}[tagid]
+        tf = tf if tf else str(tagid)
+        tf = '(TagId[' + tf + '])'
     ftyperef = jadn2typestr(fdef[FieldType] + tf, opts_d2s(fto))
     minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
     fmult = '1' if minc == 1 and maxc == 1 else str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
@@ -274,16 +293,28 @@ def jadn2fielddef(fdef, tdef):
 
 
 def fielddef2jadn(fname, fstr, fmult, fdesc):
-    ftyperef, fopts = typestr2jadn(fstr)
-    # one of: enum.id, enum, field.id, field
-    fo = topts_s2d(fopts)
-    fo.update({} if fname else {'id': True})
+    ftyperef, topts, fopts = typestr2jadn(fstr)
+    # Field is one of: enum.id, enum, field.id, field
+    fo = topts_s2d(topts)                   # Copy type options (if any) into field options (JADN extension)
+    if fname.endswith('/'):
+        fo.update({'dir': True})
+        fname = fname.rstrip('/')
+    if not fname:
+        fo.update({'id': True} if ftyperef != 'Array' else {})  # Extract field name from description if .ID or Array
+        m = re.match(r'([^:])::(.*)', fdesc)
+        if m:
+            print(' =', m.group(1), m.group(2))
+            fname = m.group(1)
+            fdesc = m.group(2)
     m = re.match(r'^(\d+)\.\.(\d+|\*)$', fmult)
     if m:
         minc = int(m.group(1))
         maxc = 0 if m.group(2) == '*' else int(m.group(2))
         fo.update({'minc': minc} if minc != 1 else {})
         fo.update({'maxc': maxc} if maxc != 1 else {})
+    if fopts:
+        assert len(fopts) == 1 and fopts[0][0] == OPTION_ID['tagid']     # Update if additional field options defined
+        fo.update({'tagid': fopts[0][1:]})      # if field name, MUST update to id after all fields have been read
     return [fname, ftyperef, opts_sort(opts_d2s(fo)), fdesc] if ftyperef else [fname, fdesc]
 
 

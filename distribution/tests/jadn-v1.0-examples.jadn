@@ -86,6 +86,6 @@
     [2, "green", ""],
     [3, "blue", ""]
   ]],
-  ["Pixel3", "MapOf", ["*Integer", "+Channel3"], ""]
+  ["Pixel3", "MapOf", ["+Channel3", "*Integer"], ""]
  ]
 }

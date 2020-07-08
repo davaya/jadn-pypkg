@@ -107,7 +107,7 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
 FIELD_OPTIONS = {
     0x5b: ('minc', lambda x: int(x), 15),   # '[', minimum cardinality, default = 1, 0 = field is optional
     0x5d: ('maxc', lambda x: int(x), 16),   # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
-    0x26: ('tfield', lambda x: int(x), 17), # '&', field that specifies the type of this field
+    0x26: ('tagid', lambda x: int(x), 17),  # '&', field that specifies the type of this field
     0x3c: ('dir', lambda x: True, 18),      # '<', pointer enumeration treats field as a collection
     0x21: ('default', lambda x: x, 19),     # '!', default value for an instance of this type
 }
@@ -129,7 +129,7 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'or':       chr(0x222a),
     'minc':     chr(0x5b),
     'maxc':     chr(0x5d),
-    'tfield':   chr(0x26),
+    'tagid':    chr(0x26),
     'dir':      chr(0x3c),
     'default':  chr(0x21),
 }

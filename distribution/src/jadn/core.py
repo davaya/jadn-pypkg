@@ -86,7 +86,7 @@ def check(schema):
                     minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
                     if minc < 0 or maxc < 0 or (maxc > 0 and maxc < minc):
                         jadn.raise_error(f'{tn}/{f[FieldName]} bad cardinality {minc} {maxc}')
-                    tf = fo.get('tfield')
+                    tf = fo.get('tagid')
                     if tf and tf not in fids:
                         jadn.raise_error(f'{tn}/{f[FieldName]}({f[FieldType]}) choice has bad external tag {tf}')
                     if is_builtin(f[FieldType]):
