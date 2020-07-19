@@ -254,11 +254,10 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
     if 'meta' in schema:
         meta = schema['meta']
         text += meta_begin()
-        meta_list = ('title', 'module', 'patch', 'description', 'exports', 'imports', 'config')
-        for h in meta_list + tuple(set(meta) - set(meta_list)):
-            if h in meta:
-                mh = meta[h]
-                text += meta_item(h, mh)
+        mlist = [k for k in META_ORDER if k in schema['meta']]
+        for h in mlist + list(set(schema['meta']) - set(mlist)):
+            mh = meta[h]
+            text += meta_item(h, mh)
         text += meta_end()
 
     for td in schema['types']:

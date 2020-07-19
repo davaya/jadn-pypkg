@@ -16,7 +16,7 @@
   ["Icon", "Binary", ["{4", "}65535"], ""],
   ["Ship-To-Store", "Boolean", [], ""],
   ["Width", "Integer", ["/i16"], ""],
-  ["Mass", "Number", ["y0.0", "z3.14", "/f32"], ""],
+  ["Mass", "Number", ["/f32", "y0.0", "z3.14"], ""],
   ["Vname", "String", ["%^[_$a-z0-9]{1,32}$"], ""],
   ["URI", "String", ["/uri"], ""],
   ["Person", "Record", [], "JADN equivalent of structure from https://developers.google.com/protocol-buffers", [
@@ -35,7 +35,16 @@
     [3, "query", "Initiate a request for information"],
     [4, "report", "Configure event reporting/logging"]
   ]],
+  ["Action2", "Enumerated", ["="], "Action list", [
+    [3, "query", "Initiate a request for information"],
+    [4, "report", "Configure event reporting/logging"]
+  ]],
   ["HTTP-Status", "Enumerated", ["="], "Status code definitions",[
+    [200, "OK", "The request has succeeded"],
+    [400, "Bad Request", "The request could not be understood by the server due to malformed syntax"],
+    [404, "Not Found", "The server has not found anything matching the request URI"]
+  ]],
+  ["HTTP-Status2", "Enumerated", [], "Status code definitions",[
     [200, "OK", "The request has succeeded"],
     [400, "Bad Request", "The request could not be understood by the server due to malformed syntax"],
     [404, "Not Found", "The server has not found anything matching the request URI"]

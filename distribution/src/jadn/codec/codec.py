@@ -315,15 +315,13 @@ def _decode_number(ts, sval, codec):
     return _check_range(ts, aval)
 
 
-def _encode_null(ts, aval, codec):      # TODO: serialization-specific handling
-    _check_type(ts, aval, type(''))
-    if aval:
+def _encode_null(ts, aval, codec):
+    if aval:                            # Treat any false-y value as Null: None, False, 0, '', [], set(), {}
         _bad_value(ts, aval)
     return aval
 
 
 def _decode_null(ts, val, codec):
-    _check_type(ts, val, type(''))
     if val:
         _bad_value(ts, val)
     return val

@@ -16,13 +16,14 @@
   ]],
 
   ["Meta", "Map", [], "Information about this module", [
-    [1, "module", "Namespace", [], "Unique name/version"],
+    [1, "module", "Namespace", [], "Unique name/version: $id"],
     [2, "patch", "String", ["{1", "[0"], "Patch version"],
     [3, "title", "String", ["{1", "[0"], "Title"],
     [4, "description", "String", ["{1", "[0"], "Description"],
-    [5, "imports", "Imports", ["[0"], "Imported schema modules"],
-    [6, "exports", "Exports", ["[0"], "Type definitions exported by this module"],
-    [7, "config", "Config", ["[0"], "Configuration values for this module"]
+    [5, "comment", "String", ["{1", "[0"], "Comment: $comment"],
+    [6, "imports", "Imports", ["[0"], "Imported schema modules"],
+    [7, "exports", "Exports", ["[0"], "Type definitions exported by this module"],
+    [8, "config", "Config", ["[0"], "Configuration values for this module"]
   ]],
   ["Imports", "MapOf", ["+NSID", "*Namespace", "{1"], "List of imported modules"],
   ["Exports", "ArrayOf", ["*TypeName", "{1"], "List of type definitions intended to be public"],

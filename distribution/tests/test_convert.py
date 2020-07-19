@@ -20,7 +20,7 @@ class HtmlConvert(unittest.TestCase):
     def _html_convert(self, schema):
         html_doc = jadn.convert.html_dumps(schema)
         schema_new = jadn.convert.html_loads(html_doc)
-        self.assertEqual(schema, schema_new)
+        self.assertEqual(schema, jadn.canonicalize(schema_new))
 
     def test_0_quickstart(self):
         self._html_convert(jadn.check(quickstart_schema))
@@ -40,7 +40,8 @@ class JidlConvert(unittest.TestCase):
     def _jidl_convert(self, schema):
         jidl_doc = jadn.convert.jidl_dumps(schema)
         schema_new = jadn.convert.jidl_loads(jidl_doc)
-        self.assertEqual(schema, schema_new)
+        self.maxDiff = None
+        self.assertEqual(schema, jadn.canonicalize(schema_new))
 
     def test_0_quickstart(self):
         self._jidl_convert(jadn.check(quickstart_schema))

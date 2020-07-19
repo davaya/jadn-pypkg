@@ -239,3 +239,5 @@ EXTENSIONS = {
     'DerivedEnum',              # enum and pointer/dir options, create Enumerated type of fields or JSON Pointers
     'MapOfEnum',                # ktype option specifies an Enumerated type
 }
+
+META_ORDER = ('title', 'module', 'patch', 'description', 'comments', 'imports', 'exports', 'config')    # Display order

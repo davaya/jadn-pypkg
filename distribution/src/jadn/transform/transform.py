@@ -51,7 +51,7 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                         newopts = {'vtype': fdef[FieldType], 'minv': max(minc, 1)}      # Don't allow empty ArrayOf
                         newopts.update({'maxv': fo['maxc']} if fo['maxc'] > 1 else {})  # maxv defaults to 0
                         newopts.update({'unique': True} if 'unique' in fto else {})     # Move unique option to ArrayOf
-                        new_types.append([newname, 'ArrayOf', opts_d2s(newopts), fdef[FieldDesc]])
+                        new_types.append([newname, 'ArrayOf', opts_d2s(newopts), fdef[FieldDesc], []])
                         fdef[FieldType] = newname   # Point existing field to new ArrayOf
                         f = fdef[FieldOptions]      # Remove unused FieldOptions
                         del_opt(f, 'maxc')
@@ -75,7 +75,7 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                         if newname not in [t[TypeName] for t in new_types]:
                             newtype = 'Enumerated' if epx(newopts) is not None else fdef[FieldType]
                             assert is_builtin(newtype)      # Don't create a bad type definition
-                            new_types.append([newname, newtype, newopts, fdef[FieldDesc]])
+                            new_types.append([newname, newtype, newopts, fdef[FieldDesc], []])
                         fdef[FieldType] = newname           # Redirect field to explicit type definition
         return new_types
 
@@ -117,7 +117,7 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                     optx = get_optx(to, 'enum')
                     optx = optx if optx is not None else get_optx(to, 'pointer')
                     items = enum_items if to[optx][:1] == OPTION_ID['enum'] else pointer_items
-                    tdef.append(items(to[optx][1:]))
+                    tdef[Fields] = items(to[optx][1:])
                     del to[optx]
                     enums.update({rname: tdef[TypeName]})
         new_types = []                  # Create new Enumerated enum/pointer types if they don't already exist

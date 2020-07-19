@@ -264,16 +264,16 @@ class SimplifyExtensions(TestCase):
                 [2, 'green', 'Integer', [], 'verde'],
                 [3, 'blue', 'Integer', [], '']
             ]],
-            ['Channel', 'Enumerated', ['#Pixel'], ''],          # Derived enumeration (explicitly named)
-            ['ChannelId', 'Enumerated', ['#Pixel', '='], ''],   # Derived enumeration with ID option
-            ['ChannelMask', 'ArrayOf', ['*#Pixel'], ''],        # Array of items from named derived enum
+            ['Channel', 'Enumerated', ['#Pixel'], '', []],          # Derived enumeration (explicitly named)
+            ['ChannelId', 'Enumerated', ['#Pixel', '='], '', []],   # Derived enumeration with ID option
+            ['ChannelMask', 'ArrayOf', ['*#Pixel'], '', []],        # Array of items from named derived enum
 
             ['Pixel2', 'Map', ['='], '', [
                 [1, 'yellow', 'Integer', [], ''],
                 [2, 'orange', 'Integer', [], ''],
                 [3, 'purple', 'Integer', [], '']
             ]],
-            ['ChannelMask2', 'ArrayOf', ['*#Pixel2'], ''],      # Array of items from generated derived enum
+            ['ChannelMask2', 'ArrayOf', ['*#Pixel2'], '', []],      # Array of items from generated derived enum
         ]
     }
 
@@ -295,15 +295,15 @@ class SimplifyExtensions(TestCase):
                 [2, 'green', 'verde'],
                 [3, 'blue', '']
             ]],
-            ['ChannelMask', 'ArrayOf', ['*Channel'], ''],
+            ['ChannelMask', 'ArrayOf', ['*Channel'], '', []],
 
             ['Pixel2', 'Map', ['='], '', [
                 [1, 'yellow', 'Integer', [], ''],
                 [2, 'orange', 'Integer', [], ''],
                 [3, 'purple', 'Integer', [], '']
             ]],
-            ['ChannelMask2', 'ArrayOf', ['*Pixel2$Enum'], ''],      # Array of items from generated derived enum
-            ['Pixel2$Enum', 'Enumerated', [], '', [                 # Generated derived enum - Id not propogated
+            ['ChannelMask2', 'ArrayOf', ['*Pixel2$Enum'], '', []],      # Array of items from generated derived enum
+            ['Pixel2$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
                 [1, 'yellow', ''],
                 [2, 'orange', ''],
                 [3, 'purple', '']

@@ -1,81 +1,63 @@
 """
 Translate JADN to JADN Interface Definition Language
 """
-
+import json
 from datetime import datetime
-
-from jadn import topts_s2d, ftopts_s2d, opts_d2s, jadn2typestr
+import re
 from jadn.definitions import *
+from jadn import topts_s2d, ftopts_s2d, opts_d2s, get_optx, raise_error
+from jadn import jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn, cleanup_tagid
 
-def jidl_dumps(jadn):
 
-    def _mult(opts, optional=False):
-        lo = opts.pop('minc', 1)
-        hi = opts.pop('maxc', 1)
-        if hi == 1:
-            return '' if lo == 1 else (' optional' if optional else ' [0..1]')
-        h = '*' if hi == 0 else str(hi)
-        return ' [' + str(lo) + '..' + str(h) + ']'
+"""
+Convert JADN to JIDL
+"""
 
-    def _fieldstr(typestr, opts):           # TODO: use jadn2fielddef
-        extra = ''
-        if 'minc' in opts or 'maxc' in opts:
-            extra += _mult(opts, optional=True)
-        if 'tagid' in opts:
-            extra += '(Tag(' + str(opts['tagid']) + '))'  # TODO: lookup field name
-        return typestr + extra
 
-    def line(cw, content, desc):
-        fmt = '{:' + str(cw) + '}{}'
-        return fmt.format(content.rstrip(), ' // ' + desc if desc else '').rstrip() + '\n'
+def jidl_dumps(schema, width=None):
+    w = {
+        'meta': 12,
+        'id': 4,
+        'name': 12,
+        'type': 35,
+        'page': None
+    }
+    if width:
+        w.update(width)
 
-    meta = jadn['meta'] if 'meta' in jadn else {}
     text = ''
-    meta_list = ('title', 'module', 'patch', 'description', 'exports', 'imports')
-    for h in meta_list + tuple(set(meta) - set(meta_list)):
-        if h in meta:
-            text += '{:>12}: {}\n'.format(h, meta[h])
+    meta = schema['meta'] if 'meta' in schema else {}
+    mlist = [k for k in META_ORDER if k in meta]
+    for k in mlist + list(set(meta) - set(mlist)):              # Display meta elements in fixed order
+        text += f'{k:>{w["meta"]}}: {json.dumps(meta[k])}\n'    # TODO: wrap to page width, continuation-line parser
 
-    efmt = ['  {0:4d} {1:15}',          # Enumerated
-            '  {0:4d}']                 # Enumerated.ID
-    ffmt = ['  {0:4d} {1:15} {2:20}',   # Full
-            '  {0:4d} {2:20}']          # Full.ID
-
-    for td in jadn['types']:
-        bt = td[BaseType]
-        assert is_builtin(bt)
-        ts = jadn2typestr(bt, td[TypeOptions])
-        to = topts_s2d(td[TypeOptions])
-        flds = '{' if has_fields(bt) or (bt == 'Enumerated' and 'enum' not in to and 'pointer' not in to) else ''
-        text += '\n' + line(44, '{} = {} {}'.format(td[TypeName], ts, flds), td[TypeDesc])
-        if flds:
-            id = 1 if 'id' in to or bt == 'Array' else 0
-            for n, f in enumerate(td[Fields]):
-                sep = ',' if n < len(td[Fields]) - 1 else ''
-                if bt == 'Enumerated':
-                    content = efmt[id].format(f[ItemID], f[ItemValue] + sep)
-                    desc = (f[ItemValue] + ':: ' if id and f[ItemValue] else '') + f[ItemDesc]
-                    text += line(48, content, desc)
-                else:
-                    ft, fto = ftopts_s2d(f[FieldOptions])
-                    fo = {'minc': 1, 'maxc': 1}
-                    fo.update(ft)
-                    fs = _fieldstr(jadn2typestr(f[FieldType], opts_d2s(fto)), fo) + (' unique' if 'unique' in fto else '')
-                    fn = f[FieldName] + ('/' if 'dir' in fo else '')
-                    content = ffmt[id].format(f[FieldID], fn, fs + sep)
-                    desc = (f[FieldName] + ':: ' if id and f[FieldName] else '') + f[FieldDesc]
-                    text += line(48, content, desc)
-
-        text += '}\n' if flds else ''
-
+    wt = w['id'] + w['name'] + w['type']
+    for td in schema['types']:
+        tdef = f'{td[TypeName]} = {jadn2typestr(td[BaseType], td[TypeOptions])}'
+        tdesc = '// ' + td[TypeDesc] if td[TypeDesc] else ''
+        text += f'\n{tdef:<{wt}}{tdesc}'[:w['page']] + '\n'
+        idt = td[BaseType] == 'Array' or get_optx(td[TypeOptions], 'id') is not None
+        for fd in td[Fields] if len(td) > Fields else []:       # TODO: constant-length types
+            fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
+            if td[BaseType] == 'Enumerated':
+                fdesc = '// ' + fdesc if fdesc else ''
+                fs = f'{fd[ItemID]:>{w["id"]}} {fname}'
+                wf = w['id'] + w['name'] + 2
+            else:
+                fdef += '' if fmult == '1' else ' optional' if fmult == '0..1' else ' [' + fmult + ']'
+                fdesc = '// ' + fdesc if fdesc else ''
+                wn = 0 if idt else w['name']
+                fs = f'{fd[FieldID]:>{w["id"]}} {fname:<{wn}} {fdef}'
+                wf = w['id'] + w['type'] if idt else wt
+            text += f'{fs:{wf}}{fdesc}'[:w['page']] + '\n'
     return text
 
 
-def jidl_dump(jadn, fname, source=''):
+def jidl_dump(schema, fname, source=''):
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write('/* Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + ' */\n\n')
-        f.write(jidl_dumps(jadn))
+        f.write(jidl_dumps(schema))
 
 
 """
@@ -83,12 +65,67 @@ Convert JIDL to JADN
 """
 
 
-def jidl_loads(doc, debug=False):
+def line2jadn(line, tdef):
+    if line:
+        p_meta = r'^\s*([-\w]+):\s*(.+?)\s*$'
+        m = re.match(p_meta, line)
+        if m:
+            return 'M', (m.group(1), m.group(2))
+
+        p_tname = r'\s*([-$\w]+)'               # Type Name
+        p_assign = r'\s*='                      # Type assignment operator
+        p_tstr  = r'\s*(.*?)\s*\{?'             # Type definition
+        p_tdesc = r'(?:\s*\/\/\s*(.*?)\s*)?'    # Optional Type description
+        p_type = '^' + p_tname + p_assign + p_tstr + p_tdesc + '$'
+        m = re.match(p_type, line)
+        if m:
+            btype, topts, fo = typestr2jadn(m.group(2))
+            assert fo == []                     # field options MUST not be included in typedefs
+            newtype = [m.group(1), btype, topts, m.group(3) if m.group(3) else '', []]
+            return 'T', newtype
+
+        p_id = r'\s*(\d+)'                      # Field ID
+        p_fname = r'\s+([-:$\w]+\/?)?'          # Field Name with dir/ option (colon is deprecated, allow for now)
+        p_fstr = r'\s*(.*?),?'                  # Field definition or Enum value
+        p_range = r'\s*(?:\[([.*\d]+)\]|(optional))?,?'     # Multiplicity
+        p_desc = r'\s*(?:\/\/\s*(.*?)\s*)?'     # Field description, including field name if .id option
+        pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[BaseType] == 'Array') else p_fname
+        if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
+            pattern = '^' + p_id + p_fstr + p_desc + '$'
+            m = re.match(pattern, line)
+            if m:
+                return 'F', fielddef2jadn(int(m.group(1)), m.group(2), '', '', m.group(3) if m.group(3) else '')
+        else:                                   # Parse Field
+            pattern = '^' + p_id + pn + p_fstr + p_range + p_desc + '$'
+            m = re.match(pattern, line)
+            if m:
+                range = '0..1' if m.group(5) else m.group(4)        # Convert 'optional' to range
+                fdesc = m.group(6) if m.group(6) else ''
+                return 'F', fielddef2jadn(int(m.group(1)), m.group(2), m.group(3), range if range else '', fdesc)
+
+        if line.strip() not in ('', '}'):
+            raise_error(f'JIDL load{repr(line)}')
+    return '', ''
+
+
+def jidl_loads(doc):
     meta = {}
     types = []
-    schema = {'meta': meta} if meta else {}
-    schema.update({'types': types})
-    return schema
+    fields = None
+    for n, line in enumerate(doc.splitlines(), start=1):
+        if line:
+            t, v = line2jadn(line, types[-1] if types else None)    # Parse a JIDL line
+            if t == 'F':
+                fields.append(v)
+            elif fields:
+                cleanup_tagid(fields)
+                fields = None
+            if t == 'M':
+                meta.update({v[0]: json.loads(v[1])})
+            elif t == 'T':
+                types.append(v)
+                fields = types[-1][Fields]
+    return {'meta': meta, 'types': types} if meta else {'types': types}
 
 
 def jidl_load(fname):

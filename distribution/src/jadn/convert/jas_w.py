@@ -29,7 +29,7 @@ def stype(jtype):
     return stype_map[jtype] if jtype in stype_map else jtype
 
 
-def jas_dumps(jadn):
+def jas_dumps(schema):
     """
     Produce JAS module from JADN structure
 
@@ -41,21 +41,20 @@ def jas_dumps(jadn):
     """
 
     jas = '/*\n'
-    hdrs = jadn['meta']
-    hdr_list = ['module', 'patch', 'title', 'description', 'imports', 'exports', 'bounds']
-    for h in hdr_list + list(set(hdrs) - set(hdr_list)):
-        if h in hdrs:
-            if h == 'description':
-                jas += fill(hdrs[h], width=80, initial_indent='{0:14} '.format(h+':'), subsequent_indent=15*' ') + '\n'
-            elif h == 'imports':
-                hh = '{:14} '.format(h+':')
-                for imp in hdrs[h]:
-                    jas += hh + '{}: {}\n'.format(*imp)
-                    hh = 15*' '
-            elif h == 'exports':
-                jas += '{:14} {}\n'.format(h+':', ', '.join(hdrs[h]))
-            else:
-                jas += '{:14} {}\n'.format(h+':', hdrs[h])
+    meta = schema['meta']
+    mlist = [k for k in META_ORDER if k in meta]
+    for h in mlist + list(set(meta) - set(mlist)):
+        if h == 'description':
+            jas += fill(meta[h], width=80, initial_indent='{0:14} '.format(h+':'), subsequent_indent=15*' ') + '\n'
+        elif h == 'imports':
+            hh = '{:14} '.format(h+':')
+            for imp in meta[h]:
+                jas += hh + '{}: {}\n'.format(*imp)
+                hh = 15*' '
+        elif h == 'exports':
+            jas += '{:14} {}\n'.format(h+':', ', '.join(meta[h]))
+        else:
+            jas += '{:14} {}\n'.format(h+':', meta[h])
     jas += '*/\n'
 
     assert set(stype_map) == set(CORE_TYPES)         # Ensure type list is up to date
@@ -64,7 +63,7 @@ def jas_dumps(jadn):
     assert {x[0] for x in TYPE_OPTIONS.values()} == set(tolist)                # Ensure type options list is up to date
     folist = ['minc', 'maxc', 'tagid', 'dir', 'default']
     assert {x[0] for x in FIELD_OPTIONS.values()} == set(folist)               # Ensure field options list is up to date
-    for td in jadn['types']:                    # 0:type name, 1:base type, 2:type opts, 3:type desc, 4:fields
+    for td in schema['types']:                    # 0:type name, 1:base type, 2:type opts, 3:type desc, 4:fields
         tname = td[TypeName]
         ttype = td[BaseType]
         topts = topts_s2d(td[TypeOptions])
@@ -142,8 +141,8 @@ def jas_dumps(jadn):
     return jas
 
 
-def jas_dump(jadn, fname, source=''):
+def jas_dump(schema, fname, source=''):
     with open(fname, 'w') as f:
         if source:
             f.write('-- Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + '\n\n')
-        f.write(jas_dumps(jadn))
+        f.write(jas_dumps(schema))

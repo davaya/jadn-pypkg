@@ -112,7 +112,7 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
                 [add_types(sm, tn) for tn in sm.deps[tname]]
             except KeyError as e:
                 if not make_enum(sm, tname):
-                    print('Error:', e, 'not defined in', sm.module, '(' + sm.source + ')')
+                    print('Error:', e, 'not defined in', sm.module, '(' + str(sm.source) + ')')
 
     def resolve(sm, types):       # add referenced types from other modules to used list
         if set(types) - sm.used:

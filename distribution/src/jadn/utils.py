@@ -6,11 +6,8 @@ Support functions for JADN codec
 
 import re
 from functools import reduce
+import jadn
 from jadn.definitions import *
-
-
-def raise_error(*s):                     # Handle errors
-    raise ValueError(*s)
 
 
 # Dict conversion utilities
@@ -136,7 +133,7 @@ def topts_s2d(olist, frange=False):        # Convert list of type definition opt
             k = TYPE_OPTIONS[ord(o[0])]
             opts[k[0]] = k[1](o[1:])
         except KeyError:
-            raise_error(f'Unknown type option: {o}')
+            jadn.raise_error(f'Unknown type option: {o}')
     return opts
 
 
@@ -164,7 +161,23 @@ def opts_sort(olist):      # Sort JADN option list into canonical order
             k = TYPE_OPTIONS[ord(o)][2]
         return k
 
-    return sorted(olist, key=lambda x: opt_order(x[0]))
+    olist.sort(key=lambda x: opt_order(x[0]))
+
+
+def canonicalize(schema):
+    """
+    """
+    def can_opts(olist):
+        opts_sort(olist)        # Sort options into canonical order (for comparisons)
+                                # TODO: remove default min-size and multiplicity options
+                                # y/z options at least one decimal
+
+    for td in schema['types']:
+        can_opts(td[TypeOptions])
+        for fd in td[Fields]:
+            if td[BaseType] != 'Enumerated':
+                can_opts(fd[FieldOptions])
+    return schema
 
 
 def cleanup_tagid(fields):          # If type definition contains a TagId option, replace field name with id
@@ -174,8 +187,8 @@ def cleanup_tagid(fields):          # If type definition contains a TagId option
             if tx is not None:
                 to = f[FieldOptions][tx]
                 try:
-                    tag = int(to)
-                except ValueError:
+                    tag = int(to[1:])           # Check if already a Field Id
+                except ValueError:              # Look up Id corresponding to Field Name
                     fx = {x[FieldName]: x[FieldID] for x in fields}
                     f[FieldOptions][tx] = to[0] + str(fx[to[1:]])
     return fields
@@ -183,20 +196,22 @@ def cleanup_tagid(fields):          # If type definition contains a TagId option
 
 def typestr2jadn(typestring):
     def parseopt(optstr):
-        mm = re.match(r'^\s*(\w+)(?:\[([^]]+)\])?$', optstr)
+        mm = re.match(r'^\s*([-$\w]+)(?:\[([^]]+)\])?$', optstr)
         return OPTION_ID[mm.group(1).lower()] + mm.group(2) if mm.group(2) else mm.group(1)
 
     topts = {}
     fo = []
-    p_name = r'([:\w$-]+)'              # 1 type name
+    p_name = r'\s*=?\s*([-$:\w]+)'      # 1 type name
     p_id = r'(.ID)?'                    # 2 'id'
     p_func = r'(?:\(([^)]+)\))?'        # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
     p_range = r'(?:\s*\{(.*)\})?'       # 4 'minv', 'maxv'
     p_format = r'(?:\s*\/(\w[-\w]*))?'  # 5 'format'
     p_pattern = r'(?:\s*\(%(.+)%\))?'   # 6 'pattern'
     p_unique = r'\s*(unique)?'          # 7 'unique'
-    pattern = '^' + p_name + p_id + p_func + p_range + p_format + p_pattern + p_unique + '$'
+    pattern = '^' + p_name + p_id + p_func + p_range + p_format + p_pattern + p_unique + '\s*\{?\s*$'
     m = re.match(pattern, typestring)
+    if m is None:
+        return '*ERR*', [], []
     tname = m.group(1)
     topts.update({'id': True} if m.group(2) else {})
     if m.group(3):                      # (ktype, vtype), Enum(), Pointer() options
@@ -209,7 +224,7 @@ def typestr2jadn(typestring):
         else:
             assert len(opts) == 1
             topts.update(topts_s2d([opts[0]]) if ord(opts[0][0]) in TYPE_OPTIONS else {})
-            fo.append(opts[0] if ord(opts[0][0]) in FIELD_OPTIONS else [])      # TagId option
+            fo += [opts[0]] if ord(opts[0][0]) in FIELD_OPTIONS else []         # TagId option
     if m.group(4):
         a, b = m.group(4).split('..', maxsplit=1)
         if tname == 'Number':
@@ -276,46 +291,56 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
 
 
 def jadn2fielddef(fdef, tdef):
-    idt = get_optx(tdef[TypeOptions], 'id') is not None
-    fo, fto = ftopts_s2d(fdef[FieldOptions])
-    fname = ('' if idt else fdef[FieldName]) + ('/' if 'dir' in fo else '')  # TODO: process tagid
-    tagid = fo.get('tagid')
-    tf = ''
-    if tagid:
-        tf = {f[FieldID]: f[FieldName] for f in tdef[Fields]}[tagid]
-        tf = tf if tf else str(tagid)
-        tf = '(TagId[' + tf + '])'
-    ftyperef = jadn2typestr(fdef[FieldType] + tf, opts_d2s(fto))
-    minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
-    fmult = '1' if minc == 1 and maxc == 1 else str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
-    fdesc = (fdef[FieldName] + ':: ' if idt else '') + fdef[FieldDesc]
+    idt = tdef[BaseType] == 'Array' or get_optx(tdef[TypeOptions], 'id') is not None
+    fname = '' if idt else fdef[FieldName]
+    ftyperef, fmult = '', ''
+    fdesc = fdef[FieldName] + ':: ' if idt else ''
+    if tdef[BaseType] == 'Enumerated':
+        fdesc += fdef[ItemDesc]
+    else:
+        fdesc += fdef[FieldDesc]
+        fo, fto = ftopts_s2d(fdef[FieldOptions])
+        fname += '/' if 'dir' in fo else ''
+        tagid = fo.get('tagid')
+        tf = ''
+        if tagid:
+            tf = {f[FieldID]: f[FieldName] for f in tdef[Fields]}[tagid]
+            tf = tf if tf else str(tagid)
+            tf = '(TagId[' + tf + '])'
+        ftyperef = jadn2typestr(fdef[FieldType] + tf, opts_d2s(fto))
+        minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
+        fmult = '1' if minc == 1 and maxc == 1 else str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
     return fname, ftyperef, fmult, fdesc
 
 
-def fielddef2jadn(fname, fstr, fmult, fdesc):
-    ftyperef, topts, fopts = typestr2jadn(fstr)
-    # Field is one of: enum.id, enum, field.id, field
-    fo = topts_s2d(topts)                   # Copy type options (if any) into field options (JADN extension)
-    if fname.endswith('/'):
-        fo.update({'dir': True})
-        fname = fname.rstrip('/')
-    if not fname:
-        fo.update({'id': True} if ftyperef != 'Array' else {})  # Extract field name from description if .ID or Array
-        m = re.match(r'([^:])::(.*)', fdesc)
+def fielddef2jadn(fid, fname, fstr, fmult, fdesc):
+    ftyperef = ''
+    fo = {}
+    if fstr:
+        ftyperef, topts, fopts = typestr2jadn(fstr)
+        # Field is one of: enum.id, enum, field.id, field
+        fo = topts_s2d(topts)                   # Copy type options (if any) into field options (JADN extension)
+        if fname.endswith('/'):
+            fo.update({'dir': True})
+            fname = fname.rstrip('/')
+        m = re.match(r'^(\d+)\.\.(\d+|\*)$', fmult) if fmult else None
         if m:
-            print(' =', m.group(1), m.group(2))
-            fname = m.group(1)
-            fdesc = m.group(2)
-    m = re.match(r'^(\d+)\.\.(\d+|\*)$', fmult)
-    if m:
-        minc = int(m.group(1))
-        maxc = 0 if m.group(2) == '*' else int(m.group(2))
-        fo.update({'minc': minc} if minc != 1 else {})
-        fo.update({'maxc': maxc} if maxc != 1 else {})
-    if fopts:
-        assert len(fopts) == 1 and fopts[0][0] == OPTION_ID['tagid']     # Update if additional field options defined
-        fo.update({'tagid': fopts[0][1:]})      # if field name, MUST update to id after all fields have been read
-    return [fname, ftyperef, opts_sort(opts_d2s(fo)), fdesc] if ftyperef else [fname, fdesc]
+            minc = int(m.group(1))
+            maxc = 0 if m.group(2) == '*' else int(m.group(2))
+            fo.update({'minc': minc} if minc != 1 else {})
+            fo.update({'maxc': maxc} if maxc != 1 else {})
+        if fopts:
+            assert len(fopts) == 1 and fopts[0][0] == OPTION_ID['tagid']     # Update if additional field options defined
+            fo.update({'tagid': fopts[0][1:]})      # if field name, MUST update to id after all fields have been read
+    if fdesc:
+        m = re.match(r'^(?:\s*\/\/)?\s*(.*)$', fdesc)
+        fdesc = m.group(1)
+        if not fname:
+            m = re.match(r'^([^:]+)::\s*(.*)$', fdesc)
+            if m:
+                fname = m.group(1)
+                fdesc = m.group(2)
+    return [fid, fname, ftyperef, opts_d2s(fo), fdesc] if ftyperef else [fid, fname, fdesc]
 
 
 def get_config(meta):
