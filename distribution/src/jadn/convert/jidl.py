@@ -20,10 +20,11 @@ def jidl_dumps(schema, width=None):
         'id': 4,
         'name': 12,
         'type': 35,
-        'page': None
+        'desc': None,       # Fixed-position descriptions
+        'page': None        # Truncate to specified page width
     }
     if width:
-        w.update(width)
+        w.update(width)     # Override any specified column widths
 
     text = ''
     meta = schema['meta'] if 'meta' in schema else {}
@@ -31,11 +32,11 @@ def jidl_dumps(schema, width=None):
     for k in mlist + list(set(meta) - set(mlist)):              # Display meta elements in fixed order
         text += f'{k:>{w["meta"]}}: {json.dumps(meta[k])}\n'    # TODO: wrap to page width, continuation-line parser
 
-    wt = w['id'] + w['name'] + w['type']
+    wt = w['desc'] if w['desc'] else w['id'] + w['name'] + w['type']
     for td in schema['types']:
         tdef = f'{td[TypeName]} = {jadn2typestr(td[BaseType], td[TypeOptions])}'
         tdesc = '// ' + td[TypeDesc] if td[TypeDesc] else ''
-        text += f'\n{tdef:<{wt}}{tdesc}'[:w['page']] + '\n'
+        text += f'\n{tdef:<{wt}}{tdesc}'[:w['page']].rstrip() + '\n'
         idt = td[BaseType] == 'Array' or get_optx(td[TypeOptions], 'id') is not None
         for fd in td[Fields] if len(td) > Fields else []:       # TODO: constant-length types
             fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
@@ -49,15 +50,16 @@ def jidl_dumps(schema, width=None):
                 wn = 0 if idt else w['name']
                 fs = f'{fd[FieldID]:>{w["id"]}} {fname:<{wn}} {fdef}'
                 wf = w['id'] + w['type'] if idt else wt
-            text += f'{fs:{wf}}{fdesc}'[:w['page']] + '\n'
+            wf = w['desc'] if w['desc'] else wf
+            text += f'{fs:{wf}}{fdesc}'[:w['page']].rstrip() + '\n'
     return text
 
 
-def jidl_dump(schema, fname, source=''):
+def jidl_dump(schema, fname, source='', width=None):
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write('/* Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + ' */\n\n')
-        f.write(jidl_dumps(schema))
+        f.write(jidl_dumps(schema, width))
 
 
 """

@@ -24,7 +24,7 @@
       "type": "array",
       "items": {
         "type": "array",
-        "minItems": 4,
+        "minItems": 5,
         "maxItems": 5,
         "items": [
           {"$ref": "#/definitions/TypeName"},

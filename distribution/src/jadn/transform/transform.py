@@ -99,7 +99,7 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
 
         def pointer_items(rtype):
             def pathnames(rtype, base=''):                   # Walk subfields of referenced type
-                tdef = tdefs[typex[rtype]]
+                tdef = tdefs[typex[rtype]]        # TODO: proper error handling for built-in or non-existing reference
                 if has_fields(tdef[BaseType]):
                     for f in tdef[Fields]:
                         if OPTION_ID['dir'] in f[FieldOptions]:

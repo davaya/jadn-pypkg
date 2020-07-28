@@ -47,7 +47,7 @@ def check(schema):
         if 'and' in topts and 'or' in topts:
             raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
 
-    for t in schema['types']:           # Transition type definitions to constant length
+    for t in schema['types']:           # Transition old type definitions to constant length
         if len(t) <= Fields:
             t.append([])
 
@@ -98,6 +98,9 @@ def check(schema):
                         allowed = {'unique', } if maxc != 1 else set()  # unique option is moved to generated ArrayOf
                         if set(fto) - allowed:
                             raise_error(f'{tn}/{f[FieldName]}({f[FieldType]}) cannot have Type options {fto}')
+                    if 'dir' in fo:
+                        if is_builtin(f[FieldType]) and not has_fields(f[FieldType]):   # TODO: check defined type
+                            raise_error(f'{tn}/{f[FieldName]}: {f[FieldType]} cannot be dir')
 
             if len(t[Fields]) != len(fids) or len(t[Fields]) != len(fnames):
                 raise_error(f'Duplicate field {tn} {len(t[Fields])} fields, {len(fids)} unique tags, {len(fnames)} unique names')
@@ -139,29 +142,32 @@ def load(fname):
 
 
 def dumps(schema, level=0, indent=1, strip=False, nlevel=None):
-    sp = level * indent * ' '
-    sp2 = (level + 1) * indent * ' '
-    sep2 = ',\n' if strip else ',\n\n'
-    if isinstance(schema, dict):
-        sep = ',\n' if level > 0 else sep2
-        lines = []
-        for k in schema:
-            lines.append(sp2 + '"' + k + '": ' + dumps(schema[k], level + 1, indent, strip))
-        return '{\n' + sep.join(lines) + '\n' + sp + '}'
-    elif isinstance(schema, list):
-        sep = ',\n' if level > 1 else sep2
-        vals = []
-        nest = schema and isinstance(schema[0], list)       # Not an empty list
-        for v in schema:
-            sp3 = sp2 if nest else ''
-            vals.append(sp3 + dumps(v, level + 1, indent, strip, level))
-        if nest:
-            spn = (nlevel if nlevel else level) * indent * ' '
-            return '[\n' + sep.join(vals) + '\n' + spn + ']'
-        return '[' + ', '.join(vals) + ']'
-    elif isinstance(schema, (numbers.Number, type(''))):
-        return json.dumps(schema)
-    return '???'
+    def _d(schema, level=0, indent=1, strip=False, nlevel=None):
+        sp = level * indent * ' '
+        sp2 = (level + 1) * indent * ' '
+        sep2 = ',\n' if strip else ',\n\n'
+        if isinstance(schema, dict):
+            sep = ',\n' if level > 0 else sep2
+            lines = []
+            for k in schema:
+                lines.append(sp2 + '"' + k + '": ' + _d(schema[k], level + 1, indent, strip))
+            return '{\n' + sep.join(lines) + '\n' + sp + '}'
+        elif isinstance(schema, list):
+            sep = ',\n' if level > 1 else sep2
+            vals = []
+            nest = schema and isinstance(schema[0], list)  # Not an empty list
+            for v in schema:
+                sp3 = sp2 if nest else ''
+                vals.append(sp3 + _d(v, level + 1, indent, strip, level))
+            if nest:
+                spn = (nlevel if nlevel else level) * indent * ' '
+                return '[\n' + sep.join(vals) + '\n' + spn + ']'
+            return '[' + ', '.join(vals) + ']'
+        elif isinstance(schema, (numbers.Number, type(''))):
+            return json.dumps(schema)
+        return '???'
+
+    return _d(jadn.canonicalize(schema), level, indent, strip, nlevel)
 
 
 def dump(schema, fname, source='', strip=False):

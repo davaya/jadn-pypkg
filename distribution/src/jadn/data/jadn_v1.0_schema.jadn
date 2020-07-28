@@ -1,7 +1,6 @@
 {
  "meta": {
   "module": "http://oasis-open.org/jadn/v1.0/schema",
-  "patch": "0-wd01",
   "title": "JADN Metaschema",
   "description": "Syntax of a JSON Abstract Data Notation (JADN) module.",
   "exports": ["Schema"],
@@ -43,7 +42,7 @@
     [2, "base_type", "BaseType", [], ""],
     [3, "type_options", "Options", [], ""],
     [4, "type_description", "Description", [], ""],
-    [5, "fields", "JADN-Type", ["[0", "&2"], ""]
+    [5, "fields", "JADN-Type", ["&2"], ""]
   ]],
   ["BaseType", "Enumerated", [], "", [
     [1, "Binary", ""],
@@ -61,20 +60,21 @@
     [13, "Record", ""]
   ]],
   ["JADN-Type", "Choice", [], "", [
-    [1, "Binary", "Null", [], ""],
-    [2, "Boolean", "Null", [], ""],
-    [3, "Integer", "Null", [], ""],
-    [4, "Number", "Null", [], ""],
-    [5, "Null", "Null", [], ""],
-    [6, "String", "Null", [], ""],
+    [1, "Binary", "Empty", [], ""],
+    [2, "Boolean", "Empty", [], ""],
+    [3, "Integer", "Empty", [], ""],
+    [4, "Number", "Empty", [], ""],
+    [5, "Null", "Empty", [], ""],
+    [6, "String", "Empty", [], ""],
     [7, "Enumerated", "Items", [], ""],
     [8, "Choice", "Fields", [], ""],
     [9, "Array", "Fields", [], ""],
-    [10, "ArrayOf", "Null", [], ""],
+    [10, "ArrayOf", "Empty", [], ""],
     [11, "Map", "Fields", [], ""],
-    [12, "MapOf", "Null", [], ""],
+    [12, "MapOf", "Empty", [], ""],
     [13, "Record", "Fields", [], ""]
   ]],
+  ["Empty", "Array", ["}0"], "", []],
   ["Items", "ArrayOf", ["*Item"], ""],
   ["Item", "Array", [], "", [
     [1, "item_id", "FieldID", [], ""],

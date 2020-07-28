@@ -61,7 +61,7 @@ def html_dumps(schema):
         HEAD(
             META(charset='UTF-8'),
             TITLE(title),
-            LINK(rel='stylesheet', href='dtheme.css', type='text/css')
+            LINK(rel='stylesheet', href='css/dtheme.css', type='text/css')
         ),
         BODY(
             H2('Schema')
@@ -85,7 +85,7 @@ def html_dumps(schema):
         he3 = etree.SubElement(he2, 'div', {'class': 'jTdef'})      # container for type definition column
         etree.SubElement(he3, 'div', {'class': 'jTname'}).text = tdef[TypeName]
         etree.SubElement(he3, 'div', {'class': 'jTstr'}).text = ' = ' + jadn2typestr(tdef[BaseType], tdef[TypeOptions])
-        etree.SubElement(he2, 'div', {'class': 'jTdesc'}).text = ' // ' + tdef[TypeDesc] if tdef[TypeDesc] else ''
+        etree.SubElement(he2, 'div', {'class': 'jTdesc'}).text = tdef[TypeDesc] if tdef[TypeDesc] else ''
         if len(tdef) > Fields:
             he2 = etree.SubElement(het, 'div', {'class': 'tHead'})
             etree.SubElement(he2, 'div', {'class': 'tHCell jHid'}).text = 'ID'
@@ -97,17 +97,17 @@ def html_dumps(schema):
             he2 = etree.SubElement(het, 'div', {'class': 'tBody'})
             for fdef in tdef[Fields]:
                 he3 = etree.SubElement(he2, 'div', {'class': 'tRow'})
+                fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, tdef)
                 if len(tdef[Fields][0]) > ItemDesc + 1:
                     etree.SubElement(he3, 'div', {'class': 'tCell jFid'}).text = str(fdef[FieldID])
-                    fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, tdef)
                     etree.SubElement(he3, 'div', {'class': 'tCell jFname'}).text = fname
                     etree.SubElement(he3, 'div', {'class': 'tCell jFstr'}).text = ftyperef
                     etree.SubElement(he3, 'div', {'class': 'tCell jFmult'}).text = fmult
                     etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdesc
                 else:
                     etree.SubElement(he3, 'div', {'class': 'tCell jFid'}).text = str(fdef[ItemID])
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFname'}).text = fdef[ItemValue]  # TODO: id option
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdef[ItemDesc]
+                    etree.SubElement(he3, 'div', {'class': 'tCell jFname'}).text = fname
+                    etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdesc
         body.append(het)
 
     return html.tostring(doc, pretty_print=True, doctype='<!DOCTYPE html>').decode('utf-8')

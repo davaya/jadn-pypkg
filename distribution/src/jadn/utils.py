@@ -167,16 +167,24 @@ def opts_sort(olist):      # Sort JADN option list into canonical order
 def canonicalize(schema):
     """
     """
-    def can_opts(olist):
-        opts_sort(olist)        # Sort options into canonical order (for comparisons)
-                                # TODO: remove default min-size and multiplicity options
-                                # y/z options at least one decimal
+    def can_opts(olist, btype):
+        opts_sort(olist)                # Sort options into canonical order (for comparisons)
+        fo, to = ftopts_s2d(olist)      # Remove default size and multiplicity options
+        if 'minv' in to and to['minv'] == 0 and btype != 'Integer':
+            del_opt(olist, 'minv')
+        if 'minc' in fo and fo['minc'] == 1:
+            del_opt(olist, 'minc')
+        if 'maxc' in fo and fo['maxc'] == 1:
+            del_opt(olist, 'maxc')
+        if btype == 'Number':
+            pass                        # TODO: format minf/maxf if present
+
 
     for td in schema['types']:
-        can_opts(td[TypeOptions])
+        can_opts(td[TypeOptions], td[BaseType])
         for fd in td[Fields]:
             if td[BaseType] != 'Enumerated':
-                can_opts(fd[FieldOptions])
+                can_opts(fd[FieldOptions], fd[FieldType])
     return schema
 
 
@@ -251,9 +259,9 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
 
     def _srange(ops):               # Size range (single-ended) - default is {0..*}
         lo = ops.pop('minv', 0)
-        hi = ops.pop('maxv', 0)
-        hs = '*' if hi == 0 else str(hi)
-        return str(lo) + '..' + hs if lo != 0 or hi != 0 else ''
+        hi = ops.pop('maxv', -1)
+        hs = '*' if hi < 0 else str(hi)
+        return str(lo) + '..' + hs if lo != 0 or hs != '*' else ''
 
     def _vrange(ops):               # Value range (double-ended) - default is {*..*}
         lo = ops.pop('minv', '*')
@@ -291,12 +299,12 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
 
 
 def jadn2fielddef(fdef, tdef):
-    idt = tdef[BaseType] == 'Array' or get_optx(tdef[TypeOptions], 'id') is not None
-    fname = '' if idt else fdef[FieldName]
-    ftyperef, fmult = '', ''
-    fdesc = fdef[FieldName] + ':: ' if idt else ''
+    idtype = tdef[BaseType] == 'Array' or get_optx(tdef[TypeOptions], 'id') is not None
+    fname = '' if idtype else fdef[FieldName]
+    fdesc = fdef[FieldName] + ':: ' if idtype else ''
     if tdef[BaseType] == 'Enumerated':
         fdesc += fdef[ItemDesc]
+        ftyperef, fmult = '', ''
     else:
         fdesc += fdef[FieldDesc]
         fo, fto = ftopts_s2d(fdef[FieldOptions])

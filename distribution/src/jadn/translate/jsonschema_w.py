@@ -174,7 +174,7 @@ def t_string(tdef, topts, ctx):
         w_td('string', tdef[TypeDesc]),
         w_format(topts['format']) if 'format' in topts else {},
         {'minLength': topts['minv']} if 'minv' in topts and topts['minv'] != 0 else {},
-        {'maxLength': topts['maxv']} if 'maxv' in topts and topts['maxv'] != 0 else {},
+        {'maxLength': topts['maxv']} if 'maxv' in topts else {},
         {'pattern': topts['pattern']} if 'pattern' in topts else {}
     )
 
@@ -205,7 +205,7 @@ def t_array(tdef, topts, ctx):
         w_td('array', tdef[TypeDesc]),
         {'additionalItems': False},
         {'minItems': topts['minv']} if 'minv' in topts and topts['minv'] != 0 else {},
-        {'maxItems': topts['maxv']} if 'maxv' in topts and topts['maxv'] != 0 else {},
+        {'maxItems': topts['maxv']} if 'maxv' in topts else {},
         {'items': [w_fdef(f, ctx) for f in tdef[Fields]]}
     )
 
@@ -215,7 +215,7 @@ def t_array_of(tdef, topts, ctx):
         w_td('array', tdef[TypeDesc]),
         {'uniqueItems': True} if 'unique' in topts else {},
         {'minItems': topts['minv']} if 'minv' in topts and topts['minv'] != 0 else {},
-        {'maxItems': topts['maxv']} if 'maxv' in topts and topts['maxv'] != 0 else {},
+        {'maxItems': topts['maxv']} if 'maxv' in topts else {},
         {'items': w_kvtype(topts['vtype'], ctx)}
     )
 
@@ -230,7 +230,7 @@ def t_map(tdef, topts, ctx):
         {'additionalProperties': False},
         {'required': required} if required else {},
         {'minProperties': topts['minv']} if 'minv' in topts and topts['minv'] != 0 else {},
-        {'maxProperties': topts['maxv']} if 'maxv' in topts and topts['maxv'] != 0 else {},
+        {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
         {'properties': {f[FieldName]: w_fdef(f, ctx) for f in tdef[Fields]}}
     )
 
@@ -242,7 +242,7 @@ def t_map_of(tdef, topts, ctx):
         w_td('object', tdef[TypeDesc]),
         {'additionalProperties': False},
         {'minProperties': topts['minv']} if 'minv' in topts and topts['minv'] != 0 else {},
-        {'maxProperties': topts['maxv']} if 'maxv' in topts and topts['maxv'] != 0 else {},
+        {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
         {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else
         {'properties': {f: vtype for f in items}} if items else {}
     )
@@ -273,7 +273,7 @@ def w_type(tdef, topts, ctx):       # Write a JADN type definition in JSON Schem
         'MapOf': t_map_of,
         'Record': t_map if ctx['verbose'] else t_array
     }
-    if 'maxv' in topts and topts['maxv'] == 0:
+    if 'maxv' not in topts and tdef[BaseType] in config_max:
         topts['maxv'] = ctx['config'][config_max[tdef[BaseType]]]
     sc = wtype[tdef[BaseType]](tdef, topts, ctx)
     if 'and' in topts:
