@@ -36,8 +36,8 @@ jidl_doc = jidl_dumps(schema)
 print(jidl_doc)
 # assert schema == jidl_loads(jidl_doc)   # To be developed.
 
-print('\nSchema (JADN IDL with truncated comments):\n------------------')
-print(jidl_dumps(strip_comments(schema, width=32)))
+print('\nSchema (JADN IDL, adjust column widths, strip comments):\n------------------')
+print(jidl_dumps(strip_comments(schema), columns={'id': 2, 'name': 8, 'desc': 30}))
 
 print('\nSchema (HTML):\n------------------')
 html_doc = html_dumps(schema)

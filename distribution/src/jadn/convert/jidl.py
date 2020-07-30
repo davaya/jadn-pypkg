@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 import re
 from jadn.definitions import *
-from jadn import topts_s2d, ftopts_s2d, opts_d2s, get_optx, raise_error
+from jadn import get_optx, raise_error
 from jadn import jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn, cleanup_tagid
 
 
@@ -14,17 +14,31 @@ Convert JADN to JIDL
 """
 
 
-def jidl_dumps(schema, width=None):
+def jidl_dumps(schema, columns=None):
+    """
+    Convert JADN schema to JADN-IDL
+
+    :param dict schema: JADN schema
+    :param dict columns: Override default column widths if specified:
+        'meta': 12,         # Width of meta name column (e.g., module:)
+        'id': 4,            # Width of Field Id column
+        'name': 12,         # Width of Field Name column
+        'type': 35,         # Width of Field Type column
+        'desc': None,       # Fixed-position descriptions - overrides type-dependent default if specified
+        'page': None        # Truncate to specified page width if specified
+    :return: JADN-IDL text
+    :rtype: str
+    """
     w = {
-        'meta': 12,
-        'id': 4,
-        'name': 12,
-        'type': 35,
-        'desc': None,       # Fixed-position descriptions
-        'page': None        # Truncate to specified page width
+        'meta': 12,         # Width of meta name column (e.g., module:)
+        'id': 4,            # Width of Field Id column
+        'name': 12,         # Width of Field Name column
+        'type': 35,         # Width of Field Type column
+        'desc': None,       # Fixed-position descriptions - overrides type-dependent default if specified
+        'page': None        # Truncate to specified page width if specified
     }
-    if width:
-        w.update(width)     # Override any specified column widths
+    if columns:
+        w.update(columns)   # Override any specified column widths
 
     text = ''
     meta = schema['meta'] if 'meta' in schema else {}
@@ -55,11 +69,11 @@ def jidl_dumps(schema, width=None):
     return text
 
 
-def jidl_dump(schema, fname, source='', width=None):
+def jidl_dump(schema, fname, source='', columns=None):
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write('/* Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + ' */\n\n')
-        f.write(jidl_dumps(schema, width))
+        f.write(jidl_dumps(schema, columns))
 
 
 """
