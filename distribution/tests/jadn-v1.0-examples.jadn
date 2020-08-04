@@ -33,12 +33,12 @@
     [3, "product", "Product", ["&1"], "Choice specifying an explicit tag field"]
   ]],
 
-  ["Hashes", "Map", ["{1"], "Multiple discriminated unions with intrinsic tag = Map", [
+  ["Hashes", "Map", ["{1"], "Multiple discriminated unions with intrinsic tags is a Map", [
     [1, "md5", "Binary", ["/x", "{16", "}16", "[0"], ""],
     [2, "sha1", "Binary", ["/x", "{20", "}20", "[0"], ""],
     [3, "sha256", "Binary", ["/x", "{32", "}32", "[0"], ""]
   ]],
-  ["Hashes2", "ArrayOf", ["*HashVal"], "Multiple discriminated unions with explicit tags = Array", []],
+  ["Hashes2", "ArrayOf", ["*HashVal"], "Multiple discriminated unions with explicit tags is an Array", []],
   ["HashVal", "Record", [], "", [
     [1, "algorithm", "Enumerated", ["#HashAlg"], "Tag - one key from Choice"],
     [2, "value", "HashAlg", ["&1"], "Value selected from Choice by 'algorithm' field"]

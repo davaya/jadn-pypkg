@@ -14,29 +14,27 @@ Convert JADN to JIDL
 """
 
 
+def jidl_columns():
+    return {
+        'meta': 12,     # Width of meta name column (e.g., module:)
+        'id': 4,        # Width of Field Id column
+        'name': 16,     # Width of Field Name column
+        'type': 35,     # Width of Field Type column
+        'desc': None,   # Fixed-position descriptions - overrides type-dependent default if specified
+        'page': None    # Truncate to specified page width if specified
+    }
+
+
 def jidl_dumps(schema, columns=None):
     """
     Convert JADN schema to JADN-IDL
 
     :param dict schema: JADN schema
-    :param dict columns: Override default column widths if specified:
-        'meta': 12,         # Width of meta name column (e.g., module:)
-        'id': 4,            # Width of Field Id column
-        'name': 12,         # Width of Field Name column
-        'type': 35,         # Width of Field Type column
-        'desc': None,       # Fixed-position descriptions - overrides type-dependent default if specified
-        'page': None        # Truncate to specified page width if specified
+    :param dict columns: Override default column widths if specified
     :return: JADN-IDL text
     :rtype: str
     """
-    w = {
-        'meta': 12,         # Width of meta name column (e.g., module:)
-        'id': 4,            # Width of Field Id column
-        'name': 12,         # Width of Field Name column
-        'type': 35,         # Width of Field Type column
-        'desc': None,       # Fixed-position descriptions - overrides type-dependent default if specified
-        'page': None        # Truncate to specified page width if specified
-    }
+    w = jidl_columns()
     if columns:
         w.update(columns)   # Override any specified column widths
 
