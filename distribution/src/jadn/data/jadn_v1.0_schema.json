@@ -31,10 +31,7 @@
           {"$ref": "#/definitions/BaseType"},
           {"$ref": "#/definitions/Options"},
           {"$ref": "#/definitions/Description"},
-          {"anyOf": [
-            {"$ref": "#/definitions/Items"},
-            {"$ref": "#/definitions/Fields"}
-          ]}
+          {"$ref": "#/definitions/Fields"}
         ]
       }
     }
@@ -67,33 +64,36 @@
         "$NSID": {"type": "string", "minLength": 1, "maxLength": 127}
       }
     },
-    "Items": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "minItems": 3,
-        "maxItems": 3,
-        "items": [
-          {"type": "integer"},
-          {"type": "string"},
-          {"$ref": "#/definitions/Description"}
-        ]
-      }
-    },
     "Fields": {
       "type": "array",
-      "items": {
-        "type": "array",
-        "minItems": 5,
-        "maxItems": 5,
-        "items": [
-          {"type": "integer"},
-          {"$ref": "#/definitions/FieldName"},
-          {"$ref": "#/definitions/TypeRef"},
-          {"$ref": "#/definitions/Options"},
-          {"$ref": "#/definitions/Description"}
-        ]
-      }
+      "items": [
+        {"anyOf": [
+          {"$ref": "#/definitions/Item"},
+          {"$ref": "#/definitions/Field"}
+        ]}
+      ]
+    },
+    "Item": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": [
+        {"type": "integer"},
+        {"type": "string"},
+        {"$ref": "#/definitions/Description"}
+      ]
+    },
+    "Field": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": [
+        {"type": "integer"},
+        {"$ref": "#/definitions/FieldName"},
+        {"$ref": "#/definitions/TypeRef"},
+        {"$ref": "#/definitions/Options"},
+        {"$ref": "#/definitions/Description"}
+      ]
     },
     "NSID": {
       "type": "string",

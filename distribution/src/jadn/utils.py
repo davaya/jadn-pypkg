@@ -337,6 +337,8 @@ def fielddef2jadn(fid, fname, fstr, fmult, fdesc):
             maxc = 0 if m.group(2) == '*' else int(m.group(2))
             fo.update({'minc': minc} if minc != 1 else {})
             fo.update({'maxc': maxc} if maxc != 1 else {})
+        elif fmult:
+            fo.update({'minc': -1, 'maxc': -1})
         if fopts:
             assert len(fopts) == 1 and fopts[0][0] == OPTION_ID['tagid']     # Update if additional field options defined
             fo.update({'tagid': fopts[0][1:]})      # if field name, MUST update to id after all fields have been read

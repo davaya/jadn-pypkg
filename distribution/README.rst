@@ -52,7 +52,7 @@ Quickstart
 ##########
 
 The `quickstart.py
-<https://github.com/davaya/jadn-pypkg/blob/main/distribution/quickstart.py>`_
+<quickstart.py>`_
 script illustrates how to use these functions:
 
 * define and validate a schema

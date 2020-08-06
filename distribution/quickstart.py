@@ -1,12 +1,7 @@
+import jadn
 import json
 import jsonschema
 import os
-
-import jadn
-from jadn.codec import Codec
-from jadn.transform import strip_comments
-from jadn.convert import jidl_dumps, table_dumps, html_dumps, html_loads
-from jadn.translate import json_schema_dumps
 
 print(f'Installed JADN version: {jadn.__version__}')
 
@@ -32,24 +27,24 @@ print('\nSchema:\n------------------')
 print(jadn.dumps(schema))
 
 print('\nSchema (JADN IDL):\n------------------')
-jidl_doc = jidl_dumps(schema)
+jidl_doc = jadn.convert.jidl_dumps(schema)
 print(jidl_doc)
-# assert schema == jidl_loads(jidl_doc)   # To be developed.
+assert schema == jadn.convert.jidl_loads(jidl_doc)      # Verify lossless round-trip conversion.
 
-print('\nSchema (JADN IDL, adjust column widths, strip comments):\n------------------')
-print(jidl_dumps(strip_comments(schema), columns={'id': 2, 'name': 8, 'desc': 30}))
+print('\nSchema (JADN IDL, adjust columns, truncate comments):\n------------------')
+print(jadn.convert.jidl_dumps(jadn.transform.strip_comments(schema, width=9), columns={'id':2, 'name':8, 'desc':30}))
 
 print('\nSchema (HTML):\n------------------')
-html_doc = html_dumps(schema)
+html_doc = jadn.convert.html_dumps(schema)
 print(html_doc)
 theme = os.path.join(jadn.data_dir(), 'dtheme.css')
 with open(theme) as f:
     print(f' (Render with {theme}: {f.read(50)} ...)')
-assert schema == html_loads(html_doc)   # Verify lossless round-trip conversion.
+assert schema == jadn.convert.html_loads(html_doc)      # Verify lossless round-trip conversion.
                                         # schema options must be canonical to avoid spurious mismatch.
 
 print('\nSchema (Markdown):\n------------------')
-print(table_dumps(schema))
+print(jadn.convert.table_dumps(schema))
 
 print('\nSchema (JSON Schema):\n------------------')
 schema.update({                 # JSON Schema conversion needs root type (Person) and namespace $id
@@ -58,7 +53,7 @@ schema.update({                 # JSON Schema conversion needs root type (Person
         'exports': ['Person']
     }
 })
-js_schema = json_schema_dumps(schema)
+js_schema = jadn.translate.json_schema_dumps(schema)
 print(js_schema)
 
 """
@@ -89,7 +84,7 @@ def print_encoded_data(codec):
 
 print('\nSerialized Data:\n----------------')
 print('Verbose JSON:')          # Create a codec from schema, Validate and encode as verbose JSON
-print_encoded_data(Codec(schema, verbose_rec=True, verbose_str=True))
+print_encoded_data(jadn.codec.Codec(schema, verbose_rec=True, verbose_str=True))
 
 print('\nMinimized JSON:')      # Create a codec from schema, Validate and encode as optimized JSON
-print_encoded_data(Codec(schema, verbose_rec=False, verbose_str=False))
+print_encoded_data(jadn.codec.Codec(schema, verbose_rec=False, verbose_str=False))
