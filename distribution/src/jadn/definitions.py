@@ -240,4 +240,5 @@ EXTENSIONS = {
     'MapOfEnum',                # ktype option specifies an Enumerated type
 }
 
-META_ORDER = ('title', 'module', 'patch', 'description', 'comments', 'imports', 'exports', 'config')    # Display order
+INFO_ORDER = ('title', 'module', 'version', 'description', 'comments',
+              'copyright', 'license', 'imports', 'exports', 'config')    # Display order

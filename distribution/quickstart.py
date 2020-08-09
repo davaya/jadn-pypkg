@@ -48,7 +48,7 @@ print(jadn.convert.table_dumps(schema))
 
 print('\nSchema (JSON Schema):\n------------------')
 schema.update({                 # JSON Schema conversion needs root type (Person) and namespace $id
-    'meta': {
+    'info': {
         'module': 'http://example.com/rolodex/v1.0',
         'exports': ['Person']
     }

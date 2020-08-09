@@ -54,7 +54,7 @@ Convert JADN to HTML
 
 def html_dumps(schema):
     try:
-        title = schema['meta']['title']
+        title = schema['info']['title']
     except KeyError:
         title = 'JADN Schema'
     doc = HTML(ATTR({'lang': 'en'}),        # Make initial etree
@@ -69,14 +69,14 @@ def html_dumps(schema):
     )
     body = doc.find('body')
 
-    if 'meta' in schema:                    # Add meta elements if present
-        het = etree.Element('div', {'class': 'tTable jMeta'})       # top-level element of the metadata table
+    if 'info' in schema:                    # Add meta elements if present
+        het = etree.Element('div', {'class': 'tTable jinfo'})       # top-level element of the metadata table
         he2 = etree.SubElement(het, 'div', {'class': 'tBody'})
-        mlist = [k for k in META_ORDER if k in schema['meta']]
-        for k in mlist + list(set(schema['meta']) - set(mlist)):
+        mlist = [k for k in INFO_ORDER if k in schema['info']]
+        for k in mlist + list(set(schema['info']) - set(mlist)):
             he3 = etree.SubElement(he2, 'div', {'class': 'tRow'})
             etree.SubElement(he3, 'div', {'class': 'tCell jKey'}).text = k + ':'
-            etree.SubElement(he3, 'div', {'class': 'tCell jVal'}).text = json.dumps(schema['meta'][k])
+            etree.SubElement(he3, 'div', {'class': 'tCell jVal'}).text = json.dumps(schema['info'][k])
         body.append(het)
 
     for tdef in schema['types']:            # Add type definitions
@@ -178,7 +178,7 @@ def html_loads(hdoc):
             elif t == 'T':
                 types.append(v)
                 fields = types[-1][Fields]
-    return {'meta': meta, 'types': types} if meta else {'types': types}
+    return {'info': meta, 'types': types} if meta else {'types': types}
 
 
 def html_load(fname):

@@ -64,7 +64,7 @@ class SimplifyExtensions(TestCase):
     Type Definition in Fields Extension
     """
     schema_anon_extension = {       # id, vtype, ktype, enum, pointer, format, pattern, minv, maxv, unique
-        'meta': {'module': 'http://jadn.org/unittests-anon-extension'},
+        'info': {'module': 'http://jadn.org/unittests-anon-extension'},
         'types': [
             ['Color', 'Map', [], '', [
                 [1, 'red', 'Integer', [], ''],
@@ -94,7 +94,7 @@ class SimplifyExtensions(TestCase):
     }
 
     schema_anon_simplified = {
-        'meta': {'module': 'http://jadn.org/unittests-anon-simple'},
+        'info': {'module': 'http://jadn.org/unittests-anon-simple'},
         'types': [
             ['Color', 'Map', [], '', [
                 [1, 'red', 'Integer', [], ''],
@@ -133,7 +133,7 @@ class SimplifyExtensions(TestCase):
     }
 
     schema_all_simplified = {
-        'meta': {'module': 'http://jadn.org/unittests-all-simple'},
+        'info': {'module': 'http://jadn.org/unittests-all-simple'},
         'types': [
             ['Color', 'Map', [], '', [
                 [1, 'red', 'Integer', [], ''],
@@ -197,7 +197,7 @@ class SimplifyExtensions(TestCase):
     Field Multiplicity Extension
     """
     schema_mult_extension = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
-        'meta': {'module': 'http://jadn.org/unittests-mult-extension'},
+        'info': {'module': 'http://jadn.org/unittests-mult-extension'},
         'types': [
             ['T-opt-list1', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
@@ -222,7 +222,7 @@ class SimplifyExtensions(TestCase):
         ]}
 
     schema_mult_simplified = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
-        'meta': {'module': 'http://jadn.org/unittests-mult-mimple'},
+        'info': {'module': 'http://jadn.org/unittests-mult-mimple'},
         'types': [
             ['T-opt-list1', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
@@ -257,7 +257,7 @@ class SimplifyExtensions(TestCase):
     Derived Enumeration Extension
     """
     schema_enum_extension = {
-        'meta': {'module': 'http://jadn.org/unittests-enum-extension'},
+        'info': {'module': 'http://jadn.org/unittests-enum-extension'},
         'types': [
             ['Pixel', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
@@ -278,7 +278,7 @@ class SimplifyExtensions(TestCase):
     }
 
     schema_enum_simplified = {
-        'meta': {'module': 'http://jadn.org/unittests-enum-simple'},
+        'info': {'module': 'http://jadn.org/unittests-enum-simple'},
         'types': [
             ['Pixel', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
@@ -318,7 +318,7 @@ class SimplifyExtensions(TestCase):
     MapOf Enumerated Key Extension
     """
     schema_mapof_extension = {
-        'meta': {'module': 'http://jadn.org/unittests-mapof-extension'},
+        'info': {'module': 'http://jadn.org/unittests-mapof-extension'},
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
                 [1, 'red', 'rojo'],
@@ -330,7 +330,7 @@ class SimplifyExtensions(TestCase):
     }
 
     schema_mapof_simplified = {
-        'meta': {'module': 'http://jadn.org/unittests-mapof-simple'},
+        'info': {'module': 'http://jadn.org/unittests-mapof-simple'},
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
                 [1, 'red', 'rojo'],
@@ -352,7 +352,7 @@ class SimplifyExtensions(TestCase):
     Pointers Extension
     """
     schema_pointer_extension = {
-        'meta': {'module': 'http://jadn.org/unittests-pointer-extension'},
+        'info': {'module': 'http://jadn.org/unittests-pointer-extension'},
         'types': [
             ['Catalog', 'Record', [], '', [
                 [1, 'a', 'TypeA', [], 'Leaf field (e.g., file)'],
@@ -375,7 +375,7 @@ class SimplifyExtensions(TestCase):
     }
 
     schema_pointer_simplified = {
-        'meta': {'module': 'http://jadn.org/unittests-pointer-simple'},
+        'info': {'module': 'http://jadn.org/unittests-pointer-simple'},
         'types': [
             ['Catalog', 'Record', [], '', [
                 [1, 'a', 'TypeA', [], 'Leaf field (e.g., file)'],

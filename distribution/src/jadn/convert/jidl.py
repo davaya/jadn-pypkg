@@ -16,7 +16,7 @@ Convert JADN to JIDL
 
 def jidl_columns():
     return {
-        'meta': 12,     # Width of meta name column (e.g., module:)
+        'info': 12,     # Width of info name column (e.g., module:)
         'id': 4,        # Width of Field Id column
         'name': 16,     # Width of Field Name column
         'type': 35,     # Width of Field Type column
@@ -39,10 +39,10 @@ def jidl_dumps(schema, columns=None):
         w.update(columns)   # Override any specified column widths
 
     text = ''
-    meta = schema['meta'] if 'meta' in schema else {}
-    mlist = [k for k in META_ORDER if k in meta]
-    for k in mlist + list(set(meta) - set(mlist)):              # Display meta elements in fixed order
-        text += f'{k:>{w["meta"]}}: {json.dumps(meta[k])}\n'    # TODO: wrap to page width, continuation-line parser
+    info = schema['info'] if 'info' in schema else {}
+    mlist = [k for k in INFO_ORDER if k in info]
+    for k in mlist + list(set(info) - set(mlist)):              # Display info elements in fixed order
+        text += f'{k:>{w["info"]}}: {json.dumps(info[k])}\n'    # TODO: wrap to page width, continuation-line parser
 
     wt = w['desc'] if w['desc'] else w['id'] + w['name'] + w['type']
     for td in schema['types']:
@@ -81,8 +81,8 @@ Convert JIDL to JADN
 
 def line2jadn(line, tdef):
     if line:
-        p_meta = r'^\s*([-\w]+):\s*(.+?)\s*$'
-        m = re.match(p_meta, line)
+        p_info = r'^\s*([-\w]+):\s*(.+?)\s*$'
+        m = re.match(p_info, line)
         if m:
             return 'M', (m.group(1), m.group(2))
 
@@ -123,7 +123,7 @@ def line2jadn(line, tdef):
 
 
 def jidl_loads(doc):
-    meta = {}
+    info = {}
     types = []
     fields = None
     for n, line in enumerate(doc.splitlines(), start=1):
@@ -135,11 +135,11 @@ def jidl_loads(doc):
                 cleanup_tagid(fields)
                 fields = None
             if t == 'M':
-                meta.update({v[0]: json.loads(v[1])})
+                info.update({v[0]: json.loads(v[1])})
             elif t == 'T':
                 types.append(v)
                 fields = types[-1][Fields]
-    return {'meta': meta, 'types': types} if meta else {'types': types}
+    return {'info': info, 'types': types} if info else {'types': types}
 
 
 def jidl_load(fname):

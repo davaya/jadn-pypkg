@@ -25,7 +25,7 @@ class JADN(TestCase):
 
 class BadSchema(TestCase):
     schema_bad_item_fields = {
-        'meta': {'module': 'http://jadn.org/unittests-BadSchema'},
+        'info': {'module': 'http://jadn.org/unittests-BadSchema'},
         'types': [
             ['Color', 'Map', [], '', [          # Enumerated items not applicable to Container types
                 [1, 'red', ''],

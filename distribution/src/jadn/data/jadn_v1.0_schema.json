@@ -5,16 +5,18 @@
   "required": ["types"],
   "additionalProperties": false,
   "properties": {
-    "meta": {
+    "info": {
       "type": "object",
       "required": ["module"],
       "additionalProperties": false,
       "properties": {
         "module": {"type": "string"},
-        "patch": {"type": "string"},
+        "version": {"type": "string"},
         "title": {"type": "string"},
         "description": {"type": "string"},
         "comment": {"type":  "string"},
+        "copyright": {"type": "string"},
+        "license": {"type": "string"},
         "imports": {"$ref": "#/definitions/Imports"},
         "exports": {"$ref": "#/definitions/Exports"},
         "config": {"$ref": "#/definitions/Config"}

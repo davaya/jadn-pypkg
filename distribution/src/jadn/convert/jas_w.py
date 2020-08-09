@@ -41,8 +41,8 @@ def jas_dumps(schema):
     """
 
     jas = '/*\n'
-    meta = schema['meta']
-    mlist = [k for k in META_ORDER if k in meta]
+    meta = schema['info']
+    mlist = [k for k in INFO_ORDER if k in meta]
     for h in mlist + list(set(meta) - set(mlist)):
         if h == 'description':
             jas += fill(meta[h], width=80, initial_indent='{0:14} '.format(h+':'), subsequent_indent=15*' ') + '\n'

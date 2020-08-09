@@ -89,7 +89,7 @@ def w_ref(tname, ctx):
     nsid, tn = tname.split(':', maxsplit=1) if ':' in tname else [None, tname]
     assert not is_builtin(tn)
     if nsid:
-        imp = {'$ref': ctx['meta_imps'][nsid] + '/definitions/' + tn} if ctx['import_style'] == 'ref' else {}
+        imp = {'$ref': ctx['info_imps'][nsid] + '/definitions/' + tn} if ctx['import_style'] == 'ref' else {}
         ctx['imported_types'][nsid].update({tn: imp})
         return {'$ref': '#/imports/' + nsid + '/' + tn}
     return {'$ref': '#/definitions/' + tn}
@@ -160,8 +160,8 @@ def t_integer(tdef, topts, ctx):
 def t_number(tdef, topts, ctx):
     return dmerge(
         w_td('number', tdef[TypeDesc]),
-        {'minimum': topts['minv']} if 'minv' in topts else {},
-        {'maximum': topts['maxv']} if 'maxv' in topts else {}
+        {'minimum': topts['minf']} if 'minf' in topts else {},
+        {'maximum': topts['maxf']} if 'maxf' in topts else {}
     )
 
 
@@ -285,7 +285,7 @@ def w_type(tdef, topts, ctx):       # Write a JADN type definition in JSON Schem
 # ========== Make JSON Schema ==========
 
 
-def json_schema_dumps(jadn, verbose=True, enum_style='enum', import_style='any'):  # TODO: use string IDs if verbose=False
+def json_schema_dumps(schema, verbose=True, enum_style='enum', import_style='any'):  # TODO: use string IDs if verbose=False
     #  verbose True: Record->object, field Names;  False: Record->array, field IDs
     assert enum_style in ('const', 'enum', 'regex')
     #  const: generate oneOf keyword with const for each item
@@ -295,18 +295,18 @@ def json_schema_dumps(jadn, verbose=True, enum_style='enum', import_style='any')
     #  any: ignore types defined in other modules, validate anything
     #  ref: generate $ref keywords that must be resolved before the JSON Schema can validate referenced types
 
-    meta = jadn['meta'] if 'meta' in jadn else {}
-    td = {t[TypeName]: t for t in jadn['types']}    # Build index of type definitions
-    exports = [e for e in meta['exports'] if e in td] if 'exports' in meta else []
-    imported_types = {k: {} for k in meta['imports']} if 'imports' in meta else {}
+    info = schema['info'] if 'info' in schema else {}
+    td = {t[TypeName]: t for t in schema['types']}    # Build index of type definitions
+    exports = [e for e in info['exports'] if e in td] if 'exports' in info else []
+    imported_types = {k: {} for k in info['imports']} if 'imports' in info else {}
     ctx = {                                         # Translation context
-        'config': get_config(meta),
+        'config': get_config(info),
         'type_defs': td,
         'verbose': verbose,
         'enum_style': enum_style,
         'imported_types': imported_types,
         'import_style': import_style,
-        'meta_imps': meta['imports'] if 'imports' in meta else None
+        'info_imps': info['imports'] if 'imports' in info else None
     }
 
     def tt(tdef, ctx):                              # Return type definition with title
@@ -315,9 +315,9 @@ def json_schema_dumps(jadn, verbose=True, enum_style='enum', import_style='any')
 
     return json.dumps(dmerge(
         {'$schema': 'http://json-schema.org/draft-07/schema#'},
-        {'$id': meta['module'] if 'module' in meta else ''},
-        {'title': meta['title'] if 'title' in meta else ''},
-        {'description': meta['description']} if 'description' in meta else {},
+        {'$id': info['module'] if 'module' in info else ''},
+        {'title': info['title'] if 'title' in info else ''},
+        {'description': info['description']} if 'description' in info else {},
         w_export(exports, ctx),
         {'definitions': {t: tt(td[t], ctx) for t in (exports + [t for t in td if t not in exports])}},
         {'imports': imported_types} if imported_types else {}

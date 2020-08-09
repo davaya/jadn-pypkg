@@ -331,10 +331,14 @@ def fielddef2jadn(fid, fname, fstr, fmult, fdesc):
         if fname.endswith('/'):
             fo.update({'dir': True})
             fname = fname.rstrip('/')
-        m = re.match(r'^(\d+)\.\.(\d+|\*)$', fmult) if fmult else None
+        m = re.match(r'^(\d+)\.\.(\d+|\*)|(\d+)$', fmult) if fmult else None
         if m:
-            minc = int(m.group(1))
-            maxc = 0 if m.group(2) == '*' else int(m.group(2))
+            if m.group(3):
+                minc = int(m.group(3))
+                maxc = minc
+            else:
+                minc = int(m.group(1))
+                maxc = 0 if m.group(2) == '*' else int(m.group(2))
             fo.update({'minc': minc} if minc != 1 else {})
             fo.update({'maxc': maxc} if maxc != 1 else {})
         elif fmult:

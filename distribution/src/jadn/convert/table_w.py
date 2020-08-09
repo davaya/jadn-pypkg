@@ -251,11 +251,11 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
 
     doc_begin, doc_end, sect, meta_begin, meta_item, meta_end, type_begin, type_item, type_end = wtab[form]
     text = doc_begin()
-    if 'meta' in schema:
-        meta = schema['meta']
+    if 'info' in schema:
+        meta = schema['info']
         text += meta_begin()
-        mlist = [k for k in META_ORDER if k in schema['meta']]
-        for h in mlist + list(set(schema['meta']) - set(mlist)):
+        mlist = [k for k in INFO_ORDER if k in schema['info']]
+        for h in mlist + list(set(schema['info']) - set(mlist)):
             mh = meta[h]
             text += meta_item(h, mh)
         text += meta_end()

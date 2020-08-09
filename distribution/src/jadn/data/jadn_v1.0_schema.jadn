@@ -1,5 +1,5 @@
 {
- "meta": {
+ "info": {
   "module": "http://oasis-open.org/jadn/v1.0/schema",
   "title": "JADN Metaschema",
   "description": "Syntax of a JSON Abstract Data Notation (JADN) module.",
@@ -10,19 +10,21 @@
  },
  "types": [
   ["Schema", "Record", [], "Definition of a JADN schema module", [
-    [1, "meta", "Meta", ["[0"], "Information about this module"],
+    [1, "info", "Information", ["[0"], "Information about this module"],
     [2, "types", "Types", [], "Types defined in this module"]
   ]],
 
-  ["Meta", "Map", [], "Information about this module", [
+  ["Information", "Map", [], "Information about this module", [
     [1, "module", "Namespace", [], "Unique name/version: $id"],
-    [2, "patch", "String", ["{1", "[0"], "Patch version"],
+    [2, "version", "String", ["{1", "[0"], "Incrementing/patch version within module"],
     [3, "title", "String", ["{1", "[0"], "Title"],
     [4, "description", "String", ["{1", "[0"], "Description"],
     [5, "comment", "String", ["{1", "[0"], "Comment: $comment"],
-    [6, "imports", "Imports", ["[0"], "Imported schema modules"],
-    [7, "exports", "Exports", ["[0"], "Type definitions exported by this module"],
-    [8, "config", "Config", ["[0"], "Configuration values for this module"]
+    [6, "copyright", "String", ["{1", "[0"], "Comment: $comment"],
+    [7, "license", "String", ["{1", "[0"], "Comment: $comment"],
+    [8, "imports", "Imports", ["[0"], "Imported schema modules"],
+    [9, "exports", "Exports", ["[0"], "Type definitions exported by this module"],
+    [10, "config", "Config", ["[0"], "Configuration values for this module"]
   ]],
   ["Imports", "MapOf", ["+NSID", "*Namespace", "{1"], "List of imported modules", []],
   ["Exports", "ArrayOf", ["*TypeName", "{1"], "List of type definitions intended to be public", []],

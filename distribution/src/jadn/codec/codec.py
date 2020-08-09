@@ -65,7 +65,7 @@ class Codec:
         assert set(enctab) == set(CORE_TYPES)
         self.schema = simplify(schema)             # Convert extensions to core definitions
         conf = config if config else schema
-        self.config = get_config(conf['meta'] if 'meta' in conf else None)
+        self.config = get_config(conf['info'] if 'info' in conf else None)
         self.format_validate = format_validators()      # Initialize format validation functions
         self.format_codec = json_format_codecs()        # Initialize format serialization functions
         self.types = {t[TypeName]: t for t in self.schema['types']}  # pre-index types to allow symtab forward refs
@@ -248,9 +248,19 @@ def _check_range(ts, val):
     op = ts[S_TOPTS]
     tn = ts[S_TDEF][TypeName]
     if 'minv' in op and val < op['minv']:
-        raise ValueError('%s: %s < minimum %s' % (tn, len(val), op['minv']))
+        raise ValueError('%s: %s < minimum %s' % (tn, val, op['minv']))
     if 'maxv' in op and val > op['maxv']:
-        raise ValueError('%s: %s > maximum %s' % (tn, len(val), op['maxv']))
+        raise ValueError('%s: %s > maximum %s' % (tn, val, op['maxv']))
+    return val
+
+
+def _check_frange(ts, val):
+    op = ts[S_TOPTS]
+    tn = ts[S_TDEF][TypeName]
+    if 'minf' in op and val < op['minf']:
+        raise ValueError('%s: %s < minimum %s' % (tn, val, op['minf']))
+    if 'maxf' in op and val > op['maxf']:
+        raise ValueError('%s: %s > maximum %s' % (tn, val, op['maxf']))
     return val
 
 
@@ -305,7 +315,7 @@ def _decode_integer(ts, sval, codec):
 
 def _encode_number(ts, aval, codec):
     _check_type(ts, aval, numbers.Real, isinstance(aval, bool))
-    _check_range(ts, aval)
+    _check_frange(ts, aval)
     return _format_encode(ts, aval)
 
 

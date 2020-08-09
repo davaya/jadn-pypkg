@@ -37,7 +37,7 @@ def check(schema):
         uo = {k for k in topts} - {k for k in ALLOWED_TYPE_OPTIONS[base_type]}
         if uo:
             raise_error(f'Unsupported type option {type_name} ({base_type}): {str(uo)}')
-        if 'format' in topts:
+        if 'format' in topts:        # TODO: if format defines array, add minv/maxv (prevents adding default max)
             f = topts['format']
             fm = dict(list(FORMAT_VALIDATE.items()) + list(FORMAT_JS_VALIDATE.items()) + list(FORMAT_SERIALIZE.items()))
             if f not in fm or base_type != fm[f]:
@@ -116,7 +116,7 @@ def analyze(schema):
 
     items = jadn.build_deps(schema)
     # out, roots = topo_sort(items)
-    meta = schema['meta'] if 'meta' in schema else {}
+    meta = schema['info'] if 'info' in schema else {}
     imports = meta['imports'] if 'imports' in meta else {}
     exports = meta['exports'] if 'exports' in meta else []
     defs = {i for i in items} | set(imports)

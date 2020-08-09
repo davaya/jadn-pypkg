@@ -1,7 +1,7 @@
 {
- "meta": {
+ "info": {
   "module": "http://jadn.org/test/convert/v0.1",
-  "patch": "0",
+  "version": "0",
   "title": "JADN format conversion",
   "description": "Test schema for checking conversion to different formats",
   "exports": ["Command"],
@@ -48,5 +48,7 @@
     [200, "OK", "The request has succeeded"],
     [400, "Bad Request", "The request could not be understood by the server due to malformed syntax"],
     [404, "Not Found", "The server has not found anything matching the request URI"]
-  ]]
+  ]],
+  ["Empty-List", "Array", ["}0"], "{0..0} is zero-length"],
+  ["Long-List", "Array", [], "{0..*} = maxv<0 = omitted maxv is unlimited-length"]
 ]}

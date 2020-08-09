@@ -1279,13 +1279,57 @@ class ListTypes(unittest.TestCase):
         self.assertListEqual(self.tc.decode('T-list', self.enums), self.enums)
 
 
-class Bounds(unittest.TestCase):        # TODO: check max and min string length, integer values, array sizes
+class Bounds(unittest.TestCase):        # TODO: check max and min string length, integer and number values, array sizes
                                         # TODO: Schema default and options
-    schema = {}
+    schema = {
+        'types': [
+            ['Int', 'Integer', [], ''],
+            ['Num', 'Number', [], ''],
+            ['Int-3-6', 'Integer', ['{3', '}6'], ''],
+            ['Num-3-6', 'Number', ['y3.0', 'z6.0'], '']
+        ]
+    }
 
     def setUp(self):
         jadn.check(self.schema)
         self.tc = jadn.codec.Codec(self.schema, verbose_rec=True, verbose_str=True)
+
+    i1 = 1
+    i5 = 5
+    i9 = 9
+    f1 = 1.0
+    f5 = 5.5
+    f9 = 9.8
+
+    def test_int(self):
+        self.tc.set_mode(verbose_rec=True, verbose_str=True)
+        self.assertEqual(self.tc.encode('Int', self.i1), self.i1)
+        self.assertEqual(self.tc.decode('Int', self.i1), self.i1)
+        self.assertEqual(self.tc.encode('Int', self.i5), self.i5)
+        self.assertEqual(self.tc.decode('Int', self.i5), self.i5)
+        self.assertEqual(self.tc.encode('Int', self.i9), self.i9)
+        self.assertEqual(self.tc.decode('Int', self.i9), self.i9)
+        self.assertEqual(self.tc.encode('Int-3-6', self.i5), self.i5)
+        self.assertEqual(self.tc.decode('Int-3-6', self.i5), self.i5)
+        with self.assertRaises(ValueError):
+            self.tc.encode('Int-3-6', self.i1)
+        with self.assertRaises(ValueError):
+            self.tc.encode('Int-3-6', self.i9)
+
+    def test_num(self):
+        self.tc.set_mode(verbose_rec=True, verbose_str=True)
+        self.assertEqual(self.tc.encode('Num', self.f1), self.f1)
+        self.assertEqual(self.tc.decode('Num', self.f1), self.f1)
+        self.assertEqual(self.tc.encode('Num', self.f5), self.f5)
+        self.assertEqual(self.tc.decode('Num', self.f5), self.f5)
+        self.assertEqual(self.tc.encode('Num', self.f9), self.f9)
+        self.assertEqual(self.tc.decode('Num', self.f9), self.f9)
+        self.assertEqual(self.tc.encode('Num-3-6', self.f5), self.f5)
+        self.assertEqual(self.tc.decode('Num-3-6', self.f5), self.f5)
+        with self.assertRaises(ValueError):
+            self.tc.encode('Num-3-6', self.f1)
+        with self.assertRaises(ValueError):
+            self.tc.encode('Num-3-6', self.f9)
 
 
 class Format(unittest.TestCase):
@@ -1592,7 +1636,7 @@ class JADN(unittest.TestCase):
 class Simplify(unittest.TestCase):
 
     schema_enum_optimized = {
-        'meta': {'module': 'http://jadn.org/unittests-enum-optimized'},
+        'info': {'module': 'http://jadn.org/unittests-enum-optimized'},
         'types': [
             ['Pixel', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
@@ -1621,7 +1665,7 @@ class Simplify(unittest.TestCase):
     }
 
     schema_enum_simplified = {
-        'meta': {'module': 'http://jadn.org/unittests-enum-simple'},
+        'info': {'module': 'http://jadn.org/unittests-enum-simple'},
         'types': [
             ['Pixel', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
@@ -1669,7 +1713,7 @@ class Simplify(unittest.TestCase):
         self.assertEqual(ss['types'], self.schema_enum_simplified['types'])
 
     schema_mapof_optimized = {
-        'meta': {'module': 'http://jadn.org/unittests-mapof-optimized'},
+        'info': {'module': 'http://jadn.org/unittests-mapof-optimized'},
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
                 [1, 'red', 'rojo'],
@@ -1681,7 +1725,7 @@ class Simplify(unittest.TestCase):
     }
 
     schema_mapof_simplified = {
-        'meta': {'module': 'http://jadn.org/unittests-mapof-simple'},
+        'info': {'module': 'http://jadn.org/unittests-mapof-simple'},
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
                 [1, 'red', 'rojo'],

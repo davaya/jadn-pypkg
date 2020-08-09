@@ -31,8 +31,8 @@ class SchemaModule:
             self.source = source
 
         try:
-            self.module = self.schema['meta']['module']
-            self.imports = self.schema['meta']['imports'] if 'imports' in self.schema['meta'] else {}
+            self.module = self.schema['info']['module']
+            self.imports = self.schema['info']['imports'] if 'imports' in self.schema['info'] else {}
         except KeyError:
             jadn.raise_error(f'Schema module {self.source} must have a module ID')
         self.clear()
@@ -48,7 +48,10 @@ class SchemaModule:
                     if ':' in dn:
                         self.deps[tn].remove(dn)
                         nsid, typename = dn.split(':', maxsplit=1)
-                        self.refs[self.imports[nsid]][tn].add(typename)
+                        try:
+                            self.refs[self.imports[nsid]][tn].add(typename)
+                        except KeyError as e:
+                            jadn.raise_error(f'Resolve: no namespace defined for {e}')
 
     def clear(self):
         self.used = set()
@@ -97,10 +100,8 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
             tn = tname[1:]
             if tn not in sm.used and tn in sm.tx:
                 if tname[0] == OPTION_ID['enum']:
-                    print('  Make enum', tname)
                     edef = [tn + sys + 'Enum', 'Enumerated', [], '', [[f[0], f[1], ''] for f in sm.tx[tn][Fields]]]
                 else:
-                    print('  Make pointers', tname)
                     edef = [tn + sys + 'Point', 'Enumerated', [], '', [[f[0], f[1], ''] for f in sm.tx[tn][Fields]]]
                 sm.schema['types'].append(edef)
             return(True)
@@ -112,7 +113,7 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
                 [add_types(sm, tn) for tn in sm.deps[tname]]
             except KeyError as e:
                 if not make_enum(sm, tname):
-                    print('Error:', e, 'not defined in', sm.module, '(' + str(sm.source) + ')')
+                    jadn.raise_error(f'Resolve: {e} not defined in {sm.module} ({str(sm.source)})')
 
     def resolve(sm, types):       # add referenced types from other modules to used list
         if set(types) - sm.used:
@@ -121,11 +122,11 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
             for mod in sm.refs:
                 if mod in modules:
                     resolve(modules[mod], {t for k, v in sm.refs[mod].items() if k in sm.used for t in v})
-                    print('  Merge', mod, 'into', sm.module)
+                    print(f'  Resolve {mod} into {sm.module}')
                 else:
-                    print('Error: module', mod, 'not found.')
+                    jadn.raise_error(f'Resolve: module', mod, 'not found.')
 
-    # if 'imports' not in schema['meta']:
+    # if 'imports' not in schema['info']:
     #    return schema
     root = SchemaModule(schema)
     modules = {root.module: root}
@@ -140,7 +141,7 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
             print('* Duplicate module', sm.module, sm.source, 'Ignoring', fn)
         for id, m in sm.imports.items():
             nsids[m].append('' if id in no_nsid else id)
-    types = root.schema['meta']['exports'] if 'exports' in root.schema['meta'] else {}
+    types = root.schema['info']['exports'] if 'exports' in root.schema['info'] else {}
     resolve(root, types)
 
     for t in root.used.copy():
@@ -148,12 +149,12 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
             if t[1:] in root.used:
                 root.used.remove(t)     # Don't need explicit type if base type is present
             else:
-                print('  Error: no base type for', t)
+                jadn.raise_error(f'Resolve: no base type for {t}')
 
 
     # Copy all needed types from other modules into root
     nsids[root.module] = ['']
-    sc = {'meta': {k: v for k, v in root.schema['meta'].items() if k != 'imports'}, 'types': []}    # Remove imports
+    sc = {'info': {k: v for k, v in root.schema['info'].items() if k != 'imports'}, 'types': []}    # Remove imports
     for sm in [root] + [m for m in modules.values() if m.module != root.module]:
         sc['types'] += [merge_typedef(t, sm.module, sm.imports, nsids) for t in sm.schema['types'] if t[TypeName] in sm.used]
     return sc
