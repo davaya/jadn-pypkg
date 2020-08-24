@@ -25,7 +25,7 @@ class JADN(TestCase):
 
 class BadSchema(TestCase):
     schema_bad_item_fields = {
-        'info': {'module': 'http://jadn.org/unittests-BadSchema'},
+        'info': {'module': 'https://jadn.org/unittests-BadSchema'},
         'types': [
             ['Color', 'Map', [], '', [          # Enumerated items not applicable to Container types
                 [1, 'red', ''],
@@ -50,8 +50,8 @@ class SpecExamples(TestCase):
         self.tc = Codec(self.schema, verbose_rec=True, verbose_str=True)
 
     def test_choice_explicit(self):
-        msg_intrinsic = {"quantity": 395, "product": {"software": "http://www.example.com/B902D1P0W37"}}
-        msg_explicit = {"dept": "software", "quantity": 395, "product": "http://www.example.com/B902D1P0W37"}
+        msg_intrinsic = {"quantity": 395, "product": {"software": "https://www.example.com/B902D1P0W37"}}
+        msg_explicit = {"dept": "software", "quantity": 395, "product": "https://www.example.com/B902D1P0W37"}
 
         self.assertEqual(self.tc.encode('Stock1', msg_intrinsic), msg_intrinsic)
         self.assertEqual(self.tc.encode('Stock2', msg_explicit), msg_explicit)

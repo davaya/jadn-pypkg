@@ -13,7 +13,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 
 import numbers
 import re
-from jadn.utils import topts_s2d, ftopts_s2d, get_config
+from jadn.utils import raise_error, topts_s2d, ftopts_s2d, get_config
 from jadn.definitions import *
 from jadn.transform import simplify
 from jadn.codec.format_validate import format_validators, get_format_validate_function
@@ -59,7 +59,7 @@ class Codec:
     """
 
     def _error(self, mesg):
-        raise ValueError('Validation Error: ' + mesg)
+        raise_error('Validation Error: ' + mesg)
 
     def __init__(self, schema, verbose_rec=False, verbose_str=False, config=None):
         assert set(enctab) == set(CORE_TYPES)
@@ -186,22 +186,22 @@ class Codec:
 
 def _bad_index(ts, k, val):
     td = ts[S_TDEF]
-    raise ValueError(
+    raise_error(
         '%s(%s): array index %d out of bounds (%d, %d)' % (td[TypeName], td[BaseType], k, len(ts[S_FLD]), len(val)))
 
 
 def _bad_choice(ts, val):
     td = ts[S_TDEF]
-    raise ValueError('%s: choice must have one value: %s' % (td[TypeName], val))
+    raise_error('%s: choice must have one value: %s' % (td[TypeName], val))
 
 
 def _bad_value(ts, val, fld=None):
     td = ts[S_TDEF]
     if fld is not None:
-        raise ValueError('%s(%s): missing required field "%s": %s' % (td[TypeName], td[BaseType], fld[FieldName], val))
+        raise_error('%s(%s): missing required field "%s": %s' % (td[TypeName], td[BaseType], fld[FieldName], val))
     else:
         v = next(iter(val)) if type(val) == dict else val
-        raise ValueError('%s(%s): bad value: %s' % (td[TypeName], td[BaseType], v))
+        raise_error('%s(%s): bad value: %s' % (td[TypeName], td[BaseType], v))
 
 
 def _check_type(ts, val, vtype, fail=False):  # fail forces rejection of boolean vals for number types
@@ -209,14 +209,14 @@ def _check_type(ts, val, vtype, fail=False):  # fail forces rejection of boolean
         if fail or not isinstance(val, vtype):
             td = ts[S_TDEF]
             tn = ('%s(%s)' % (td[TypeName], td[BaseType]) if td else 'Primitive')
-            raise TypeError('%s: %s is not %s' % (tn, val, vtype))
+            raise_error('%s: %s is not %s' % (tn, val, vtype))
 
 
 def _format_encode(ts, val):
     try:
         ts[S_FVALIDATE](val)
     except ValueError:
-        raise ValueError('%s: %s is not format "%s"' % (ts[S_TDEF][TypeName], val, ts[S_TOPTS]['format']))
+        raise_error('%s: %s is not format "%s"' % (ts[S_TDEF][TypeName], val, ts[S_TOPTS]['format']))
     return ts[S_FENCODE](val)
 
 
@@ -225,7 +225,7 @@ def _format_decode(ts, val):
     try:
         ts[S_FVALIDATE](aval)
     except ValueError:
-        raise ValueError('%s: %s is not format "%s"' % (ts[S_TDEF][TypeName], val, ts[S_TOPTS]['format']))
+        raise_error('%s: %s is not format "%s"' % (ts[S_TDEF][TypeName], val, ts[S_TOPTS]['format']))
     return aval
 
 
@@ -233,14 +233,14 @@ def _check_key(ts, val):
     try:
         return int(val) if isinstance(next(iter(ts[S_DMAP])), int) else val
     except ValueError:
-        raise ValueError('%s: %s is not a valid field ID' % (ts[S_TDEF][TypeName], val))
+        raise_error('%s: %s is not a valid field ID' % (ts[S_TDEF][TypeName], val))
 
 
 def _check_pattern(ts, val):
     op = ts[S_TOPTS]
     if 'pattern' in op and not re.match(op['pattern'], val):
         tn = ts[S_TDEF][TypeName]
-        raise ValueError('%s: string %s does not match %s' % (tn, val, op['pattern']))
+        raise_error('%s: string "%s" does not match %s' % (tn, val, op['pattern']))
     return val
 
 
@@ -248,9 +248,9 @@ def _check_range(ts, val):
     op = ts[S_TOPTS]
     tn = ts[S_TDEF][TypeName]
     if 'minv' in op and val < op['minv']:
-        raise ValueError('%s: %s < minimum %s' % (tn, val, op['minv']))
+        raise_error('%s: %s < minimum %s' % (tn, val, op['minv']))
     if 'maxv' in op and val > op['maxv']:
-        raise ValueError('%s: %s > maximum %s' % (tn, val, op['maxv']))
+        raise_error('%s: %s > maximum %s' % (tn, val, op['maxv']))
     return val
 
 
@@ -258,9 +258,9 @@ def _check_frange(ts, val):
     op = ts[S_TOPTS]
     tn = ts[S_TDEF][TypeName]
     if 'minf' in op and val < op['minf']:
-        raise ValueError('%s: %s < minimum %s' % (tn, val, op['minf']))
+        raise_error('%s: %s < minimum %s' % (tn, val, op['minf']))
     if 'maxf' in op and val > op['maxf']:
-        raise ValueError('%s: %s > maximum %s' % (tn, val, op['maxf']))
+        raise_error('%s: %s > maximum %s' % (tn, val, op['maxf']))
     return val
 
 
@@ -268,15 +268,15 @@ def _check_size(ts, val):
     op = ts[S_TOPTS]
     tn = ts[S_TDEF][TypeName]
     if 'minv' in op and len(val) < op['minv']:
-        raise ValueError('%s: length %s < minimum %s' % (tn, len(val), op['minv']))
+        raise_error('%s: length %s < minimum %s' % (tn, len(val), op['minv']))
     if 'maxv' in op and len(val) > op['maxv']:
-        raise ValueError('%s: length %s > maximum %s' % (tn, len(val), op['maxv']))
+        raise_error('%s: length %s > maximum %s' % (tn, len(val), op['maxv']))
     return val
 
 
 def _extra_value(ts, val, fld):
     td = ts[S_TDEF]
-    raise ValueError('%s(%s): unexpected field: %s not in %s:' % (td[TypeName], td[BaseType], val, fld))
+    raise_error('%s(%s): unexpected field: %s not in %s:' % (td[TypeName], td[BaseType], val, fld))
 
 
 def _encode_binary(ts, aval, codec):    # Encode bytes to string
@@ -357,7 +357,7 @@ def _encode_enumerated(ts, aval, codec):                # TODO: Serialization
         return ts[S_EMAP][aval]
     else:
         td = ts[S_TDEF]
-        raise ValueError('%s: %r is not a valid %s' % (td[BaseType], aval, td[TypeName]))
+        raise_error('%s: %r is not a valid %s' % (td[BaseType], aval, td[TypeName]))
 
 
 def _decode_enumerated(ts, sval, codec):
@@ -366,7 +366,7 @@ def _decode_enumerated(ts, sval, codec):
         return ts[S_DMAP][sval]
     else:
         td = ts[S_TDEF]
-        raise ValueError('%s: %r is not a valid %s' % (td[BaseType], sval, td[TypeName]))
+        raise_error('%s: %r is not a valid %s' % (td[BaseType], sval, td[TypeName]))
 
 
 def _encode_choice(ts, val, codec):

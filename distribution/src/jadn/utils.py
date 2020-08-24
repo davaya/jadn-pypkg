@@ -4,10 +4,14 @@ Support functions for JADN codec
   Convert typedef options between dict and strings
 """
 
+import copy
 import re
 from functools import reduce
-import jadn
 from jadn.definitions import *
+
+
+def raise_error(*s):                     # Handle errors
+    raise ValueError(*s)
 
 
 # Dict conversion utilities
@@ -133,7 +137,7 @@ def topts_s2d(olist, frange=False):        # Convert list of type definition opt
             k = TYPE_OPTIONS[ord(o[0])]
             opts[k[0]] = k[1](o[1:])
         except KeyError:
-            jadn.raise_error(f'Unknown type option: {o}')
+            raise_error(f'Unknown type option: {o}')
     return opts
 
 
@@ -150,8 +154,10 @@ def ftopts_s2d(olist):       # Convert list of field definition option strings t
 
 
 def opts_d2s(to):
-    return [OPTION_ID[k] + ('' if v is True else str(v)) for k, v in to.items()]
-
+    try:
+        return [OPTION_ID[k] + ('' if v is True else str(v)) for k, v in to.items()]
+    except KeyError:
+        raise_error(f'Unknown option tag {to}')
 
 def opts_sort(olist):      # Sort JADN option list into canonical order
     def opt_order(o):
@@ -176,16 +182,21 @@ def canonicalize(schema):
             del_opt(olist, 'minc')
         if 'maxc' in fo and fo['maxc'] == 1:
             del_opt(olist, 'maxc')
-        if btype == 'Number':
-            pass                        # TODO: format minf/maxf if present
+        if btype == 'Number':           # TODO: fix corner case input = 2.000
+            minf = get_optx(olist, 'minf')
+            if minf is not None and '.' not in olist[minf]:
+                olist[minf] += '.0'
+            maxf = get_optx(olist, 'maxf')
+            if maxf is not None and '.' not in olist[maxf]:
+                olist[maxf] += '.0'
 
-
-    for td in schema['types']:
+    cschema = copy.deepcopy(schema)     # don't modify original
+    for td in cschema['types']:
         can_opts(td[TypeOptions], td[BaseType])
         for fd in td[Fields]:
             if td[BaseType] != 'Enumerated':
                 can_opts(fd[FieldOptions], fd[FieldType])
-    return schema
+    return cschema
 
 
 def cleanup_tagid(fields):          # If type definition contains a TagId option, replace field name with id
@@ -204,22 +215,23 @@ def cleanup_tagid(fields):          # If type definition contains a TagId option
 
 def typestr2jadn(typestring):
     def parseopt(optstr):
-        mm = re.match(r'^\s*([-$\w]+)(?:\[([^]]+)\])?$', optstr)
-        return OPTION_ID[mm.group(1).lower()] + mm.group(2) if mm.group(2) else mm.group(1)
+        m1 = re.match(r'^\s*([-$\w]+)(?:\[([^]]+)\])?$', optstr)
+        if m1 is None:
+            raise_error(f'TypeString2JADN: unexpected function: {optstr}')
+        return OPTION_ID[m1.group(1).lower()] + m1.group(2) if m1.group(2) else m1.group(1)
 
     topts = {}
     fo = []
     p_name = r'\s*=?\s*([-$:\w]+)'      # 1 type name
-    p_id = r'(.ID)?'                    # 2 'id'
+    p_id = r'(\.ID)?'                   # 2 'id'
     p_func = r'(?:\(([^)]+)\))?'        # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
-    p_range = r'(?:\s*\{(.*)\})?'       # 4 'minv', 'maxv'
-    p_format = r'(?:\s*\/(\w[-\w]*))?'  # 5 'format'
-    p_pattern = r'(?:\s*\(%(.+)%\))?'   # 6 'pattern'
-    p_unique = r'\s*(unique)?'          # 7 'unique'
-    pattern = '^' + p_name + p_id + p_func + p_range + p_format + p_pattern + p_unique + '\s*\{?\s*$'
+    p_rangepat = r'(?:\{(.*)\})?'       # 4 'minv', 'maxv', 'pattern'
+    p_format = r'(?:\s+\/(\w[-\w]*))?'  # 5 'format'
+    p_unique = r'(\s+unique)?'          # 6 'unique'
+    pattern = '^' + p_name + p_id + p_func + p_rangepat + p_format + p_unique + '\s*$'
     m = re.match(pattern, typestring)
     if m is None:
-        return '*ERR*', [], []
+        raise_error(f'TypeString2JADN: "{typestring}" does not match pattern {pattern}')
     tname = m.group(1)
     topts.update({'id': True} if m.group(2) else {})
     if m.group(3):                      # (ktype, vtype), Enum(), Pointer() options
@@ -234,17 +246,20 @@ def typestr2jadn(typestring):
             topts.update(topts_s2d([opts[0]]) if ord(opts[0][0]) in TYPE_OPTIONS else {})
             fo += [opts[0]] if ord(opts[0][0]) in FIELD_OPTIONS else []         # TagId option
     if m.group(4):
-        a, b = m.group(4).split('..', maxsplit=1)
-        if tname == 'Number':
-            topts.update({} if a == '*' else {'minf': float(a)})
-            topts.update({} if b == '*' else {'maxf': float(b)})
+        m1 = re.match('^pattern="(.+)"$', m.group(4))
+        if m1:
+            topts.update({'pattern': m1.group(1)})
         else:
-            a = '*' if tname != 'Integer' and a != '*' and int(a) == 0 else a   # Default min size = 0
-            topts.update({} if a == '*' else {'minv': int(a)})
-            topts.update({} if b == '*' else {'maxv': int(b)})
+            a, b = m.group(4).split('..', maxsplit=1)
+            if tname == 'Number':
+                topts.update({} if a == '*' else {'minf': float(a)})
+                topts.update({} if b == '*' else {'maxf': float(b)})
+            else:
+                a = '*' if tname != 'Integer' and a != '*' and int(a) == 0 else a   # Default min size = 0
+                topts.update({} if a == '*' else {'minv': int(a)})
+                topts.update({} if b == '*' else {'maxv': int(b)})
     topts.update({'format': m.group(5)} if m.group(5) else {})
-    topts.update({'pattern': m.group(6)} if m.group(6) else {})
-    topts.update({'unique': True} if m.group(7) else {})
+    topts.update({'unique': True} if m.group(6) else {})
     return tname, opts_d2s(topts), fo
 
 
@@ -274,7 +289,7 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
         return str(lo) + '..' + str(hi) if lo != '*' or hi != '*' else ''
 
     opts = topts_s2d(topts)
-    extra = '.ID' if opts.pop('id', None) else ''   # SIDE EFFECT!: remove known options from opts.
+    extra = '.ID' if opts.pop('id', None) else ''   # SIDE EFFECT: remove known options from opts.
     if tname == 'ArrayOf':
         extra += '(' + _kvstr(opts.pop('vtype')) + ')'
     elif tname == 'MapOf':
@@ -283,8 +298,8 @@ def jadn2typestr(tname, topts):     # Convert typename and options to string
     extra += '(Enum[' + v + '])' if v else ''
     v = opts.pop('pointer', None)
     extra += '(Pointer[' + v + '])' if v else ''
-    v = opts.pop('pattern', None)
-    extra += ' (%' + v + '%)' if v else ''
+    v = opts.pop('pattern', None)                   # String can have {range} or {pattern} or /format
+    extra += '{pattern="' + v + '"}' if v else ''
     v = _vrange(opts) if tname == 'Integer' else (_frange(opts) if tname == 'Number' else _srange(opts))
     extra += '{' + v + '}' if v else ''
     v = opts.pop('format', None)
@@ -315,7 +330,8 @@ def jadn2fielddef(fdef, tdef):
             tf = {f[FieldID]: f[FieldName] for f in tdef[Fields]}[tagid]
             tf = tf if tf else str(tagid)
             tf = '(TagId[' + tf + '])'
-        ftyperef = jadn2typestr(fdef[FieldType] + tf, opts_d2s(fto))
+        ft = jadn2typestr(fdef[FieldType] + tf, opts_d2s(fto))
+        ftyperef = f'Key({ft})' if 'key' in fo else f'Link({ft})' if 'link' in fo else ft
         minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
         fmult = '1' if minc == 1 and maxc == 1 else str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
     return fname, ftyperef, fmult, fdesc
@@ -325,9 +341,13 @@ def fielddef2jadn(fid, fname, fstr, fmult, fdesc):
     ftyperef = ''
     fo = {}
     if fstr:
+        m = re.match(r'^(Link|Key)\((.*)\)$', fstr)
+        if m:
+            fo = {m.group(1).lower(): True}
+            fstr = m.group(2)
         ftyperef, topts, fopts = typestr2jadn(fstr)
         # Field is one of: enum.id, enum, field.id, field
-        fo = topts_s2d(topts)                   # Copy type options (if any) into field options (JADN extension)
+        fo.update(topts_s2d(topts))                   # Copy type options (if any) into field options (JADN extension)
         if fname.endswith('/'):
             fo.update({'dir': True})
             fname = fname.rstrip('/')

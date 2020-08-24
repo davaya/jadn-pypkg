@@ -10,6 +10,7 @@ from datetime import datetime
 
 import jadn
 from jadn.definitions import *
+from jadn.utils import raise_error
 
 
 def data_dir():
@@ -17,10 +18,6 @@ def data_dir():
     Return directory containing JADN schema files
     """
     return os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
-
-
-def raise_error(*s):                     # Handle errors
-    raise ValueError(*s)
 
 
 def check(schema):
@@ -37,6 +34,8 @@ def check(schema):
         uo = {k for k in topts} - {k for k in ALLOWED_TYPE_OPTIONS[base_type]}
         if uo:
             raise_error(f'Unsupported type option {type_name} ({base_type}): {str(uo)}')
+        if 'maxv' in topts and 'minv' in topts and topts['maxv'] < topts['minv']:
+            raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minv"]}..{topts["maxv"]}]')
         if 'format' in topts:        # TODO: if format defines array, add minv/maxv (prevents adding default max)
             f = topts['format']
             fm = dict(list(FORMAT_VALIDATE.items()) + list(FORMAT_JS_VALIDATE.items()) + list(FORMAT_SERIALIZE.items()))
@@ -47,7 +46,7 @@ def check(schema):
         if 'and' in topts and 'or' in topts:
             raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
 
-    for t in schema['types']:           # Transition old type definitions to constant length
+    for t in schema['types']:           # Add empty Fields if not present
         if len(t) <= Fields:
             t.append([])
 
@@ -141,7 +140,7 @@ def load(fname):
     return check(schema)
 
 
-def dumps(schema, level=0, indent=1, strip=False, nlevel=None):
+def dumps(schema, strip=False):
     def _d(schema, level=0, indent=1, strip=False, nlevel=None):
         sp = level * indent * ' '
         sp2 = (level + 1) * indent * ' '
@@ -167,7 +166,7 @@ def dumps(schema, level=0, indent=1, strip=False, nlevel=None):
             return json.dumps(schema)
         return '???'
 
-    return _d(jadn.canonicalize(schema), level, indent, strip, nlevel)
+    return _d(schema, strip=strip)
 
 
 def dump(schema, fname, source='', strip=False):

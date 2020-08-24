@@ -82,64 +82,64 @@ class BasicTypes(unittest.TestCase):
         self.assertEqual(self.tc.decode('T-bool', False), False)
         self.assertEqual(self.tc.encode('T-bool', True), True)
         self.assertEqual(self.tc.encode('T-bool', False), False)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-bool', 'True')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-bool', 1)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-bool', 'True')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-bool', 1)
 
         self.assertEqual(self.tc.decode('T-int', 35), 35)
         self.assertEqual(self.tc.encode('T-int', 35), 35)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-int', 35.4)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-int', True)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-int', 'hello')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-int', 35.4)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-int', True)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-int', 'hello')
 
         self.assertEqual(self.tc.decode('T-num', 25.96), 25.96)
         self.assertEqual(self.tc.decode('T-num', 25), 25)
         self.assertEqual(self.tc.encode('T-num', 25.96), 25.96)
         self.assertEqual(self.tc.encode('T-num', 25), 25)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-num', True)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-num', 'hello')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-num', True)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-num', 'hello')
 
         self.assertEqual(self.tc.decode('T-str', 'parrot'), 'parrot')
         self.assertEqual(self.tc.encode('T-str', 'parrot'), 'parrot')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-str', True)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-str', 1)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-str', True)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-str', 1)
 
     def test_array_of(self):
         self.assertEqual(self.tc.decode('T-array-of', [1, 4, 9, 16]), [1, 4, 9, 16])
         self.assertEqual(self.tc.encode('T-array-of', [1, 4, 9, 16]), [1, 4, 9, 16])
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-array-of', [1, '4', 9, 16])
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-array-of', 9)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-array-of', [1, '4', 9, 16])
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-array-of', 9)
 
     B1b = b'data to be encoded'
@@ -162,11 +162,11 @@ class BasicTypes(unittest.TestCase):
         self.assertEqual(self.tc.encode('T-bin', self.B3b), self.B3s)
         with self.assertRaises((TypeError, binascii.Error)):
             self.tc.decode('T-bin', self.B_bad1s)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-bin', self.B_bad1b)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-bin', self.B_bad2b)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-bin', self.B_bad3b)
 
     C1a = {'f_str': 'foo'}  # Choice - API keys are names
@@ -207,13 +207,13 @@ class BasicTypes(unittest.TestCase):
         self.assertEqual(self.tc.encode('T-choice', self.C3a), self.C3m)
         self.assertEqual(self.tc.decode('T-choice', self.C3m), self.C3a)
         self.assertEqual(self.tc.decode('T-choice', _j(self.C3m)), self.C3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-choice', self.C1_bad1a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-choice', self.C1_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-choice', self.C1_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-choice', self.C1_bad1m)
         with self.assertRaises(ValueError):
             self.tc.decode('T-choice', self.C1_bad2m)
@@ -230,13 +230,13 @@ class BasicTypes(unittest.TestCase):
         self.assertEqual(self.tc.decode('T-choice', self.C2a), self.C2a)
         self.assertEqual(self.tc.encode('T-choice', self.C3a), self.C3a)
         self.assertEqual(self.tc.decode('T-choice', self.C3a), self.C3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-choice', self.C1_bad1a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-choice', self.C1_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-choice', self.C1_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-choice', self.C1_bad1a)
         with self.assertRaises(ValueError):
             self.tc.decode('T-choice', self.C1_bad2a)
@@ -253,13 +253,13 @@ class BasicTypes(unittest.TestCase):
         self.assertEqual(self.tc.encode('T-choice-id', self.Cc3a), self.Cc3m)
         self.assertEqual(self.tc.decode('T-choice-id', self.Cc3m), self.Cc3a)
         self.assertEqual(self.tc.decode('T-choice-id', _j(self.Cc3m)), self.Cc3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-choice-id', self.Cc1_bad1a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-choice-id', self.Cc1_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-choice-id', self.Cc1_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-choice-id', self.Cc1_bad1m)
         with self.assertRaises(ValueError):
             self.tc.decode('T-choice-id', self.Cc1_bad2m)
@@ -276,13 +276,13 @@ class BasicTypes(unittest.TestCase):
         self.assertEqual(self.tc.decode('T-choice-id', self.Cc2a), self.Cc2a)
         self.assertEqual(self.tc.encode('T-choice-id', self.Cc3a), self.Cc3a)
         self.assertEqual(self.tc.decode('T-choice-id', self.Cc3a), self.Cc3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-choice-id', self.Cc1_bad1a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-choice-id', self.Cc1_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-choice-id', self.Cc1_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-choice-id', self.Cc1_bad1a)
         with self.assertRaises(ValueError):
             self.tc.decode('T-choice-id', self.Cc1_bad2a)
@@ -294,15 +294,15 @@ class BasicTypes(unittest.TestCase):
         self.assertEqual(self.tc.decode('T-enum', 15), 'extra')
         with self.assertRaises(ValueError):
             self.tc.encode('T-enum', 'foo')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-enum', 15)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-enum', [1])
         with self.assertRaises(ValueError):
             self.tc.decode('T-enum', 13)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-enum', 'extra')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-enum', ['first'])
 
     def test_enumerated_verbose(self):
@@ -311,32 +311,32 @@ class BasicTypes(unittest.TestCase):
         self.assertEqual(self.tc.decode('T-enum', 'extra'), 'extra')
         with self.assertRaises(ValueError):
             self.tc.encode('T-enum', 'foo')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-enum', 42)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-enum', ['first'])
         with self.assertRaises(ValueError):
             self.tc.decode('T-enum', 'foo')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-enum', 42)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-enum', ['first'])
 
     def test_enumerated_id_min(self):
         self.assertEqual(self.tc.encode('T-enum-c', 15), 15)
         self.assertEqual(self.tc.decode('T-enum-c', 15), 15)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-enum-c', 'extra')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-enum-c', 'extra')
 
     def test_enumerated_id_verbose(self):
         self.tc.set_mode(verbose_rec=True, verbose_str=True)
         self.assertEqual(self.tc.encode('T-enum-c', 15), 15)
         self.assertEqual(self.tc.decode('T-enum-c', 15), 15)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-enum-c', 'extra')
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-enum-c', 'extra')
 
     RGB1 = {'red': 24, 'green': 120, 'blue': 240}    # API (decoded) and verbose values Map and Record
@@ -398,9 +398,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.encode('T-map-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad6a)
@@ -410,11 +410,11 @@ class BasicTypes(unittest.TestCase):
             self.tc.decode('T-map-rgba', self.Map_bad1m)
         with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.Map_bad2m)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.Map_bad3m)
         with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.Map_bad4m)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.Map_bad5m)
 
     def test_map_unused(self):         # dict structure, identifier tag
@@ -434,9 +434,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.encode('T-map-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad6a)
@@ -446,7 +446,7 @@ class BasicTypes(unittest.TestCase):
             self.tc.decode('T-map-rgba', self.Map_bad1m)
         with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.Map_bad2m)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.Map_bad3m)
         with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.Map_bad4m)
@@ -467,9 +467,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.decode('T-map-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.RGB_bad6a)
@@ -481,9 +481,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.encode('T-map-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad6a)
@@ -504,9 +504,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.encode('T-map-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-map-rgba', self.RGB_bad6a)
@@ -520,9 +520,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.decode('T-map-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.decode('T-map-rgba', self.RGB_bad6a)
@@ -544,9 +544,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.encode('T-rec-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad6a)
@@ -556,7 +556,7 @@ class BasicTypes(unittest.TestCase):
             self.tc.decode('T-rec-rgba', self.Rec_bad1m)
         with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.Rec_bad2m)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.Rec_bad3m)
 
     def test_record_unused(self):
@@ -576,9 +576,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.encode('T-rec-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad6a)
@@ -588,7 +588,7 @@ class BasicTypes(unittest.TestCase):
             self.tc.decode('T-rec-rgba', self.Rec_bad1n)
         with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.Rec_bad2n)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.Rec_bad3n)
         with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.Rec_bad4n)
@@ -607,9 +607,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.encode('T-rec-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad6a)
@@ -619,7 +619,7 @@ class BasicTypes(unittest.TestCase):
             self.tc.decode('T-rec-rgba', self.RGB_bad1c)
         with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.RGB_bad2c)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.RGB_bad3c)
 
     def test_record_verbose(self):
@@ -636,9 +636,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.encode('T-rec-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.encode('T-rec-rgba', self.RGB_bad6a)
@@ -652,9 +652,9 @@ class BasicTypes(unittest.TestCase):
             self.tc.decode('T-rec-rgba', self.RGB_bad2a)
         with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.RGB_bad3a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.RGB_bad4a)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.RGB_bad5a)
         with self.assertRaises(ValueError):
             self.tc.decode('T-rec-rgba', self.RGB_bad6a)
@@ -689,9 +689,9 @@ class BasicTypes(unittest.TestCase):
                 self.tc.encode('T-array', self.Arr_bad1)
             with self.assertRaises(ValueError):
                 self.tc.decode('T-array', self.Arr_bad1)
-            with self.assertRaises(TypeError):
+            with self.assertRaises(ValueError):
                 self.tc.encode('T-array', self.Arr_bad2)
-            with self.assertRaises(TypeError):
+            with self.assertRaises(ValueError):
                 self.tc.decode('T-array', self.Arr_bad2)
             with self.assertRaises(ValueError):
                 self.tc.encode('T-array', self.Arr_bad3)
@@ -712,9 +712,9 @@ class BasicTypes(unittest.TestCase):
                 self.tc.encode('T-arr-rgba', self.Rec_bad2m)
             with self.assertRaises(ValueError):
                 self.tc.decode('T-arr-rgba', self.Rec_bad2m)
-            with self.assertRaises(TypeError):
+            with self.assertRaises(ValueError):
                 self.tc.encode('T-arr-rgba', self.Rec_bad3m)
-            with self.assertRaises(TypeError):
+            with self.assertRaises(ValueError):
                 self.tc.decode('T-arr-rgba', self.Rec_bad3m)
 
         # Ensure that mode has no effect on array serialization
@@ -902,9 +902,9 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
         self.assertListEqual(self.tc.decode('T-attr-arr-name', self.arr_name_p1_api), self.arr_name_p1_api)
         self.assertListEqual(self.tc.encode('T-attr-arr-name', self.arr_names_p1_api), self.arr_names_p1_api)
         self.assertListEqual(self.tc.decode('T-attr-arr-name', self.arr_names_p1_api), self.arr_names_p1_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-attr-arr-name', self.arr_name4_bad_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-attr-arr-name', self.arr_name4_bad_api)
         with self.assertRaises(ValueError):
             self.tc.encode('T-attr-arr-name', self.arr_name5_bad_api)
@@ -919,9 +919,9 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
         self.assertListEqual(self.tc.decode('T-attr-arr-tag', self.arr_tag2_api), self.arr_tag2_api)
         self.assertListEqual(self.tc.encode('T-attr-arr-tag', self.arr_tag3_api), self.arr_tag3_api)
         self.assertListEqual(self.tc.decode('T-attr-arr-tag', self.arr_tag3_api), self.arr_tag3_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-attr-arr-tag', self.arr_tag4_bad_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-attr-arr-tag', self.arr_tag4_bad_api)
         with self.assertRaises(ValueError):
             self.tc.encode('T-attr-arr-tag', self.arr_tag5_bad_api)
@@ -936,9 +936,9 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
         self.assertListEqual(self.tc.decode('T-attr-arr-name', self.arr_name2_min), self.arr_name2_api)
         self.assertListEqual(self.tc.encode('T-attr-arr-name', self.arr_name3_api), self.arr_name3_min)
         self.assertListEqual(self.tc.decode('T-attr-arr-name', self.arr_name3_min), self.arr_name3_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-attr-arr-name', self.arr_name4_bad_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-attr-arr-name', self.arr_name4_bad_min)
         with self.assertRaises(ValueError):
             self.tc.encode('T-attr-arr-name', self.arr_name5_bad_api)
@@ -953,9 +953,9 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
         self.assertListEqual(self.tc.decode('T-attr-arr-tag', self.arr_tag2_min), self.arr_tag2_api)
         self.assertListEqual(self.tc.encode('T-attr-arr-tag', self.arr_tag3_api), self.arr_tag3_min)
         self.assertListEqual(self.tc.decode('T-attr-arr-tag', self.arr_tag3_min), self.arr_tag3_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-attr-arr-tag', self.arr_tag4_bad_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-attr-arr-tag', self.arr_tag4_bad_min)
         with self.assertRaises(ValueError):
             self.tc.encode('T-attr-arr-tag', self.arr_tag5_bad_api)
@@ -990,9 +990,9 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
         self.assertDictEqual(self.tc.decode('T-attr-rec-name', self.rec_name2_api), self.rec_name2_api)
         self.assertDictEqual(self.tc.encode('T-attr-rec-name', self.rec_name3_api), self.rec_name3_api)
         self.assertDictEqual(self.tc.decode('T-attr-rec-name', self.rec_name3_api), self.rec_name3_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-attr-rec-name', self.rec_name4_bad_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-attr-rec-name', self.rec_name4_bad_api)
         with self.assertRaises(ValueError):
             self.tc.encode('T-attr-rec-name', self.rec_name5_bad_api)
@@ -1007,9 +1007,9 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
         self.assertDictEqual(self.tc.decode('T-attr-rec-name', self.rec_name2_min), self.rec_name2_api)
         self.assertListEqual(self.tc.encode('T-attr-rec-name', self.rec_name3_api), self.rec_name3_min)
         self.assertDictEqual(self.tc.decode('T-attr-rec-name', self.rec_name3_min), self.rec_name3_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-attr-rec-name', self.rec_name4_bad_api)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-attr-rec-name', self.rec_name4_bad_min)
         with self.assertRaises(ValueError):
             self.tc.encode('T-attr-rec-name', self.rec_name5_bad_api)
@@ -1094,9 +1094,9 @@ class ListCardinality(unittest.TestCase):      # TODO: arrayOf(rec,map,array,arr
         self.tc.set_mode(verbose_rec=True, verbose_str=True)
         self.assertDictEqual(self.tc.encode('T-opt-list0', self.Lna), self.Lna)
         self.assertDictEqual(self.tc.decode('T-opt-list0', self.Lna), self.Lna)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-opt-list0', self.Lsa)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-opt-list0', self.Lsa)
         self.assertDictEqual(self.tc.encode('T-opt-list0', self.L0a), self.L0a)
         self.assertDictEqual(self.tc.decode('T-opt-list0', self.L0a), self.L0a)
@@ -1113,9 +1113,9 @@ class ListCardinality(unittest.TestCase):      # TODO: arrayOf(rec,map,array,arr
         self.tc.set_mode(verbose_rec=True, verbose_str=True)
         self.assertDictEqual(self.tc.encode('T-opt-list1', self.Lna), self.Lna)
         self.assertDictEqual(self.tc.decode('T-opt-list1', self.Lna), self.Lna)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-opt-list1', self.Lsa)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-opt-list1', self.Lsa)
         with self.assertRaises(ValueError):
             self.tc.encode('T-opt-list1', self.L0a)
@@ -1136,9 +1136,9 @@ class ListCardinality(unittest.TestCase):      # TODO: arrayOf(rec,map,array,arr
             self.tc.encode('T-list-1-2', self.Lna)
         with self.assertRaises(ValueError):
             self.tc.decode('T-list-1-2', self.Lna)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-list-1-2', self.Lsa)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-list-1-2', self.Lsa)
         with self.assertRaises(ValueError):
             self.tc.encode('T-list-1-2', self.L0a)
@@ -1157,9 +1157,9 @@ class ListCardinality(unittest.TestCase):      # TODO: arrayOf(rec,map,array,arr
         self.tc.set_mode(verbose_rec=True, verbose_str=True)
         self.assertDictEqual(self.tc.encode('T-list-0-2', self.Lna), self.Lna)
         self.assertDictEqual(self.tc.decode('T-list-0-2', self.Lna), self.Lna)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.encode('T-list-0-2', self.Lsa)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.tc.decode('T-list-0-2', self.Lsa)
         with self.assertRaises(ValueError):
             self.tc.encode('T-list-0-2', self.L0a)
@@ -1636,7 +1636,6 @@ class JADN(unittest.TestCase):
 class Simplify(unittest.TestCase):
 
     schema_enum_optimized = {
-        'info': {'module': 'http://jadn.org/unittests-enum-optimized'},
         'types': [
             ['Pixel', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
@@ -1665,7 +1664,6 @@ class Simplify(unittest.TestCase):
     }
 
     schema_enum_simplified = {
-        'info': {'module': 'http://jadn.org/unittests-enum-simple'},
         'types': [
             ['Pixel', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
@@ -1713,7 +1711,6 @@ class Simplify(unittest.TestCase):
         self.assertEqual(ss['types'], self.schema_enum_simplified['types'])
 
     schema_mapof_optimized = {
-        'info': {'module': 'http://jadn.org/unittests-mapof-optimized'},
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
                 [1, 'red', 'rojo'],
@@ -1725,7 +1722,6 @@ class Simplify(unittest.TestCase):
     }
 
     schema_mapof_simplified = {
-        'info': {'module': 'http://jadn.org/unittests-mapof-simple'},
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
                 [1, 'red', 'rojo'],

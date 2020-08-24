@@ -72,7 +72,7 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                             newopts.append(fdef[FieldOptions].pop(get_optx(fdef[FieldOptions], o)))
                         name = epname(newopts)              # If enum/pointer option, use derived enum typename
                         newname = name if name else tdef[TypeName] + sys + fdef[FieldName]
-                        if newname not in [t[TypeName] for t in new_types]:
+                        if newname not in [t[TypeName] for t in tdefs + new_types]:
                             newtype = 'Enumerated' if epx(newopts) is not None else fdef[FieldType]
                             assert is_builtin(newtype)      # Don't create a bad type definition
                             new_types.append([newname, newtype, newopts, fdef[FieldDesc], []])
@@ -90,7 +90,7 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                     else:                   # Make new Enumerated type
                         make_items = enum_items if opts[n][1:2] == OPTION_ID['enum'] else pointer_items
                         opts[n] = opts[n][:1] + name
-                        new.append([name, 'Enumerated', [], '', make_items(name.split(sys)[0])])
+                        new.append([name, 'Enumerated', [], '', make_items(name.rsplit(sys, maxsplit=1)[0])])
 
         def enum_items(rtype):
             tdef = tdefs[typex[rtype]]
