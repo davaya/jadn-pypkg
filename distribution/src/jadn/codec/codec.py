@@ -13,8 +13,15 @@ http://www.apache.org/licenses/LICENSE-2.0
 
 import numbers
 import re
+
+from typing import Any, Dict, List, Optional, NoReturn
 from jadn.utils import raise_error, topts_s2d, ftopts_s2d, get_config
-from jadn.definitions import *
+from jadn.definitions import (
+    # Field Indexes
+    TypeName, BaseType, TypeOptions, Fields, FieldID, FieldName, FieldType, FieldOptions,
+    # Const values
+    SIMPLE_TYPES, CORE_TYPES
+)
 from jadn.transform import simplify
 from jadn.codec.format_validate import format_validators, get_format_validate_function
 from jadn.codec.format_serialize_json import json_format_codecs, get_format_encode_function, get_format_decode_function
@@ -55,13 +62,17 @@ class Codec:
                  False: Record types encoded as arrays
     verbose_str - True: Identifiers encoded as strings
                  False: Identifiers encoded as integer tags
-
     """
+    schema: dict  # better typing??
+    config: dict  # better typing??
+    format_validators: dict  # better typing??
+    format_codec: dict  # better typing??
+    types: Dict[str, list]  # better typing??
+    symtab = Dict[str, list]  # better typing??
+    verbose_rec: bool
+    verbose_str: bool
 
-    def _error(self, mesg):
-        raise_error('Validation Error: ' + mesg)
-
-    def __init__(self, schema, verbose_rec=False, verbose_str=False, config=None):
+    def __init__(self, schema: dict, verbose_rec=False, verbose_str=False, config: dict = None):
         assert set(enctab) == set(CORE_TYPES)
         self.schema = simplify(schema)             # Convert extensions to core definitions
         conf = config if config else schema
@@ -70,33 +81,37 @@ class Codec:
         self.format_codec = json_format_codecs()        # Initialize format serialization functions
         self.types = {t[TypeName]: t for t in self.schema['types']}  # pre-index types to allow symtab forward refs
         self.symtab = None                      # Symbol table - pre-computed values for all datatypes
-        self.verbose_rec = None                 # define placeholders in __init__, set value in set_mode
-        self.verbose_str = None
-        self.set_mode(verbose_rec, verbose_str) # Create symbol table based on encoding mode
+        self.set_mode(verbose_rec, verbose_str)  # Create symbol table based on encoding mode
 
-    def decode(self, datatype, sval):           # Decode serialized value into API value
+    def _error(self, msg: str) -> NoReturn:
+        raise_error(f'Validation Error: {msg}')
+
+    def decode(self, datatype: str, sval: Any) -> Any:  # Decode serialized value into API value
+        ts: list = []
         try:
             ts = self.symtab[datatype]
         except KeyError:
-            self._error('Decode: datatype "%s" is not defined' % datatype)
+            self._error(f'Decode: datatype "{datatype}" is not defined')
         return ts[S_DECODE](ts, sval, self)     # Dispatch to type-specific decoder
 
-    def encode(self, datatype, aval):  # Encode API value into serialized value
+    def encode(self, datatype: str, aval: Any) -> Any:  # Encode API value into serialized value
+        ts: list = []
         try:
             ts = self.symtab[datatype]
         except KeyError:
-            self._error('Encode: datatype "%s" is not defined' % datatype)
+            self._error(f'Encode: datatype "{datatype}" is not defined')
         return ts[S_ENCODE](ts, aval, self)     # Dispatch to type-specific encoder
 
     def set_mode(self, verbose_rec=False, verbose_str=False):
-        def symf(fld, fa, fnames):      # Build symbol table field entries
+        # Build symbol table field entries
+        def symf(fld: list, fa: int, fnames: dict) -> [list, dict, Optional[int]]:
             fo, to = ftopts_s2d(fld[FieldOptions])
             if to:
                 self._error('%s: internal error: unexpected type options: %s' % (fld[FieldName], str(to)))
             fopts = {'minc': 1, 'maxc': 1}
             fopts.update(fo)
             assert fopts['minc'] in (0, 1) and fopts['maxc'] == 1     # Other cardinalities have been simplified
-            ctag = None
+            ctag: Optional[int] = None
             if 'tagid' in fopts:
                 ctag = fopts['tagid'] if fa == FieldID else fnames[fopts['tagid']]
             fs = [
@@ -106,28 +121,30 @@ class Codec:
             ]
             return fs
 
-        def make_typeref_pattern(nsid, typename):   # Generate TypeRef pattern - concatenate NSID: and TypeName patterns
+        # Generate TypeRef pattern - concatenate NSID: and TypeName patterns
+        def make_typeref_pattern(nsid: str, typename: str) -> dict:
             ns = nsid.lstrip('^').rstrip('$')
             tn = typename.lstrip('^').rstrip('$')
             return {'pattern': '^(' + ns + ':)?' + tn + '$'}
 
-        def config_opts(opts):                  # Set configurable option values
+        # Set configurable option values
+        def config_opts(opts: List[str]) -> dict:
             op = [(v[0] + self.config[v[1:]]) if len(v) > 1 and v[1] == '$' else v for v in opts]
             return topts_s2d(op)
 
-        def sym(t):  # Build symbol table based on encoding modes
+        def sym(t: list) -> list:  # Build symbol table based on encoding modes
             symval = [
-                t,                              # 0: S_TDEF:  JADN type definition
-                enctab[t[BaseType]][C_ENC],     # 1: S_ENCODE: Encoder for this type
-                enctab[t[BaseType]][C_DEC],     # 2: S_DECODE: Decoder for this type
-                enctab[t[BaseType]][C_ETYPE],   # 3: S_ENCTYPE: Encoded value type
-                config_opts(t[TypeOptions]),    # 4: S_TOPTS:  Type Options (dict)
-                {},                             # 5: S_FVALIDATE: Format semantic validation - returns True if valid
-                {},                             # 6: S_FENCODE: Format encode conversion - returns serialized data representation
-                {},                             # 7: S_FDECODE: Format decode conversion - returns API value
-                {},                             # 8: S_DMAP: Encoded field key or enum value to API
-                {},                             # 9: S_EMAP: API field key or enum value to Encoded
-                {},                             # 10: S_FLD: Symbol table field entry
+                t,                             # 0: S_TDEF:  JADN type definition
+                enctab[t[BaseType]][C_ENC],    # 1: S_ENCODE: Encoder for this type
+                enctab[t[BaseType]][C_DEC],    # 2: S_DECODE: Decoder for this type
+                enctab[t[BaseType]][C_ETYPE],  # 3: S_ENCTYPE: Encoded value type
+                config_opts(t[TypeOptions]),   # 4: S_TOPTS:  Type Options (dict)
+                {},                            # 5: S_FVALIDATE: Format semantic validation - returns True if valid
+                {},                            # 6: S_FENCODE: Format encode conversion - returns serialized data representation
+                {},                            # 7: S_FDECODE: Format decode conversion - returns API value
+                {},                            # 8: S_DMAP: Encoded field key or enum value to API
+                {},                            # 9: S_EMAP: API field key or enum value to Encoded
+                {},                            # 10: S_FLD: Symbol table field entry
             ]
 
             if t[BaseType] == 'Record':
@@ -148,16 +165,16 @@ class Codec:
                     symval[S_FLD] = {f[fx]: symf(f, fa, fnames) for f in t[Fields]}
             if t[BaseType] in ('Binary', 'String', 'Array', 'ArrayOf', 'Map', 'MapOf', 'Record'):
                 opts = symval[S_TOPTS]
-                minv = opts['minv'] if 'minv' in opts else 0
-                maxv = opts['maxv'] if 'maxv' in opts else 0
+                minv = opts.get('minv', 0)
+                maxv = opts.get('maxv', 0)
                 if minv < 0 or maxv < 0:
-                    self._error(('%s: length cannot be negative: {}..{}' % t[TypeName], minv, maxv))
+                    self._error(f'{t[TypeName]}: length cannot be negative: {minv}..{maxv}')
                 if maxv == 0:
-                    maxv = self.config['$MaxBinary'] if t[BaseType] == 'Binary' else \
-                           self.config['$MaxString'] if t[BaseType] == 'String' else \
-                           self.config['$MaxElements']
+                    maxv = self.config['$MaxElements']
+                    if t[BaseType] in ('Binary', 'String'):
+                        maxv = self.config[f'$Max{t[BaseType]}']
                 opts.update({'minv': minv, 'maxv': maxv})
-            fmt = symval[S_TOPTS]['format'] if 'format' in symval[S_TOPTS] else ''
+            fmt = symval[S_TOPTS].get('format', '')
             symval[S_FVALIDATE] = get_format_validate_function(self.format_validate, t[BaseType], fmt)
             symval[S_FENCODE] = get_format_encode_function(self.format_codec, t[BaseType], fmt)
             symval[S_FDECODE] = get_format_decode_function(self.format_codec, t[BaseType], fmt)
@@ -184,174 +201,173 @@ class Codec:
             ] for t in SIMPLE_TYPES})
 
 
-def _bad_index(ts, k, val):
+def _bad_index(ts: list, k: int, val) -> NoReturn:
     td = ts[S_TDEF]
-    raise_error(
-        '%s(%s): array index %d out of bounds (%d, %d)' % (td[TypeName], td[BaseType], k, len(ts[S_FLD]), len(val)))
+    raise_error(f'{td[TypeName]}({td[BaseType]}): array index {k} out of bounds ({len(ts[S_FLD])}, {len(val)})')
 
 
-def _bad_choice(ts, val):
+def _bad_choice(ts: List, val) -> NoReturn:
     td = ts[S_TDEF]
-    raise_error('%s: choice must have one value: %s' % (td[TypeName], val))
+    raise_error(f'{td[TypeName]}: choice must have one value: {val}')
 
 
-def _bad_value(ts, val, fld=None):
+def _bad_value(ts: list, val, fld: list = None) -> NoReturn:
     td = ts[S_TDEF]
     if fld is not None:
-        raise_error('%s(%s): missing required field "%s": %s' % (td[TypeName], td[BaseType], fld[FieldName], val))
+        raise_error(f'{td[TypeName]}({td[BaseType]}: missing required field "{fld[FieldName]}": {val}')
     else:
         v = next(iter(val)) if type(val) == dict else val
-        raise_error('%s(%s): bad value: %s' % (td[TypeName], td[BaseType], v))
+        raise_error(f'{td[TypeName]}({td[BaseType]}: bad value: {v}')
 
 
-def _check_type(ts, val, vtype, fail=False):  # fail forces rejection of boolean vals for number types
+def _check_type(ts: list, val, vtype, fail=False) -> NoReturn:  # fail forces rejection of boolean vals for number types
     if vtype is not None:
         if fail or not isinstance(val, vtype):
             td = ts[S_TDEF]
-            tn = ('%s(%s)' % (td[TypeName], td[BaseType]) if td else 'Primitive')
-            raise_error('%s: %s is not %s' % (tn, val, vtype))
+            tn = f"{td[TypeName]}({td[BaseType] if td else 'Primitive'})"
+            raise_error(f'{tn}: {val} is not {vtype}')
 
 
-def _format_encode(ts, val):
+def _format_encode(ts: list, val):
     try:
         ts[S_FVALIDATE](val)
     except ValueError:
-        raise_error('%s: %s is not format "%s"' % (ts[S_TDEF][TypeName], val, ts[S_TOPTS]['format']))
+        raise_error(f'{ts[S_TDEF][TypeName]}: {val} is not format "{ts[S_TOPTS]["format"]}"')
     return ts[S_FENCODE](val)
 
 
-def _format_decode(ts, val):
+def _format_decode(ts: list, val):
     aval = ts[S_FDECODE](val)
     try:
         ts[S_FVALIDATE](aval)
     except ValueError:
-        raise_error('%s: %s is not format "%s"' % (ts[S_TDEF][TypeName], val, ts[S_TOPTS]['format']))
+        raise_error(f'{ts[S_TDEF][TypeName]}: {val} is not format "{ts[S_TOPTS]["format"]}"')
     return aval
 
 
-def _check_key(ts, val):
+def _check_key(ts: list, val):
     try:
         return int(val) if isinstance(next(iter(ts[S_DMAP])), int) else val
     except ValueError:
-        raise_error('%s: %s is not a valid field ID' % (ts[S_TDEF][TypeName], val))
+        raise_error(f'{ts[S_TDEF][TypeName]}: {val} is not a valid field ID')
 
 
-def _check_pattern(ts, val):
+def _check_pattern(ts: list, val):
     op = ts[S_TOPTS]
     if 'pattern' in op and not re.match(op['pattern'], val):
         tn = ts[S_TDEF][TypeName]
-        raise_error('%s: string "%s" does not match %s' % (tn, val, op['pattern']))
+        raise_error(f'{tn}: string "{val}" does not match {op["pattern"]}')
     return val
 
 
-def _check_range(ts, val):
+def _check_range(ts: list, val):
     op = ts[S_TOPTS]
     tn = ts[S_TDEF][TypeName]
     if 'minv' in op and val < op['minv']:
-        raise_error('%s: %s < minimum %s' % (tn, val, op['minv']))
+        raise_error(f'{tn}: {val} < minimum {op["minv"]}')
     if 'maxv' in op and val > op['maxv']:
-        raise_error('%s: %s > maximum %s' % (tn, val, op['maxv']))
+        raise_error(f'{tn}: {val} < maximum {op["maxv"]}')
     return val
 
 
-def _check_frange(ts, val):
+def _check_frange(ts: list, val):
     op = ts[S_TOPTS]
     tn = ts[S_TDEF][TypeName]
     if 'minf' in op and val < op['minf']:
-        raise_error('%s: %s < minimum %s' % (tn, val, op['minf']))
+        raise_error(f'{tn}: {val} < minimum {op["minf"]}')
     if 'maxf' in op and val > op['maxf']:
-        raise_error('%s: %s > maximum %s' % (tn, val, op['maxf']))
+        raise_error(f'{tn}: {val} < maximum {op["maxf"]}')
     return val
 
 
-def _check_size(ts, val):
+def _check_size(ts: list, val):
     op = ts[S_TOPTS]
     tn = ts[S_TDEF][TypeName]
     if 'minv' in op and len(val) < op['minv']:
-        raise_error('%s: length %s < minimum %s' % (tn, len(val), op['minv']))
+        raise_error(f'{tn}: length {len(val)} < minimum {op["minv"]}')
     if 'maxv' in op and len(val) > op['maxv']:
-        raise_error('%s: length %s > maximum %s' % (tn, len(val), op['maxv']))
+        raise_error(f'{tn}: length {len(val)} > maximum {op["maxv"]}')
     return val
 
 
-def _extra_value(ts, val, fld):
+def _extra_value(ts: list, val, fld):
     td = ts[S_TDEF]
-    raise_error('%s(%s): unexpected field: %s not in %s:' % (td[TypeName], td[BaseType], val, fld))
+    raise_error(f'{td[TypeName]}({td[BaseType]}): unexpected field: {val} not in {fld}:')
 
 
-def _encode_binary(ts, aval, codec):    # Encode bytes to string
+def _encode_binary(ts: list, aval, codec):    # Encode bytes to string
     _check_type(ts, aval, bytes)
     _check_size(ts, aval)
     return _format_encode(ts, aval)
 
 
-def _decode_binary(ts, sval, codec):    # Decode ASCII string to bytes
+def _decode_binary(ts: list, sval, codec):    # Decode ASCII string to bytes
     aval = _format_decode(ts, sval)
     _check_type(ts, aval, bytes)        # assert format decode returns correct type
     return _check_size(ts, aval)
 
 
-def _encode_boolean(ts, val, codec):
+def _encode_boolean(ts: list, val, codec):
     _check_type(ts, val, bool)
     return val
 
 
-def _decode_boolean(ts, val, codec):
+def _decode_boolean(ts: list, val, codec):
     _check_type(ts, val, bool)
     return val
 
 
-def _encode_integer(ts, aval, codec):
+def _encode_integer(ts: list, aval, codec):
     _check_type(ts, aval, numbers.Integral, isinstance(aval, bool))
     _check_range(ts, aval)
     return _format_encode(ts, aval)
 
 
-def _decode_integer(ts, sval, codec):
+def _decode_integer(ts: list, sval, codec):
     aval = _format_decode(ts, sval)
     _check_type(ts, aval, numbers.Integral, isinstance(aval, bool))
     return _check_range(ts, aval)
 
 
-def _encode_number(ts, aval, codec):
+def _encode_number(ts: list, aval, codec):
     _check_type(ts, aval, numbers.Real, isinstance(aval, bool))
     _check_frange(ts, aval)
     return _format_encode(ts, aval)
 
 
-def _decode_number(ts, sval, codec):
+def _decode_number(ts: list, sval, codec):
     aval = _format_decode(ts, sval)
     _check_type(ts, aval, numbers.Real, isinstance(aval, bool))
     return _check_range(ts, aval)
 
 
-def _encode_null(ts, aval, codec):
+def _encode_null(ts: list, aval, codec):
     if aval:                            # Treat any false-y value as Null: None, False, 0, '', [], set(), {}
         _bad_value(ts, aval)
     return aval
 
 
-def _decode_null(ts, val, codec):
+def _decode_null(ts: list, val, codec):
     if val:
         _bad_value(ts, val)
     return val
 
 
-def _encode_string(ts, aval, codec):
+def _encode_string(ts: list, aval, codec):
     _check_type(ts, aval, type(''))
     _check_size(ts, aval)
     _check_pattern(ts, aval)
     return _format_encode(ts, aval)
 
 
-def _decode_string(ts, sval, codec):
+def _decode_string(ts: list, sval, codec):
     aval = _format_decode(ts, sval)
     _check_type(ts, aval, type(''))
     _check_size(ts, aval)
     return _check_pattern(ts, aval)
 
 
-def _encode_enumerated(ts, aval, codec):                # TODO: Serialization
+def _encode_enumerated(ts: list, aval, codec):                # TODO: Serialization
     _check_type(ts, aval, type(next(iter(ts[S_EMAP]))))
     if aval in ts[S_EMAP]:
         return ts[S_EMAP][aval]
@@ -360,7 +376,7 @@ def _encode_enumerated(ts, aval, codec):                # TODO: Serialization
         raise_error('%s: %r is not a valid %s' % (td[BaseType], aval, td[TypeName]))
 
 
-def _decode_enumerated(ts, sval, codec):
+def _decode_enumerated(ts: list, sval, codec):
     _check_type(ts, sval, type(next(iter(ts[S_DMAP]))))
     if sval in ts[S_DMAP]:
         return ts[S_DMAP][sval]
@@ -369,7 +385,7 @@ def _decode_enumerated(ts, sval, codec):
         raise_error('%s: %r is not a valid %s' % (td[BaseType], sval, td[TypeName]))
 
 
-def _encode_choice(ts, val, codec):
+def _encode_choice(ts: list, val, codec):
     _check_type(ts, val, dict)
     if len(val) != 1:
         _bad_choice(ts, val)
@@ -381,7 +397,7 @@ def _encode_choice(ts, val, codec):
     return {k: codec.encode(f[FieldType], v)}
 
 
-def _decode_choice(ts, val, codec):  # Map Choice:  val == {key: value}
+def _decode_choice(ts: list, val, codec):  # Map Choice:  val == {key: value}
     _check_type(ts, val, dict)
     if len(val) != 1:
         _bad_choice(ts, val)
@@ -394,7 +410,7 @@ def _decode_choice(ts, val, codec):  # Map Choice:  val == {key: value}
     return {k: codec.decode(f[FieldType], v)}
 
 
-def _encode_maprec(ts, aval, codec):
+def _encode_maprec(ts: list, aval, codec):
     _check_type(ts, aval, dict)
     sval = ts[S_ENCTYPE]()
     assert type(sval) in (list, dict)
@@ -426,7 +442,7 @@ def _encode_maprec(ts, aval, codec):
     return sval
 
 
-def _decode_maprec(ts, sval, codec):
+def _decode_maprec(ts: list, sval, codec):
     _check_type(ts, sval, ts[S_ENCTYPE])
     val = sval
     if ts[S_ENCTYPE] == dict:
@@ -461,7 +477,7 @@ def _decode_maprec(ts, sval, codec):
     return aval
 
 
-def _encode_array(ts, aval, codec):
+def _encode_array(ts: list, aval, codec):
     _check_type(ts, aval, list)
     sval = list()
     extra = len(aval) > len(ts[S_FLD])
@@ -489,7 +505,7 @@ def _encode_array(ts, aval, codec):
     return _format_encode(ts, sval)
 
 
-def _decode_array(ts, sval, codec):  # Ordered list of types, returned as a list
+def _decode_array(ts: list, sval, codec):  # Ordered list of types, returned as a list
     val = _format_decode(ts, sval)
     _check_type(ts, val, list)
     aval = list()
@@ -518,26 +534,26 @@ def _decode_array(ts, sval, codec):  # Ordered list of types, returned as a list
     return aval
 
 
-def _encode_array_of(ts, val, codec):
+def _encode_array_of(ts: list, val, codec):
     _check_type(ts, val, list)
     _check_size(ts, val)
     return [codec.encode(ts[S_TOPTS]['vtype'], v) for v in val]
 
 
-def _decode_array_of(ts, val, codec):
+def _decode_array_of(ts: list, val, codec):
     _check_type(ts, val, list)
     _check_size(ts, val)
     return [codec.decode(ts[S_TOPTS]['vtype'], v) for v in val]
 
 
-def _encode_map_of(ts, aval, codec):
+def _encode_map_of(ts: list, aval, codec):
     _check_type(ts, aval, dict)
     _check_size(ts, aval)
     to = ts[S_TOPTS]
     return {codec.encode(to['ktype'], k): codec.encode(to['vtype'], v) for k, v in aval.items()}
 
 
-def _decode_map_of(ts, sval, codec):
+def _decode_map_of(ts: list, sval, codec):
     _check_type(ts, sval, dict)
     _check_size(ts, sval)
     return {k: codec.decode(ts[S_TOPTS]['vtype'], v) for k, v in sval.items()}

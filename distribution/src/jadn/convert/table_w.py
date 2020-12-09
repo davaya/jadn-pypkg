@@ -3,40 +3,46 @@ Translate JADN to HTML or Markdown property tables
 """
 
 import jadn
-from jadn.definitions import *
+from typing import List, NoReturn, Union
+from jadn.definitions import (
+    # Field Indexes
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID,
+    # Const Values
+    INFO_ORDER, SIMPLE_TYPES,
+    # Functions
+    is_builtin
+)
 from datetime import datetime
 
 
-def _fmt(s, f):
+def _fmt(s: str, f: str) -> str:
     f1 = {'n': '', 's': '', 'd': '', 'b': '**', 'h': '**_'}
     f2 = {'n': '', 's': '', 'd': '', 'b': '**', 'h': '_**'}
     ss = '\*' if s == '*' else s
-    return f1[f] + ss + f2[f]
-
-#--------- Markdown ouput -----------------
+    return f'{f1[f]}{ss}{f2[f]}'
 
 
-def doc_begin_m():
-    text = '## Schema\n'
-    return text
+# --------- Markdown ouput -----------------
+def doc_begin_m() -> str:
+    return '## Schema\n'
 
 
-def doc_end_m():
+def doc_end_m() -> str:
     return ''
 
 
-def sect_m(num, name):
+def sect_m(num, name) -> str:
     n = ''
     # n = '.'.join([str(n) for n in num]) + ' '
     # return '\n' + len(num)*'#' + ' ' + n + name + '\n'
     return ''
 
 
-def meta_begin_m():
+def meta_begin_m() -> str:
     return '| . | . |\n| ---: | :--- |\n'
 
 
-def meta_item_m(h, val):
+def meta_item_m(h: str, val: Union[dict, list, str]) -> str:
     if h == 'exports':
         sval = ', '.join(val)
     elif h in ('imports', 'config'):
@@ -46,151 +52,142 @@ def meta_item_m(h, val):
     return '| **' + h + ':** | ' + sval + ' |\n'
 
 
-def meta_end_m():
+def meta_end_m() -> str:
     return ''
 
 
-def type_begin_m(tname, ttype, headers, cls):
+def type_begin_m(tname: str, ttype: str, headers: List[str], cls: List[str]) -> str:
     assert len(headers) == len(cls)
     ch = {'n': '---:', 'h': '---:', 's': ':---', 'd': ':---', 'b': ':---'}
     clh = [ch[c] if c in ch else '---' for c in cls]
-    to = ' (' + ttype + ')' if ttype else ''
-    tc = '\n**_Type: ' + tname + to + '_**' if tname else ''
-    return tc + '\n\n| ' + ' | '.join(headers) + ' |\n| ' + ' | '.join(clh) + ' |\n'
+    to = f' ({ttype})' if ttype else ''
+    tc = f'\n**_Type: {tname}{to}_**' if tname else ''
+    return f"{tc}\n\n| {' | '.join(headers)} |\n| {' | '.join(clh)} |\n"
 
 
-def type_item_m(row, cls):
+def type_item_m(row: list, cls: list) -> str:
     assert len(row) == len(cls)
-    return '| ' + ' | '.join([_fmt(*r) for r in zip(row, cls)]) + ' |\n'
+    return f"| {' | '.join([_fmt(*r) for r in zip(row, cls)])} |\n"
 
 
-def type_end_m():
+def type_end_m() -> str:
     return ''
 
 
 # ---------- JADN Source (JAS) output ------------------
-
-
-def doc_begin_s():
-    text = ''
-    return text
-
-
-def doc_end_s():
+def doc_begin_s() -> str:
     return ''
 
 
-def sect_s(num, name):
+def doc_end_s() -> str:
     return ''
 
 
-def meta_begin_s():
+def sect_s(num, name) -> str:
     return ''
 
 
-def meta_item_s(key, val):
+def meta_begin_s() -> str:
     return ''
 
 
-def meta_end_s():
+def meta_item_s(key, val) -> str:
     return ''
 
 
-def type_begin_s(tname, ttype, headers, cls):
+def meta_end_s() -> str:
+    return ''
+
+
+def type_begin_s(tname: str, ttype: str, headers: list, cls: list) -> str:
     assert len(headers) == len(cls)
     return ''
 
 
-def type_item_s(row, cls):
+def type_item_s(row: list, cls: list) -> str:
     assert len(row) == len(cls)
     return ''
 
 
-def type_end_s():
+def type_end_s() -> str:
     return ''
 
 
 # ---------- CDDL output ------------------
-
-
-def doc_begin_c():
-    text = ''
-    return text
-
-
-def doc_end_c():
+def doc_begin_c() -> str:
     return ''
 
 
-def sect_c(num, name):
+def doc_end_c() -> str:
     return ''
 
 
-def meta_begin_c():
+def sect_c(num, name) -> str:
     return ''
 
 
-def meta_item_c(key, val):
+def meta_begin_c() -> str:
     return ''
 
 
-def meta_end_c():
+def meta_item_c(key, val) -> str:
     return ''
 
 
-def type_begin_c(tname, ttype, headers, cls):
+def meta_end_c() -> str:
+    return ''
+
+
+def type_begin_c(tname: str, ttype: str, headers: list, cls: list) -> str:
     assert len(headers) == len(cls)
     return ''
 
 
-def type_item_c(row, cls):
+def type_item_c(row: list, cls: list) -> str:
     assert len(row) == len(cls)
     return ''
 
 
-def type_end_c():
+def type_end_c() -> str:
     return ''
 
 
 # ---------- Thrift output ------------------
-
-
-def doc_begin_t():
-    text = ''
-    return text
-
-
-def doc_end_t():
+def doc_begin_t() -> str:
     return ''
 
 
-def sect_t(num, name):
+def doc_end_t() -> str:
     return ''
 
 
-def meta_begin_t():
+def sect_t(num, name) -> str:
     return ''
 
 
-def meta_item_t(key, val):
+def meta_begin_t() -> str:
     return ''
 
 
-def meta_end_t():
+def meta_item_t(key, val) -> str:
     return ''
 
 
-def type_begin_t(tname, ttype, headers, cls):
+def meta_end_t() -> str:
+    return ''
+
+
+def type_begin_t(tname: str, ttype: str, headers: list, cls: list) -> str:
     assert len(headers) == len(cls)
     return ''
 
 
-def type_item_t(row, cls):
+def type_item_t(row: list, cls: list) -> str:
     assert len(row) == len(cls)
     return ''
 
 
-def type_end_t():
+def type_end_t() -> str:
     return ''
 
 # ----------------------------------------------
@@ -219,7 +216,7 @@ wtab = {
 DEFAULT_FORMAT = 'markdown'
 
 
-def table_dumps(schema, form=DEFAULT_FORMAT):
+def table_dumps(schema: dict, form=DEFAULT_FORMAT) -> str:
     """
     Translate JADN schema into other formats
 
@@ -230,8 +227,10 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
     b - bold (bold, left aligned)
     d - description (left aligned, extra width)
     """
+    doc_begin, doc_end, sect, meta_begin, meta_item, meta_end, type_begin, type_item, type_end = wtab[form]
+    text = doc_begin()
 
-    def _tbegin(to, name, tdef, head, cls):
+    def _tbegin(to: dict, name: str, tdef: str, head: List[str], cls: List[str]) -> str:
         h = head
         c = cls
         if 'id' in to:
@@ -239,7 +238,7 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
             c = [cls[0]] + cls[2:]
         return type_begin(name, tdef, h, c)
 
-    def _titem(to, fitems, cls):
+    def _titem(to: dict, fitems: List[str], cls: List[str]) -> str:
         f = fitems
         c = cls
         if 'id' in to:
@@ -249,8 +248,6 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
             c = [cls[0]] + cls[2:]
         return type_item(f, c)
 
-    doc_begin, doc_end, sect, meta_begin, meta_item, meta_end, type_begin, type_item, type_end = wtab[form]
-    text = doc_begin()
     if 'info' in schema:
         meta = schema['info']
         text += meta_begin()
@@ -291,8 +288,8 @@ def table_dumps(schema, form=DEFAULT_FORMAT):
     return text
 
 
-def table_dump(schema, fname, source='', form=DEFAULT_FORMAT):
+def table_dump(schema: dict, fname: Union[bytes, str, int], source='', form=DEFAULT_FORMAT) -> NoReturn:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
-            f.write('<!-- Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + '-->\n')
+            f.write(f'<!-- Generated from {source}, {datetime.ctime(datetime.now())}-->\n')
         f.write(table_dumps(schema, form))

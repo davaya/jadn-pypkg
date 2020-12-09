@@ -1,11 +1,18 @@
 import re
 import json
+
 from datetime import datetime
 from lxml import etree, html
+# TODO: change to specific imports??
 from lxml.html.builder import *
-from jadn.definitions import *
-from jadn import raise_error
-from jadn import jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn, cleanup_tagid, get_optx
+from jadn.definitions import (
+    # Field Indexes
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemDesc, FieldID,
+    # Const values
+    INFO_ORDER
+)
+from typing import Generator, NoReturn, Tuple, Union
+from jadn import jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn, cleanup_tagid
 
 
 """
@@ -52,12 +59,14 @@ jHdesc:   Description
 Convert JADN to HTML
 """
 
-def html_dumps(schema):
+
+def html_dumps(schema: dict) -> str:
     try:
         title = schema['info']['title']
     except KeyError:
         title = 'JADN Schema'
-    doc = HTML(ATTR({'lang': 'en'}),        # Make initial etree
+    doc = HTML(
+        ATTR({'lang': 'en'}),        # Make initial etree
         HEAD(
             META(charset='UTF-8'),
             TITLE(title),
@@ -113,10 +122,10 @@ def html_dumps(schema):
     return html.tostring(doc, pretty_print=True, doctype='<!DOCTYPE html>').decode('utf-8')
 
 
-def html_dump(schema, fname, source=''):
+def html_dump(schema: dict, fname: Union[bytes, str, int], source='') -> NoReturn:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
-            f.write('<! Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + '>\n\n')
+            f.write(f'<! Generated from {source}, {datetime.ctime(datetime.now())}>\n\n')
         f.write(html_dumps(schema))
 
 
@@ -125,12 +134,12 @@ Convert HTML to JADN
 """
 
 
-def line2jadn(lt, tdef):
-    def default(x, d):
+def line2jadn(lt: dict, tdef) -> Tuple[str, list]:
+    def default(x: str, d: str) -> str:
         return x if x else d
 
     if 'jKey' in lt:
-        return 'M', (lt['jKey'].rstrip(':'), lt['jVal'])
+        return 'M', [lt['jKey'].rstrip(':'), lt['jVal']]
     if 'jTname' in lt:
         btype, topts, fo = typestr2jadn(lt['jTstr'])
         assert fo == []                     # field options MUST not be included in typedefs
@@ -147,8 +156,8 @@ def line2jadn(lt, tdef):
         return 'F', fielddef2jadn(int(lt['jFid']), fname, fstr, fmult, fdesc)
 
 
-def html_loads(hdoc):
-    def get_line(hdoc):
+def html_loads(hdoc: str) -> dict:
+    def get_line(hdoc: str) -> Generator[dict, None, None]:
         line = {}
         tclass = ('jKey', 'jVal', 'jTname', 'jTstr', 'jTdesc', 'jFid', 'jFname', 'jFstr', 'jFmult', 'jFdesc')
         for element in html.fromstring(hdoc).iter():
@@ -181,6 +190,6 @@ def html_loads(hdoc):
     return {'info': meta, 'types': types} if meta else {'types': types}
 
 
-def html_load(fname):
+def html_load(fname: Union[bytes, str, int]) -> dict:
     with open(fname, 'r') as f:
         return html_loads(f.read())

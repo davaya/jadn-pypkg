@@ -4,8 +4,7 @@ import unittest
 
 
 # TODO: Read and Write JIDL and HTML, Write Markdown, JSON Schema, XSD, CDDL
-
-
+dir_path = os.path.abspath(os.path.dirname(__file__))
 quickstart_schema = {
     'types': [
         ['Person', 'Record', [],
@@ -15,8 +14,8 @@ quickstart_schema = {
              [3, 'email', 'String', ['/email', '[0'], '']]]]
     }
 
-class HtmlConvert(unittest.TestCase):
 
+class HtmlConvert(unittest.TestCase):
     def _html_convert(self, schema):
         html_doc = jadn.convert.html_dumps(schema)
         schema_new = jadn.convert.html_loads(html_doc)
@@ -26,17 +25,16 @@ class HtmlConvert(unittest.TestCase):
         self._html_convert(jadn.check(quickstart_schema))
 
     def test_1_types(self):
-        self._html_convert(jadn.load('convert_types.jadn'))
+        self._html_convert(jadn.load(os.path.join(dir_path, 'convert_types.jadn')))
 
     def test_2_jadn(self):
         self._html_convert(jadn.load(os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')))
 
     def test_3_examples(self):
-        self._html_convert(jadn.load('jadn-v1.0-examples.jadn'))
+        self._html_convert(jadn.load(os.path.join(dir_path, 'jadn-v1.0-examples.jadn')))
 
 
 class JidlConvert(unittest.TestCase):
-
     def _jidl_convert(self, schema):
         jidl_doc = jadn.convert.jidl_dumps(schema)
         schema_new = jadn.convert.jidl_loads(jidl_doc)
@@ -47,13 +45,13 @@ class JidlConvert(unittest.TestCase):
         self._jidl_convert(jadn.check(quickstart_schema))
 
     def test_1_types(self):
-        self._jidl_convert(jadn.load('convert_types.jadn'))
+        self._jidl_convert(jadn.load(os.path.join(dir_path, 'convert_types.jadn')))
 
     def test_2_jadn(self):
         self._jidl_convert(jadn.load(os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')))
 
     def test_3_examples(self):
-        self._jidl_convert(jadn.load('jadn-v1.0-examples.jadn'))
+        self._jidl_convert(jadn.load(os.path.join(dir_path, 'jadn-v1.0-examples.jadn')))
 
 
 if __name__ == '__main__':

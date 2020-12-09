@@ -7,46 +7,57 @@ import jsonschema
 import numbers
 import os
 from datetime import datetime
+from typing import NoReturn, Union
 
 import jadn
-from jadn.definitions import *
+from jadn.definitions import (
+    # Field Indexes
+    TypeName, BaseType, TypeOptions, Fields, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
+    # Const values
+    FIELD_LENGTH, OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, FORMAT_JS_VALIDATE, FORMAT_VALIDATE,
+    FORMAT_SERIALIZE,
+    # Functions
+    is_builtin, has_fields
+)
 from jadn.utils import raise_error
 
 
-def data_dir():
+def data_dir() -> str:
     """
     Return directory containing JADN schema files
     """
     return os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
 
 
-def check(schema):
+def check(schema: dict) -> dict:
     """
     Validate JADN schema against JSON schema,
     Validate JADN schema against JADN meta-schema, then
     Perform additional checks on type definitions
     """
+    jadn_formats = {**FORMAT_VALIDATE, **FORMAT_JS_VALIDATE, **FORMAT_SERIALIZE}
 
-    def check_typeopts(type_name, base_type, topts):  # Check for invalid type options and undefined formats
-        ro = {k for k in REQUIRED_TYPE_OPTIONS[base_type]} - {k for k in topts}
-        if ro:
-            raise_error(f'Missing type option {type_name}: {str(ro)}')
-        uo = {k for k in topts} - {k for k in ALLOWED_TYPE_OPTIONS[base_type]}
-        if uo:
-            raise_error(f'Unsupported type option {type_name} ({base_type}): {str(uo)}')
+    def check_typeopts(type_name: str, base_type: str, topts: dict) -> NoReturn:
+        """
+        Check for invalid type options and undefined formats
+        """
+        if ro := {*REQUIRED_TYPE_OPTIONS[base_type]} - {*topts.keys()}:
+            raise_error(f'Missing type option {type_name}: {ro}')
+        if uo := {*topts.keys()} - {*ALLOWED_TYPE_OPTIONS[base_type]}:
+            raise_error(f'Unsupported type option {type_name} ({base_type}): {uo}')
         if 'maxv' in topts and 'minv' in topts and topts['maxv'] < topts['minv']:
             raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minv"]}..{topts["maxv"]}]')
-        if 'format' in topts:        # TODO: if format defines array, add minv/maxv (prevents adding default max)
-            f = topts['format']
-            fm = dict(list(FORMAT_VALIDATE.items()) + list(FORMAT_JS_VALIDATE.items()) + list(FORMAT_SERIALIZE.items()))
-            if f not in fm or base_type != fm[f]:
-                raise_error(f'Unsupported format {f} in {type_name} {base_type}')
+        # TODO: if format defines array, add minv/maxv (prevents adding default max)
+        if fmt := topts.get('format', None):
+            if fmt not in jadn_formats or base_type != jadn_formats[fmt]:
+                raise_error(f'Unsupported format {fmt} in {type_name} {base_type}')
         if 'enum' in topts and 'pointer' in topts:
             raise_error(f'Type cannot be both Enum and Pointer {type_name} {base_type}')
         if 'and' in topts and 'or' in topts:
             raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
 
-    for t in schema['types']:           # Add empty Fields if not present
+    # Add empty Fields if not present
+    for t in schema['types']:
         if len(t) <= Fields:
             t.append([])
 
@@ -58,35 +69,36 @@ def check(schema):
         meta_schema = jadn.codec.Codec(json.load(f), verbose_rec=True, verbose_str=True, config=schema)
         assert meta_schema.encode('Schema', schema) == schema
 
-    types = set()                                               # Additional checks not included in schema
+    # Additional checks not included in schema
+    types = set()  # Additional checks not included in schema
     for t in schema['types']:
         tn = t[TypeName]
         bt = t[BaseType]
         if tn in types:
             raise_error(f'Duplicate type definition {tn}')
-        types |= {tn}
+        types.add(tn)
         if is_builtin(tn):
             raise_error(f'Reserved type name {tn}')
         if not is_builtin(bt):
             raise_error(f'Invalid base type {tn}: {bt}')
         topts = jadn.topts_s2d(t[TypeOptions])
         check_typeopts(tn, bt, topts)
-        flen = 0 if 'enum' in topts or 'pointer' in topts else FIELD_LENGTH[bt]
-        if flen:                # Check fields
-            fids = set()        # Field IDs
-            fnames = set()      # Field Names
+        # Check fields
+        if flen := (0 if 'enum' in topts or 'pointer' in topts else FIELD_LENGTH[bt]):
+            fids = set()  # Field IDs
+            fnames = set()  # Field Names
             ordinal = bt in ('Array', 'Record')
             for n, f in enumerate(t[Fields]):
                 if len(f) != flen:
-                    raise_error(f'Bad field {n+1} in {tn} length, {len(f)} should be {flen}')
-                fids.update({f[FieldID]})
-                fnames.update({f[FieldName]})
+                    raise_error(f'Bad field {n + 1} in {tn} length, {len(f)} should be {flen}')
+                fids.add(f[FieldID])
+                fnames.add(f[FieldName])
                 if ordinal and f[FieldID] != n + 1:
-                    raise_error(f'Item tag error: {tn}({bt}) [{f[FieldName]}] -- {f[FieldID]} should be {n+1}')
-                if flen > FieldDesc:    # Full field, not an Enumerated item
+                    raise_error(f'Item tag error: {tn}({bt}) [{f[FieldName]}] -- {f[FieldID]} should be {n + 1}')
+                if flen > FieldDesc:  # Full field, not an Enumerated item
                     fo, fto = jadn.ftopts_s2d(f[FieldOptions])
                     minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
-                    if minc < 0 or maxc < 0 or (maxc > 0 and maxc < minc):
+                    if minc < 0 or maxc < 0 or (0 < maxc < minc):
                         raise_error(f'{tn}/{f[FieldName]} bad multiplicity {minc} {maxc}')
                     tf = fo.get('tagid')
                     if tf and tf not in fids:
@@ -98,7 +110,7 @@ def check(schema):
                         if set(fto) - allowed:
                             raise_error(f'{tn}/{f[FieldName]}({f[FieldType]}) cannot have Type options {fto}')
                     if 'dir' in fo:
-                        if is_builtin(f[FieldType]) and not has_fields(f[FieldType]):   # TODO: check defined type
+                        if is_builtin(f[FieldType]) and not has_fields(f[FieldType]):  # TODO: check defined type
                             raise_error(f'{tn}/{f[FieldName]}: {f[FieldType]} cannot be dir')
 
             if len(t[Fields]) != len(fids) or len(t[Fields]) != len(fnames):
@@ -106,13 +118,12 @@ def check(schema):
     return schema
 
 
-def analyze(schema):
-    def ns(name, nsids):   # Return namespace if name has a known namespace, otherwise return full name
+def analyze(schema: dict) -> dict:
+    def ns(name: str, nsids: dict) -> str:   # Return namespace if name has a known namespace, otherwise return full name
         nsp = name.split(':')[0]
         return nsp if nsp in nsids else name
 
     # TODO: Check for extension usages
-
     items = jadn.build_deps(schema)
     # out, roots = topo_sort(items)
     meta = schema['info'] if 'info' in schema else {}
@@ -129,48 +140,48 @@ def analyze(schema):
     }
 
 
-def loads(jadn_str):
+def loads(jadn_str: str) -> dict:
     schema = json.loads(jadn_str)
     return check(schema)
 
 
-def load(fname):
+def load(fname: Union[str, bytes, int]) -> dict:
     with open(fname, encoding='utf-8') as f:
         schema = json.load(f)
     return check(schema)
 
 
-def dumps(schema, strip=False):
-    def _d(schema, level=0, indent=1, strip=False, nlevel=None):
+def dumps(schema: dict, strip: bool = False) -> str:
+    def _d(val: any, level: int = 0, indent: int = 1, strip: bool = False, nlevel: int = None) -> str:
         sp = level * indent * ' '
         sp2 = (level + 1) * indent * ' '
         sep2 = ',\n' if strip else ',\n\n'
-        if isinstance(schema, dict):
+        if isinstance(val, dict):
             sep = ',\n' if level > 0 else sep2
             lines = []
-            for k in schema:
-                lines.append(sp2 + '"' + k + '": ' + _d(schema[k], level + 1, indent, strip))
+            for k in val:
+                lines.append(sp2 + '"' + k + '": ' + _d(val[k], level + 1, indent, strip))
             return '{\n' + sep.join(lines) + '\n' + sp + '}'
-        elif isinstance(schema, list):
+        elif isinstance(val, list):
             sep = ',\n' if level > 1 else sep2
             vals = []
-            nest = schema and isinstance(schema[0], list)  # Not an empty list
-            for v in schema:
+            nest = val and isinstance(val[0], list)  # Not an empty list
+            for v in val:
                 sp3 = sp2 if nest else ''
                 vals.append(sp3 + _d(v, level + 1, indent, strip, level))
             if nest:
                 spn = (nlevel if nlevel else level) * indent * ' '
                 return '[\n' + sep.join(vals) + '\n' + spn + ']'
             return '[' + ', '.join(vals) + ']'
-        elif isinstance(schema, (numbers.Number, type(''))):
-            return json.dumps(schema)
+        elif isinstance(val, (numbers.Number, type(''))):
+            return json.dumps(val)
         return '???'
 
     return _d(schema, strip=strip)
 
 
-def dump(schema, fname, source='', strip=False):
+def dump(schema: dict, fname: Union[str, bytes, int], source: str = '', strip: bool = False) -> NoReturn:
     with open(fname, 'w') as f:
         if source:
-            f.write('"Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + '"\n\n')
+            f.write(f'"Generated from {source}, {datetime.ctime(datetime.now())}"\n\n')
         f.write(dumps(schema, strip=strip) + '\n')

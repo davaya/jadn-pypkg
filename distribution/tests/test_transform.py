@@ -4,6 +4,7 @@ from unittest import main, TestCase
 import jadn
 from jadn.definitions import EXTENSIONS
 
+
 class Resolve(TestCase):
     schema = {}  # TODO: test Merge imported definitions
 
@@ -12,14 +13,14 @@ class Resolve(TestCase):
 
 class StripComments(TestCase):
     schema = {
-    'types': [
-        ['Person', 'Record', [], 'JADN equivalent of structure from https://developers.google.com/protocol-buffers', [
-            [1, 'name', 'String', [], 'The person\'s name.'],
-            [2, 'id', 'Integer', [], 'A person\'s unique id'],
-            [3, 'email', 'String', ['[0', '/email'], 'An email address for the person.']
+        'types': [
+            ['Person', 'Record', [], 'JADN equivalent of structure from https://developers.google.com/protocol-buffers', [
+                [1, 'name', 'String', [], 'The person\'s name.'],
+                [2, 'id', 'Integer', [], 'A person\'s unique id'],
+                [3, 'email', 'String', ['[0', '/email'], 'An email address for the person.']
+            ]]
         ]
-    ]]
-}
+    }
     stripped_schema = {
         'types': [
             ['Person', 'Record', [], '', [
@@ -30,14 +31,14 @@ class StripComments(TestCase):
              ]]
     }
     c20_schema = {
-    'types': [
-        ['Person', 'Record',                     [], 'JADN equivalent of..', [
-            [1, 'name', 'String',                [], 'The person\'s name.'],
-            [2, 'id', 'Integer',                 [], 'A person\'s unique id'],
-            [3, 'email', 'String', ['[0', '/email'], 'An email address f..']
+        'types': [
+            ['Person', 'Record',                     [], 'JADN equivalent of..', [
+                [1, 'name', 'String',                [], 'The person\'s name.'],
+                [2, 'id', 'Integer',                 [], 'A person\'s unique id'],
+                [3, 'email', 'String', ['[0', '/email'], 'An email address f..']
+            ]]
         ]
-    ]]
-}
+    }
 
     def test_strip_comments(self):
         jadn.check(self.schema)
@@ -91,7 +92,6 @@ class SimplifyExtensions(TestCase):
             ]]
         ]
     }
-
     schema_anon_simplified = {
         'types': [
             ['Color', 'Map', [], '', [
@@ -129,7 +129,6 @@ class SimplifyExtensions(TestCase):
             ['T-anon$unique', 'ArrayOf', ['*String', 'q'], ''],
         ]
     }
-
     schema_all_simplified = {
         'types': [
             ['Color', 'Map', [], '', [
@@ -216,7 +215,6 @@ class SimplifyExtensions(TestCase):
                 [2, 'list', 'String', [']0'], '']           # Min default = 1, Max = 0 -> n
             ]]
         ]}
-
     schema_mult_simplified = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
         'types': [
             ['T-opt-list1', 'Record', [], '', [
@@ -270,7 +268,6 @@ class SimplifyExtensions(TestCase):
             ['ChannelMask2', 'ArrayOf', ['*#Pixel2'], '', []],      # Array of items from generated derived enum
         ]
     }
-
     schema_enum_simplified = {
         'types': [
             ['Pixel', 'Record', [], '', [
@@ -320,7 +317,6 @@ class SimplifyExtensions(TestCase):
             ['Colors-Map', 'MapOf', ['+Colors-Enum', '*Number'], '']
         ]
     }
-
     schema_mapof_simplified = {
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
@@ -363,7 +359,6 @@ class SimplifyExtensions(TestCase):
             ['Empty-Paths', 'Enumerated', ['>Simple'], '']
         ]
     }
-
     schema_pointer_simplified = {
         'types': [
             ['Catalog', 'Record', [], '', [

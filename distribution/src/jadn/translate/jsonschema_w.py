@@ -3,50 +3,73 @@ Translate JADN to JSON Schema
 """
 
 import json
+
+from datetime import datetime
 from jadn import topts_s2d, ftopts_s2d, get_config
 from jadn.definitions import *
 from jadn.transform.transform import get_enum_items
-from datetime import datetime
 
 
-def dmerge(*dicts):             # Merge any number of dicts
-    rv = {}
-    for d in dicts:
-        rv.update(d)
-    return rv
+def dmerge(*dicts: dict) -> dict:
+    """
+    Merge any number of dicts
+    """
+    return {k: v for d in dicts for k, v in d.items()}
 
 
-def get_items(stype, ctx):       # return enumerated items if stype is Enumerated
+def get_items(stype: str, ctx: dict) -> list:
+    """
+    return enumerated items if stype is Enumerated
+    """
     td = ctx['type_defs']
     et = stype[1:] if stype[0] == OPTION_ID['enum'] else stype
+
     if et in td and td[et][BaseType] == 'Enumerated':
         to = topts_s2d(td[et][TypeOptions])
         et = to['enum'] if 'enum' in to else et
-    if et in td and \
-        td[et][BaseType] in ('Enumerated', 'Array', 'Choice', 'Map', 'Record') and \
-        'id' not in topts_s2d(td[et][TypeOptions]):
+
+    to = topts_s2d(td[et][TypeOptions])
+    if et in td and td[et][BaseType] in ('Enumerated', 'Array', 'Choice', 'Map', 'Record') and 'id' not in to:
         return [f[ItemValue] for f in td[et][Fields]]
 
 
-def spaces(s):                  # Return name with dash and underscore replaced with space
+def spaces(s: str) -> str:
+    """
+    Return name with dash and underscore replaced with space
+    """
     return s.replace('-', ' ').replace('_', ' ')
 
 
-def fieldname(name):            # Return TypeName converted to FieldName
+def fieldname(name: str) -> str:
+    """
+    Return TypeName converted to FieldName
+    """
     return name.lower().replace('-', '_')
 
 # === Return JSON Schema keywords
 
 
-def w_td(tname, desc):              # Make type and type description
-    return {'type': tname, 'description': desc} if desc else {'type': tname}
+def w_td(tname: str, desc: str) -> dict:
+    """
+    Make type and type description
+    """
+    rtn = {'type': tname}
+    if desc:
+        rtn['description'] = desc
+    return rtn
 
 
-def w_def(typ):                     # Make definition reference
-    return {'#ref': '#/definitions/' + typ}
+def w_def(typ: str) -> dict:
+    """
+    Make definition reference
+    """
+    return {'#ref': f'#/definitions/{typ}'}
 
 
-def w_kvtype(stype, ctx):            # Make definition from ktype or vtype option
+def w_kvtype(stype: str, ctx: dict) -> dict:
+    """
+    Make definition from ktype or vtype option
+    """
     stypes = {'Boolean': 'boolean', 'Integer': 'integer', 'Number': 'number', 'String': 'string'}
     if stype in stypes:
         return {'type': stypes[stype]}
@@ -56,15 +79,21 @@ def w_kvtype(stype, ctx):            # Make definition from ktype or vtype optio
         fields = get_enum_items(tdef, topts, ctx['type_defs'])
         idopt = 'id' in topts
         return w_enum(fields, FieldID if idopt else FieldName, FieldDesc, idopt, ctx)
-    return {'$ref': '#/definitions/' + stype}
+    return {'$ref': f'#/definitions/{stype}'}
 
 
-def w_enum(fields, vcol, dcol, idopt, ctx):
-    def pattern(vals):              # Return an enum regex from a list of values
-        return '^(' + '|'.join([str(v) for v in vals]) + ')$'
+def w_enum(fields: list, vcol: int, dcol: int, idopt: bool, ctx: dict) -> dict:
+    def pattern(vals: list) -> str:
+        """
+        Return an enum regex from a list of values
+        """
+        return f"^({'|'.join(map(str, vals))})$"
 
-    def fdesc(fld, desc, idopt):    # Make field description
-        return fld[FieldName] + ' - ' + desc if idopt else desc
+    def fdesc(fld: list, desc: str, idopt: bool) -> str:
+        """
+        Make field description
+        """
+        return f'{fld[FieldName]} - {desc}' if idopt else desc
 
     values = [f[vcol] for f in fields]
     es = ctx['enum_style']
@@ -76,26 +105,34 @@ def w_enum(fields, vcol, dcol, idopt, ctx):
     else:
         return {'enum': values}
 
-def w_export(exp, ctx):          # Make top-level definition header
+
+def w_export(exp: list, ctx: dict) -> dict:
+    """
+    Make top-level definition header
+    """
     if len(exp) == 1:
-        return {'$ref': '#/definitions/' + exp[0]}
+        return {'$ref': f'#/definitions/{exp[0]}'}
     return {
         'type': 'object',
         'additionalProperties': False,
-        'properties': {fieldname(ctx['type_defs'][t][TypeName]): {'$ref': '#/definitions/' + t} for t in exp}
+        'properties': {fieldname(ctx['type_defs'][t][TypeName]): {'$ref': f'#/definitions/{t}'} for t in exp}
     }
 
-def w_ref(tname, ctx):
+
+def w_ref(tname: str, ctx: dict) -> dict:
     nsid, tn = tname.split(':', maxsplit=1) if ':' in tname else [None, tname]
     assert not is_builtin(tn)
     if nsid:
-        imp = {'$ref': ctx['info_imps'][nsid] + '/definitions/' + tn} if ctx['import_style'] == 'ref' else {}
+        imp = {'$ref': f"{ctx['info_imps'][nsid]}/definitions/{tn}"} if ctx['import_style'] == 'ref' else {}
         ctx['imported_types'][nsid].update({tn: imp})
-        return {'$ref': '#/imports/' + nsid + '/' + tn}
-    return {'$ref': '#/definitions/' + tn}
+        return {'$ref': f'#/imports/{nsid}/{tn}'}
+    return {'$ref': f'#/definitions/{tn}'}
 
 
-def w_fdef(f, ctx):                      # Make field definition
+def w_fdef(f: list, ctx: dict) -> dict:
+    """
+    Make field definition
+    """
     fopts, topts = ftopts_s2d(f[FieldOptions])
     if is_builtin(f[FieldType]):
         t = w_type(['', f[FieldType], [], f[FieldDesc]], topts, ctx)
@@ -114,7 +151,10 @@ def w_fdef(f, ctx):                      # Make field definition
     )
 
 
-def w_format(fmt):                  # Make semantic validation keywords
+def w_format(fmt: str) -> dict:
+    """
+    Make semantic validation keywords
+    """
     jadn_fmt = {
         'x': {'contentEncoding': 'base16'},
         # 'eui': {'pattern': r'^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$'},
@@ -129,10 +169,9 @@ def w_format(fmt):                  # Make semantic validation keywords
     }
     return (jadn_fmt[fmt] if fmt in jadn_fmt else {'format': fmt}) if fmt else {}
 
+
 # ========== JADN Types ==========:
-
-
-def t_binary(tdef, topts, ctx):
+def t_binary(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('string', tdef[TypeDesc]),
         w_format(topts['format']) if 'format' in topts else {'contentEncoding': 'base64url'},
@@ -145,11 +184,11 @@ def t_binary(tdef, topts, ctx):
     )
 
 
-def t_boolean(tdef, topts, ctx):
+def t_boolean(tdef: list, topts: dict, ctx: dict) -> dict:
     return w_td('boolean', tdef[TypeDesc])
 
 
-def t_integer(tdef, topts, ctx):
+def t_integer(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('integer', tdef[TypeDesc]),
         {'minimum': topts['minv']} if 'minv' in topts else {},
@@ -157,7 +196,7 @@ def t_integer(tdef, topts, ctx):
     )
 
 
-def t_number(tdef, topts, ctx):
+def t_number(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('number', tdef[TypeDesc]),
         {'minimum': topts['minf']} if 'minf' in topts else {},
@@ -165,11 +204,11 @@ def t_number(tdef, topts, ctx):
     )
 
 
-def t_null(tdef, topts, ctx):
+def t_null(tdef: list, topts: dict, ctx: dict) -> dict:
     return {}
 
 
-def t_string(tdef, topts, ctx):
+def t_string(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('string', tdef[TypeDesc]),
         w_format(topts['format']) if 'format' in topts else {},
@@ -179,7 +218,7 @@ def t_string(tdef, topts, ctx):
     )
 
 
-def t_enumerated(tdef, topts, ctx):
+def t_enumerated(tdef: list, topts: dict, ctx: dict) -> dict:
     item, tname = (ItemID, 'integer') if 'id' in topts else (ItemValue, 'string')
     fields = get_enum_items(tdef, topts, ctx['type_defs'])
     dcol = FieldDesc if 'enum' in topts or 'pointer' in topts else ItemDesc
@@ -189,7 +228,7 @@ def t_enumerated(tdef, topts, ctx):
     )
 
 
-def t_choice(tdef, topts, ctx):
+def t_choice(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('object', tdef[TypeDesc]),
         {'additionalProperties': False, 'minProperties': 1, 'maxProperties': 1},
@@ -197,7 +236,7 @@ def t_choice(tdef, topts, ctx):
     )
 
 
-def t_array(tdef, topts, ctx):
+def t_array(tdef: list, topts: dict, ctx: dict) -> dict:
     fmt = w_format(topts['format']) if 'format' in topts else {}
     if fmt:
         return dmerge(w_td('string', tdef[TypeDesc]), fmt)
@@ -210,7 +249,7 @@ def t_array(tdef, topts, ctx):
     )
 
 
-def t_array_of(tdef, topts, ctx):
+def t_array_of(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('array', tdef[TypeDesc]),
         {'uniqueItems': True} if 'unique' in topts else {},
@@ -220,10 +259,11 @@ def t_array_of(tdef, topts, ctx):
     )
 
 
-def t_map(tdef, topts, ctx):
-    def req(f):
+def t_map(tdef: list, topts: dict, ctx: dict) -> dict:
+    def req(f: list) -> bool:
         fo, to = ftopts_s2d(f[FieldOptions])
         return fo['minc'] >= 1 if 'minc' in fo else True
+
     required = [f[FieldName] for f in tdef[Fields] if req(f)]
     return dmerge(
         w_td('object', tdef[TypeDesc]),
@@ -235,7 +275,7 @@ def t_map(tdef, topts, ctx):
     )
 
 
-def t_map_of(tdef, topts, ctx):
+def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
     items = get_items(topts['ktype'], ctx)
     vtype = w_kvtype(topts['vtype'], ctx)
     return dmerge(
@@ -248,7 +288,10 @@ def t_map_of(tdef, topts, ctx):
     )
 
 
-def w_type(tdef, topts, ctx):       # Write a JADN type definition in JSON Schema format
+def w_type(tdef: list, topts: dict, ctx: dict) -> dict:
+    """
+    Write a JADN type definition in JSON Schema format
+    """
     config_max = {
         'Binary':  '$MaxBinary',
         'String':  '$MaxString',
@@ -282,10 +325,10 @@ def w_type(tdef, topts, ctx):       # Write a JADN type definition in JSON Schem
         return {'anyOf': [sc, w_ref(topts['or'], ctx)]}
     return sc
 
+
 # ========== Make JSON Schema ==========
-
-
-def json_schema_dumps(schema, verbose=True, enum_style='enum', import_style='any'):  # TODO: use string IDs if verbose=False
+# TODO: use string IDs if verbose=False
+def json_schema_dumps(schema: dict, verbose=True, enum_style='enum', import_style='any'):
     #  verbose True: Record->object, field Names;  False: Record->array, field IDs
     assert enum_style in ('const', 'enum', 'regex')
     #  const: generate oneOf keyword with const for each item
@@ -324,8 +367,8 @@ def json_schema_dumps(schema, verbose=True, enum_style='enum', import_style='any
     ), indent=2)
 
 
-def json_schema_dump(jadn, fname, source=None, verbose=True, enum_style='enum', import_style='ref'):
+def json_schema_dump(jadn: dict, fname: Union[str, bytes, int], source=None, verbose=True, enum_style='enum', import_style='ref'):
     with open(fname, 'w') as f:
         if source:
-            f.write('/* Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + ' */\n\n')
+            f.write(f'/* Generated from {source}, {datetime.ctime(datetime.now())} */\n\n')
         f.write(json_schema_dumps(jadn, verbose, enum_style, import_style))

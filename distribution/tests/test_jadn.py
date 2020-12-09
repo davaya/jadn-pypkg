@@ -6,9 +6,10 @@ from unittest import main, TestCase
 import jadn
 from jadn.codec import Codec
 
+dir_path = os.path.abspath(os.path.dirname(__file__))
+
 
 class JADN(TestCase):
-
     def setUp(self):
         fn = os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')
         self.schema = jadn.load(fn)
@@ -46,7 +47,7 @@ class SpecExamples(TestCase):
     """
 
     def setUp(self):
-        self.schema = jadn.load('jadn-v1.0-examples.jadn')
+        self.schema = jadn.load(os.path.join(dir_path, 'jadn-v1.0-examples.jadn'))
         self.tc = Codec(self.schema, verbose_rec=True, verbose_str=True)
 
     def test_choice_explicit(self):
@@ -81,6 +82,7 @@ class SpecExamples(TestCase):
             self.tc.decode('Hashes2', msg_explicit_bad_alg)
         with self.assertRaises(ValueError):
             self.tc.decode('Hashes2', msg_explicit_bad_val)
+
 
 if __name__ == '__main__':
     main()

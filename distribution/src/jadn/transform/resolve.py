@@ -1,9 +1,10 @@
 import copy
 import json
 import os
+import jadn
+
 from collections import defaultdict
 from jadn.definitions import *
-import jadn
 
 
 class SchemaModule:

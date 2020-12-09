@@ -1,10 +1,20 @@
 import copy
-from jadn.definitions import *
+
+from typing import Generator, List, NoReturn, Union
+from jadn.definitions import (
+    # Field Indexes
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID, FieldName, FieldType,
+    FieldOptions, FieldDesc,
+    # Const values
+    OPTION_ID, EXTENSIONS, OPTION_TYPES,
+    # Functions
+    is_builtin, has_fields
+)
 from jadn import topts_s2d, ftopts_s2d, opts_d2s, get_optx, del_opt
 
 
-def strip_comments(schema, width=0):             # Strip or truncate comments from schema
-    def estrip(s, n):
+def strip_comments(schema: dict, width=0) -> dict:  # Strip or truncate comments from schema
+    def estrip(s: str, n: int) -> str:
         return s[:n-2] + (s[n-2:], '..')[len(s) > n] if n > 1 else s[:n]
 
     sc = copy.deepcopy(schema)
@@ -17,7 +27,7 @@ def strip_comments(schema, width=0):             # Strip or truncate comments fr
     return sc
 
 
-def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
+def simplify(schema: dict, extensions=EXTENSIONS):  # Remove schema extensions
     """
     Given an input schema, return a simplified schema with some or all extensions removed.
 
@@ -28,24 +38,26 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
         MapOfEnum:       Replace all MapOf types with listed keys with explicit Map type definitions
     """
 
-    def epx(topts):             # Return option array index of enum or pointer option
+    # Return option array index of enum or pointer option
+    def epx(topts: List[OPTION_TYPES]) -> Union[int, float, str, None]:
         ex = get_optx(topts, 'enum')
         px = get_optx(topts, 'pointer')
         return ex if ex is not None else px
 
-    def epname(topts):
+    def epname(topts: List[OPTION_TYPES]) -> str:
         x = epx(topts)
         if x is not None:
             oname = 'Enum' if topts[x][0] == OPTION_ID['enum'] else 'Pointer'
             return topts[x][1:] + sys + oname + ('-Id' if get_optx(topts, 'id') else '')
 
-    def simplify_multiplicity():            # Replace field multiplicity with explicit ArrayOf type definitions
+    # Replace field multiplicity with explicit ArrayOf type definitions
+    def simplify_multiplicity() -> list:
         new_types = []
         for tdef in tdefs:
             if has_fields(tdef[BaseType]):
                 for fdef in tdef[Fields]:
                     fo, fto = ftopts_s2d(fdef[FieldOptions])
-                    if ('maxc' in fo and fo['maxc'] != 1):
+                    if 'maxc' in fo and fo['maxc'] != 1:
                         newname = tdef[TypeName] + sys + fdef[FieldName]
                         minc = fo['minc'] if 'minc' in fo else 1
                         newopts = {'vtype': fdef[FieldType], 'minv': max(minc, 1)}      # Don't allow empty ArrayOf
@@ -60,7 +72,8 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                         del_opt(f, 'unique')
         return new_types
 
-    def simplify_anonymous_types():          # Replace anonymous types in fields with explicit type definitions
+    # Replace anonymous types in fields with explicit type definitions
+    def simplify_anonymous_types() -> list:
         new_types = []
         for tdef in tdefs:
             if has_fields(tdef[BaseType]):
@@ -79,8 +92,9 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                         fdef[FieldType] = newname           # Redirect field to explicit type definition
         return new_types
 
-    def simplify_derived_enum():             # Generate Enumerated list of fields or JSON Pointers
-        def update_eref(enums, opts, optname, new):
+    # Generate Enumerated list of fields or JSON Pointers
+    def simplify_derived_enum() -> list:
+        def update_eref(enums: dict, opts: List[OPTION_TYPES], optname: str, new: list) -> NoReturn:
             n = get_optx(opts, optname)
             if n is not None:
                 name = epname([opts[n][1:]])
@@ -92,13 +106,13 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                         opts[n] = opts[n][:1] + name
                         new.append([name, 'Enumerated', [], '', make_items(name.rsplit(sys, maxsplit=1)[0])])
 
-        def enum_items(rtype):
+        def enum_items(rtype: str) -> list:
             tdef = tdefs[typex[rtype]]
             fields = tdef[Fields] if has_fields(tdef[BaseType]) else []
             return [[f[FieldID], f[FieldName], f[FieldDesc]] for f in fields]
 
-        def pointer_items(rtype):
-            def pathnames(rtype, base=''):                   # Walk subfields of referenced type
+        def pointer_items(rtype: str) -> list:
+            def pathnames(rtype: str, base='') -> Generator[list, None, None]:  # Walk subfields of referenced type
                 tdef = tdefs[typex[rtype]]        # TODO: proper error handling for built-in or non-existing reference
                 if has_fields(tdef[BaseType]):
                     for f in tdef[Fields]:
@@ -112,8 +126,7 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
         for tdef in tdefs:              # Replace enum/pointer options in Enumerated types with explicit items
             if tdef[BaseType] == 'Enumerated':
                 to = tdef[TypeOptions]
-                rname = epname(to)
-                if rname:
+                if rname := epname(to):
                     optx = get_optx(to, 'enum')
                     optx = optx if optx is not None else get_optx(to, 'pointer')
                     items = enum_items if to[optx][:1] == OPTION_ID['enum'] else pointer_items
@@ -127,7 +140,10 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
                 update_eref(enums, tdef[TypeOptions], 'ktype', new_types)
         return new_types
 
-    def simplify_map_of_enum():           # Replace MapOf(enumerated key) with explicit Map
+    def simplify_map_of_enum() -> NoReturn:
+        """
+        Replace MapOf(enumerated key) with explicit Map
+        """
         for n, tdef in enumerate(tdefs):
             to = topts_s2d(tdef[TypeOptions])
             if tdef[BaseType] == 'MapOf' and tdefs[typex[to['ktype']]][BaseType] == 'Enumerated':
@@ -150,7 +166,7 @@ def simplify(schema, extensions=EXTENSIONS):      # Remove schema extensions
     return sc
 
 
-def get_enum_items(tdef, topts, types):
+def get_enum_items(tdef: list, topts: dict, types: dict) -> list:
     def ptr(fdef):
         if OPTION_ID['dir'] in fdef[FieldOptions]:
             return fdef[FieldName] + "^"

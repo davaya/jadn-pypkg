@@ -2,9 +2,16 @@
 Translate JADN to JADN Interface Definition Language
 """
 import json
-from datetime import datetime
 import re
-from jadn.definitions import *
+
+from datetime import datetime
+from typing import NoReturn, Tuple, Union
+from jadn.definitions import (
+    # Field Indexes
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID,
+    # Const values
+    INFO_ORDER
+)
 from jadn import get_optx, raise_error
 from jadn import jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn, cleanup_tagid
 
@@ -14,7 +21,7 @@ Convert JADN to JIDL
 """
 
 
-def jidl_columns():
+def jidl_columns() -> dict:
     return {
         'info': 12,     # Width of info name column (e.g., module:)
         'id': 4,        # Width of Field Id column
@@ -25,7 +32,7 @@ def jidl_columns():
     }
 
 
-def jidl_dumps(schema, columns=None):
+def jidl_dumps(schema: dict, columns: dict = None) -> str:
     """
     Convert JADN schema to JADN-IDL
 
@@ -67,10 +74,10 @@ def jidl_dumps(schema, columns=None):
     return text
 
 
-def jidl_dump(schema, fname, source='', columns=None):
+def jidl_dump(schema: dict, fname: Union[bytes, str, int], source='', columns=None) -> NoReturn:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
-            f.write('/* Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + ' */\n\n')
+            f.write(f'/* Generated from {source}, {datetime.ctime(datetime.now())} */\n\n')
         f.write(jidl_dumps(schema, columns))
 
 
@@ -79,20 +86,18 @@ Convert JIDL to JADN
 """
 
 
-def line2jadn(line, tdef):
+def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
     if line:
         p_info = r'^\s*([-\w]+):\s*(.+?)\s*$'
-        m = re.match(p_info, line)
-        if m:
-            return 'M', (m.group(1), m.group(2))
+        if m := re.match(p_info, line):
+            return 'M', [m.group(1), m.group(2)]
 
         p_tname = r'\s*([-$\w]+)'               # Type Name
         p_assign = r'\s*='                      # Type assignment operator
         p_tstr  = r'\s*(.*?)\s*\{?'             # Type definition
         p_tdesc = r'(?:\s*\/\/\s*(.*?)\s*)?'    # Optional Type description
         p_type = '^' + p_tname + p_assign + p_tstr + p_tdesc + '$'
-        m = re.match(p_type, line)
-        if m:
+        if m := re.match(p_type, line):
             btype, topts, fo = typestr2jadn(m.group(2))
             assert fo == []                     # field options MUST not be included in typedefs
             newtype = [m.group(1), btype, topts, m.group(3) if m.group(3) else '', []]
@@ -106,8 +111,7 @@ def line2jadn(line, tdef):
         pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[BaseType] == 'Array') else p_fname
         if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
             pattern = '^' + p_id + p_fstr + p_desc + '$'
-            m = re.match(pattern, line)
-            if m:
+            if m := re.match(pattern, line):
                 return 'F', fielddef2jadn(int(m.group(1)), m.group(2), '', '', m.group(3) if m.group(3) else '')
         else:                                   # Parse Field
             pattern = '^' + p_id + pn + p_fstr + p_range + p_desc + '$'
@@ -119,10 +123,10 @@ def line2jadn(line, tdef):
 
         if line.strip() not in ('', '}'):
             raise_error(f'JIDL load{repr(line)}')
-    return '', ''
+    return '', []
 
 
-def jidl_loads(doc):
+def jidl_loads(doc: str) -> dict:
     info = {}
     types = []
     fields = None
@@ -142,6 +146,6 @@ def jidl_loads(doc):
     return {'info': info, 'types': types} if info else {'types': types}
 
 
-def jidl_load(fname):
+def jidl_load(fname: Union[bytes, str, int]) -> dict:
     with open(fname, 'r') as f:
         return jidl_loads(f.read())

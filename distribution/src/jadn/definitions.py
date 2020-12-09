@@ -10,6 +10,8 @@ For the enumerated type each field definition is a list of three items: (tag, na
 For other structure types (array, choice, map, record) each field definition is a list of five items:
 (tag, name, type, field options, field description).
 """
+from typing import Union
+
 
 # Datatype Definition columns
 TypeName = 0            # Name of the type being defined
@@ -31,7 +33,6 @@ FieldOptions = 3        # An array of zero or more FIELD_OPTIONS (and TYPE_OPTIO
 FieldDesc = 4           # A non-normative description of the field
 
 # Core datatypes
-
 SIMPLE_TYPES = (
     'Binary',
     'Boolean',
@@ -73,11 +74,11 @@ FIELD_LENGTH = {
 }
 
 
-def is_builtin(t):      # Is a core type
+def is_builtin(t: str) -> bool:      # Is a core type
     return t in CORE_TYPES
 
 
-def has_fields(t):      # Is a type with fields listed in definition
+def has_fields(t: str) -> bool:      # Is a type with fields listed in definition
     return FIELD_LENGTH[t] == 5 if is_builtin(t) else False
 
 
@@ -245,4 +246,8 @@ EXTENSIONS = {
 }
 
 INFO_ORDER = ('title', 'module', 'version', 'description', 'comments',
-              'copyright', 'license', 'imports', 'exports', 'config')    # Display order
+              'copyright', 'license', 'imports', 'exports', 'config')  # Display order
+
+
+# Type Hinting
+OPTION_TYPES = Union[int, float, str]

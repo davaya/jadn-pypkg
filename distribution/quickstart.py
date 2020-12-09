@@ -1,13 +1,11 @@
-import jadn
 import json
 import jsonschema
 import os
+import jadn
 
 print(f'Installed JADN version: {jadn.__version__}')
 
-"""
-Define and validate a JADN schema
-"""
+# Define and validate a JADN schema
 schema_data = {     # This is a Python value. Avoiding double quotes reduces chance of confusion with JSON strings.
     'types': [      # Python values allow comments, single quoted strings, None, True, False.
         ['Person', 'Record', [], 'JADN equivalent of structure from https://developers.google.com/protocol-buffers', [
@@ -20,9 +18,7 @@ schema_data = {     # This is a Python value. Avoiding double quotes reduces cha
 schema = jadn.check(schema_data)        # jadn.check returns unmodified schema to facilitate chaining
 assert schema == schema_data
 
-"""
-Convert schema to alternate formats
-"""
+# Convert schema to alternate formats
 print('\nSchema:\n------------------')
 print(jadn.dumps(schema))
 
@@ -56,9 +52,8 @@ schema.update({                 # JSON Schema conversion needs root type (Person
 js_schema = jadn.translate.json_schema_dumps(schema)
 print(js_schema)
 
-"""
-Validate and serialize test data
-"""
+
+# Validate and serialize test data
 def print_encoded_data(codec):
     data = [
         {'id': 14912, 'name': 'Joe'},                                       # Valid "Person" record

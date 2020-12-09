@@ -2,11 +2,17 @@
 Translate JADN to JAS (JADN Abstract Syntax)
 """
 
-from jadn import topts_s2d, ftopts_s2d
-from jadn.definitions import *
 from copy import deepcopy
 from datetime import datetime
 from textwrap import fill
+from typing import NoReturn, Union
+from jadn import topts_s2d, ftopts_s2d
+from jadn.definitions import (
+    # Field Indexes
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
+    # Const values
+    CORE_TYPES, INFO_ORDER, TYPE_OPTIONS, FIELD_OPTIONS
+)
 
 stype_map = {                   # Map JADN built-in types to JAS type names (Equivalent ASN.1 types in comments)
     'Binary': 'BINARY',         # OCTET STRING
@@ -25,11 +31,11 @@ stype_map = {                   # Map JADN built-in types to JAS type names (Equ
 }
 
 
-def stype(jtype):
+def stype(jtype: str) -> str:
     return stype_map[jtype] if jtype in stype_map else jtype
 
 
-def jas_dumps(schema):
+def jas_dumps(schema: dict) -> str:
     """
     Produce JAS module from JADN structure
 
@@ -39,7 +45,6 @@ def jas_dumps(schema):
     Map could be implemented using ASN.1 table constraints, but for the purpose of representing
     JSON objects, the Map first-class type in JAS is easier to use.
     """
-
     jas = '/*\n'
     meta = schema['info']
     mlist = [k for k in INFO_ORDER if k in meta]
@@ -141,8 +146,8 @@ def jas_dumps(schema):
     return jas
 
 
-def jas_dump(schema, fname, source=''):
+def jas_dump(schema: dict, fname: Union[bytes, str, int], source='') -> NoReturn:
     with open(fname, 'w') as f:
         if source:
-            f.write('-- Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + '\n\n')
+            f.write(f'-- Generated from {source}, {datetime.ctime(datetime.now())}\n\n')
         f.write(jas_dumps(schema))
