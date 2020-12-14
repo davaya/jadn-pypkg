@@ -3,6 +3,7 @@
 JSON Abstract Data Notation (JADN)
 **********************************
 """
+# TODO: migrate to local imports??
 from jadn.core import analyze, check, dump, dumps, load, loads, data_dir
 from jadn.utils import (
     topts_s2d, ftopts_s2d, opts_d2s, get_optx, del_opt, cleanup_tagid, opts_sort, canonicalize,

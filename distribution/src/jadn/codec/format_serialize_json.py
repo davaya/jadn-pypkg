@@ -3,44 +3,23 @@ import binascii
 import socket
 import string
 
+from typing import Any, Callable, Dict
 from socket import AF_INET, AF_INET6
-from jadn.definitions import FORMAT_SERIALIZE
+from ..definitions import FORMAT_SERIALIZE
 
-"""
-Create a table listing the serialization functions for each format keyword
-"""
+FormatTable = Dict[str, Dict[str, Callable[[Any], bool]]]
 
 
-def json_format_codecs():                              # return table of JSON format serialization functions
-    # Ensure code is in sync with JADN definitions
-    assert set(FORMAT_SERIALIZE) == \
-           set(FORMAT_CONVERT_BINARY_FUNCTIONS) |\
-           set(FORMAT_CONVERT_MULTIPART_FUNCTIONS) |\
-           set(FORMAT_CONVERT_INTEGER_FUNCTIONS) |\
-           set(FORMAT_CONVERT_NUMBER_FUNCTIONS)
-
-    return {
-        'Binary': FORMAT_CONVERT_BINARY_FUNCTIONS,
-        'Array': FORMAT_CONVERT_MULTIPART_FUNCTIONS,
-        'Integer': FORMAT_CONVERT_INTEGER_FUNCTIONS,
-        'Number': FORMAT_CONVERT_NUMBER_FUNCTIONS
-    }
-
-
-"""
-Return serialization functions for the specified format keyword and data type
-"""
-
-
-def get_format_encode_function(format_table, base_type, format_kw):
+# Return serialization functions for the specified format keyword and data type
+def get_format_encode_function(format_table: FormatTable, base_type: str, format_kw: str) -> Callable[[Any], Any]:
     return _codec_function(format_table, base_type, format_kw, 0)
 
 
-def get_format_decode_function(format_table, base_type, format_kw):
+def get_format_decode_function(format_table: FormatTable, base_type: str, format_kw: str) -> Callable[[Any], Any]:
     return _codec_function(format_table, base_type, format_kw, 1)
 
 
-def _codec_function(format_table, base_type, format_kw, direction):
+def _codec_function(format_table: FormatTable, base_type: str, format_kw: str, direction: int) -> Callable[[Any], Any]:
     try:
         if not format_kw:
             format_kw = {'Binary': 'b', 'Number': 'f64'}[base_type]   # Set default format for type if one exists
@@ -49,15 +28,11 @@ def _codec_function(format_table, base_type, format_kw, direction):
         return _format_pass
 
 
-def _format_pass(val):
+def _format_pass(val: Any) -> Any:
     return val
 
 
-"""
-Binary to String, String to Binary conversion functions
-"""
-
-
+# Binary to String, String to Binary conversion functions
 def b2s_hex(bval: bytes) -> str:      # Convert from binary to hex string
     return base64.b16encode(bval).decode()
 
@@ -127,11 +102,7 @@ FORMAT_CONVERT_BINARY_FUNCTIONS = {
 }
 
 
-"""
-IP Net (address, prefix length tuple) conversions
-"""
-
-
+# IP Net (address, prefix length tuple) conversions
 def a2s_ipv4_net(aval: [str, int]) -> str:
     if aval[1] < 0 or aval[1] > 32:         # Verify prefix length is valid
         raise ValueError
@@ -183,3 +154,20 @@ FORMAT_CONVERT_NUMBER_FUNCTIONS = {
     'f32': (_format_pass, _format_pass),
     'f64': (_format_pass, _format_pass)
 }
+
+
+# Create a table listing the serialization functions for each format keyword
+def json_format_codecs():  # Return table of JSON format serialization functions
+    # Ensure code is in sync with JADN definitions
+    assert set(FORMAT_SERIALIZE) == \
+           set(FORMAT_CONVERT_BINARY_FUNCTIONS) |\
+           set(FORMAT_CONVERT_MULTIPART_FUNCTIONS) |\
+           set(FORMAT_CONVERT_INTEGER_FUNCTIONS) |\
+           set(FORMAT_CONVERT_NUMBER_FUNCTIONS)
+
+    return {
+        'Binary': FORMAT_CONVERT_BINARY_FUNCTIONS,
+        'Array': FORMAT_CONVERT_MULTIPART_FUNCTIONS,
+        'Integer': FORMAT_CONVERT_INTEGER_FUNCTIONS,
+        'Number': FORMAT_CONVERT_NUMBER_FUNCTIONS
+    }

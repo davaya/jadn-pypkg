@@ -1,22 +1,27 @@
 import copy
 import json
 import os
-import jadn
 
 from collections import defaultdict
-from jadn.definitions import *
+from typing import Dict, Optional, List, Set, Union
+from ..core import check
+from ..definitions import (
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, FieldType, FieldOptions, OPTION_ID, is_builtin
+)
+from ..utils import build_deps, raise_error
 
 
 class SchemaModule:
-    def __init__(self, source):     # Read schema data, get module name
-        self.source = None          # Filename or URL
-        self.module = None          # Namespace unique name
-        self.schema = None          # JADN data
-        self.imports = None         # Copy of meta['imports'] or empty {}
-        self.tx = None              # Type index: {type name: type definition in schema}
-        self.deps = None            # Internal dependencies: {type1: {t2, t3}, type2: {t3, t4, t5}}
-        self.refs = None            # External references {namespace1: {type1: {t2, t3}, ...}}
-        self.used = None            # Types from this module that have been referenced {t2, t3}
+    source: Optional[str]                 # Filename or URL
+    module: str                           # Namespace unique name
+    schema: dict                          # JADN data
+    imports: dict                         # Copy of meta['imports'] or empty {}
+    tx: Dict[str, list]                   # Type index: {type name: type definition in schema}
+    deps: Dict[str, List[str]]             # Internal dependencies: {type1: {t2, t3}, type2: {t3, t4, t5}}
+    refs: Dict[str, Dict[str, Set[str]]]  # External references {namespace1: {type1: {t2, t3}, ...}}
+    used: Set[str]                        # Types from this module that have been referenced {t2, t3}
+
+    def __init__(self, source: Union[dict, str]):     # Read schema data, get module name
         if isinstance(source, dict):    # If schema is provided, save data
             self.schema = source
         elif isinstance(source, str):   # If filename or URL is provided, load data and record source
@@ -26,7 +31,7 @@ class SchemaModule:
                 with open(source, encoding='utf-8') as f:
                     try:
                         self.schema = json.load(f)
-                    except json.JSONDecodeError as e:
+                    except json.JSONDecodeError:
                         print("Decoding", source)
                         raise
             self.source = source
@@ -35,14 +40,14 @@ class SchemaModule:
             self.module = self.schema['info']['module']
             self.imports = self.schema['info']['imports'] if 'imports' in self.schema['info'] else {}
         except KeyError:
-            jadn.raise_error(f'Schema module {self.source} must have a module ID')
+            raise_error(f'Schema module {self.source} must have a module ID')
         self.clear()
 
     def load(self):                 # Validate schema, build type dependencies and external references
         if not self.deps:           # Ignore if already loaded
-            jadn.check(self.schema)
+            check(self.schema)
             self.tx = {t[TypeName]: t for t in self.schema['types']}
-            self.deps = jadn.build_deps(self.schema)
+            self.deps = build_deps(self.schema)
             self.refs = defaultdict(lambda: defaultdict(set))
             for tn in self.deps:
                 for dn in self.deps[tn].copy():     # Iterate over copy so original can be modified safely
@@ -52,17 +57,16 @@ class SchemaModule:
                         try:
                             self.refs[self.imports[nsid]][tn].add(typename)
                         except KeyError as e:
-                            jadn.raise_error(f'Resolve: no namespace defined for {e}')
+                            raise_error(f'Resolve: no namespace defined for {e}')
 
     def clear(self):
         self.used = set()
 
-    def add_used(self, type):
-        self.used.add(type)
+    def add_used(self, t):
+        self.used.add(t)
 
 
 def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types to schema. dirname => other schema files
-
     def merge_tname(tref, module, imports, nsids):
         """
         Convert reference to an imported type (nsid:TypeName) to a local type. Return unchanged if local.
@@ -72,7 +76,6 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
         :param nsids: Dict that maps each namespace to a namespace id. If blank, do not append $nsid qualifier
         :return: Local type name, qualified (TypeName$nsid) or unqualified (TypeName)
         """
-
         sys = '$'  # Character reserved for use in tool-generated type names
         nsid, tname = tref.split(':', maxsplit=1) if ':' in tref else ('', tref)
         ns_id = nsids[imports[nsid] if nsid else module][0]
@@ -95,7 +98,7 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
             td.append(new_fields)
         return td
 
-    def make_enum(sm, tname):
+    def make_enum(sm, tname) -> bool:
         if tname[0] in (OPTION_ID['enum'], OPTION_ID['pointer']):
             sys = '$'
             tn = tname[1:]
@@ -105,7 +108,8 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
                 else:
                     edef = [tn + sys + 'Point', 'Enumerated', [], '', [[f[0], f[1], ''] for f in sm.tx[tn][Fields]]]
                 sm.schema['types'].append(edef)
-            return(True)
+            return True
+        return False
 
     def add_types(sm, tname):        # add referenced typenames in this module to used list
         if {tname} - sm.used:
@@ -114,18 +118,19 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
                 [add_types(sm, tn) for tn in sm.deps[tname]]
             except KeyError as e:
                 if not make_enum(sm, tname):
-                    jadn.raise_error(f'Resolve: {e} not defined in {sm.module} ({str(sm.source)})')
+                    raise_error(f'Resolve: {e} not defined in {sm.module} ({str(sm.source)})')
 
     def resolve(sm, types):       # add referenced types from other modules to used list
         if set(types) - sm.used:
             sm.load()
-            [add_types(sm, tn) for tn in types]
+            for tn in types:
+                add_types(sm, tn)
             for mod in sm.refs:
                 if mod in modules:
                     resolve(modules[mod], {t for k, v in sm.refs[mod].items() if k in sm.used for t in v})
                     print(f'  Resolve {mod} into {sm.module}')
                 else:
-                    jadn.raise_error(f'Resolve: module', mod, 'not found.')
+                    raise_error('Resolve: module', mod, 'not found.')
 
     # if 'imports' not in schema['info']:
     #    return schema
@@ -140,8 +145,8 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
             modules[sm.module].source = fn
         elif sm.source != fn:                   # Flag multiple files with same module name
             print('* Duplicate module', sm.module, sm.source, 'Ignoring', fn)
-        for id, m in sm.imports.items():
-            nsids[m].append('' if id in no_nsid else id)
+        for i, m in sm.imports.items():
+            nsids[m].append('' if i in no_nsid else i)
     types = root.schema['info']['exports'] if 'exports' in root.schema['info'] else {}
     resolve(root, types)
 
@@ -150,8 +155,7 @@ def resolve_imports(schema, dirname, no_nsid=()):       # Add referenced types t
             if t[1:] in root.used:
                 root.used.remove(t)     # Don't need explicit type if base type is present
             else:
-                jadn.raise_error(f'Resolve: no base type for {t}')
-
+                raise_error(f'Resolve: no base type for {t}')
 
     # Copy all needed types from other modules into root
     nsids[root.module] = ['']

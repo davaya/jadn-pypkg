@@ -1,25 +1,19 @@
 """
 Load, validate, prettyprint, and dump JSON Abstract Encoding Notation (JADN) schemas
 """
-
 import json
 import jsonschema
 import numbers
 import os
+import jadn
+
 from datetime import datetime
 from typing import NoReturn, Union
-
-import jadn
-from jadn.definitions import (
-    # Field Indexes
-    TypeName, BaseType, TypeOptions, Fields, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
-    # Const values
-    FIELD_LENGTH, OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, FORMAT_JS_VALIDATE, FORMAT_VALIDATE,
-    FORMAT_SERIALIZE,
-    # Functions
+from .definitions import (
+    FieldID, FieldName, FIELD_LENGTH, OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, VALID_FORMATS,
     is_builtin, has_fields
 )
-from jadn.utils import raise_error
+from .utils import raise_error, list_types, object_types
 
 
 def data_dir() -> str:
@@ -35,8 +29,6 @@ def check(schema: dict) -> dict:
     Validate JADN schema against JADN meta-schema, then
     Perform additional checks on type definitions
     """
-    jadn_formats = {**FORMAT_VALIDATE, **FORMAT_JS_VALIDATE, **FORMAT_SERIALIZE}
-
     def check_typeopts(type_name: str, base_type: str, topts: dict) -> NoReturn:
         """
         Check for invalid type options and undefined formats
@@ -48,8 +40,8 @@ def check(schema: dict) -> dict:
         if 'maxv' in topts and 'minv' in topts and topts['maxv'] < topts['minv']:
             raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minv"]}..{topts["maxv"]}]')
         # TODO: if format defines array, add minv/maxv (prevents adding default max)
-        if fmt := topts.get('format', None):
-            if fmt not in jadn_formats or base_type != jadn_formats[fmt]:
+        if fmt := topts.get('format'):
+            if fmt not in VALID_FORMATS or base_type != VALID_FORMATS[fmt]:
                 raise_error(f'Unsupported format {fmt} in {type_name} {base_type}')
         if 'enum' in topts and 'pointer' in topts:
             raise_error(f'Type cannot be both Enum and Pointer {type_name} {base_type}')
@@ -57,64 +49,63 @@ def check(schema: dict) -> dict:
             raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
 
     # Add empty Fields if not present
-    for t in schema['types']:
-        if len(t) <= Fields:
-            t.append([])
+    schema['types'] = list_types(object_types(schema['types']))
 
-    here = data_dir()
-    with open(os.path.join(here, 'jadn_v1.0_schema.json')) as f:     # Check using JSON Schema for JADN
+    local_dir = data_dir()
+    with open(os.path.join(local_dir, 'jadn_v1.0_schema.json')) as f:     # Check using JSON Schema for JADN
         jsonschema.Draft7Validator(json.load(f)).validate(schema)
 
-    with open(os.path.join(here, 'jadn_v1.0_schema.jadn')) as f:     # Optional: check using JADN meta-schema
+    with open(os.path.join(local_dir, 'jadn_v1.0_schema.jadn')) as f:     # Optional: check using JADN meta-schema
         meta_schema = jadn.codec.Codec(json.load(f), verbose_rec=True, verbose_str=True, config=schema)
         assert meta_schema.encode('Schema', schema) == schema
 
     # Additional checks not included in schema
     types = set()  # Additional checks not included in schema
-    for t in schema['types']:
-        tn = t[TypeName]
-        bt = t[BaseType]
-        if tn in types:
-            raise_error(f'Duplicate type definition {tn}')
-        types.add(tn)
-        if is_builtin(tn):
-            raise_error(f'Reserved type name {tn}')
-        if not is_builtin(bt):
-            raise_error(f'Invalid base type {tn}: {bt}')
-        topts = jadn.topts_s2d(t[TypeOptions])
-        check_typeopts(tn, bt, topts)
+    for t in object_types(schema['types']):
+        if t.TypeName in types:
+            raise_error(f'Duplicate type definition {t.TypeName}')
+        types.add(t.TypeName)
+        if is_builtin(t.TypeName):
+            raise_error(f'Reserved type name {t.TypeName}')
+        if not is_builtin(t.BaseType):
+            raise_error(f'Invalid base type {t.TypeName}: {t.BaseType}')
+        topts = jadn.topts_s2d(t.TypeOptions)
+        check_typeopts(t.TypeName, t.BaseType, topts)
+
         # Check fields
-        if flen := (0 if 'enum' in topts or 'pointer' in topts else FIELD_LENGTH[bt]):
+        if flen := (0 if 'enum' in topts or 'pointer' in topts else FIELD_LENGTH[t.BaseType]):
             fids = set()  # Field IDs
             fnames = set()  # Field Names
-            ordinal = bt in ('Array', 'Record')
-            for n, f in enumerate(t[Fields]):
+            ordinal = t.BaseType in ('Array', 'Record')
+            for n, f in enumerate(t.Fields):
                 if len(f) != flen:
-                    raise_error(f'Bad field {n + 1} in {tn} length, {len(f)} should be {flen}')
+                    raise_error(f'Bad field {n + 1} in {t.TypeName} length, {len(f)} should be {flen}')
                 fids.add(f[FieldID])
                 fnames.add(f[FieldName])
                 if ordinal and f[FieldID] != n + 1:
-                    raise_error(f'Item tag error: {tn}({bt}) [{f[FieldName]}] -- {f[FieldID]} should be {n + 1}')
-                if flen > FieldDesc:  # Full field, not an Enumerated item
-                    fo, fto = jadn.ftopts_s2d(f[FieldOptions])
-                    minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
+                    raise_error(f'Item tag error: {t.TypeName}({t.BaseType}) [{f[FieldName]}] -- {f[FieldID]} should be {n + 1}')
+                if has_fields(t.BaseType):  # Full field, not an Enumerated item
+                    fo, fto = jadn.ftopts_s2d(f.FieldOptions)
+                    minc = fo.get('minc', 1)
+                    maxc = fo.get('maxc', 1)
                     if minc < 0 or maxc < 0 or (0 < maxc < minc):
-                        raise_error(f'{tn}/{f[FieldName]} bad multiplicity {minc} {maxc}')
-                    tf = fo.get('tagid')
-                    if tf and tf not in fids:
-                        raise_error(f'{tn}/{f[FieldName]}({f[FieldType]}) choice has bad external tag {tf}')
-                    if is_builtin(f[FieldType]):
-                        check_typeopts(f'{tn}/{f[FieldName]}', f[FieldType], fto)
-                    elif fto:
-                        allowed = {'unique', } if maxc != 1 else set()  # unique option is moved to generated ArrayOf
-                        if set(fto) - allowed:
-                            raise_error(f'{tn}/{f[FieldName]}({f[FieldType]}) cannot have Type options {fto}')
-                    if 'dir' in fo:
-                        if is_builtin(f[FieldType]) and not has_fields(f[FieldType]):  # TODO: check defined type
-                            raise_error(f'{tn}/{f[FieldName]}: {f[FieldType]} cannot be dir')
+                        raise_error(f'{t.TypeName}/{f.FieldName} bad multiplicity {minc} {maxc}')
 
-            if len(t[Fields]) != len(fids) or len(t[Fields]) != len(fnames):
-                raise_error(f'Duplicate field {tn} {len(t[Fields])} fields, {len(fids)} unique tags, {len(fnames)} unique names')
+                    if tf := fo.get('tagid'):
+                        if tf not in fids:
+                            raise_error(f'{t.TypeName}/{f.FieldName}({f.FieldType}) choice has bad external tag {tf}')
+                    if is_builtin(f.FieldType):
+                        check_typeopts(f'{t.TypeName}/{f.FieldName}', f.FieldType, fto)
+                    elif fto:
+                        # unique option is moved to generated ArrayOf
+                        if {*fto} - ({'unique', } if maxc != 1 else set()):
+                            raise_error(f'{t.TypeName}/{f.FieldName}({f.FieldType}) cannot have Type options {fto}')
+                    if 'dir' in fo:
+                        if is_builtin(f.FieldType) and not has_fields(f.FieldType):  # TODO: check defined type
+                            raise_error(f'{t.TypeName}/{f.FieldName}: {f.FieldType} cannot be dir')
+
+            if len(t.Fields) != len(fids) or len(t.Fields) != len(fnames):
+                raise_error(f'Duplicate field {t.TypeName} {len(t.Fields)} fields, {len(fids)} unique tags, {len(fnames)} unique names')
     return schema
 
 
@@ -129,7 +120,7 @@ def analyze(schema: dict) -> dict:
     meta = schema['info'] if 'info' in schema else {}
     imports = meta['imports'] if 'imports' in meta else {}
     exports = meta['exports'] if 'exports' in meta else []
-    defs = {i for i in items} | set(imports)
+    defs = {*items.keys()} | set(imports)
     refs = set().union([ns(r, imports) for i in items for r in items[i]]) | set(exports)
     oids = (OPTION_ID['enum'], OPTION_ID['pointer'])
     refs = {r[1:] if r[0] in oids else r for r in refs}         # Reference base type for derived enums/pointers
@@ -162,7 +153,7 @@ def dumps(schema: dict, strip: bool = False) -> str:
             for k in val:
                 lines.append(sp2 + '"' + k + '": ' + _d(val[k], level + 1, indent, strip))
             return '{\n' + sep.join(lines) + '\n' + sp + '}'
-        elif isinstance(val, list):
+        if isinstance(val, list):
             sep = ',\n' if level > 1 else sep2
             vals = []
             nest = val and isinstance(val[0], list)  # Not an empty list
@@ -173,7 +164,7 @@ def dumps(schema: dict, strip: bool = False) -> str:
                 spn = (nlevel if nlevel else level) * indent * ' '
                 return '[\n' + sep.join(vals) + '\n' + spn + ']'
             return '[' + ', '.join(vals) + ']'
-        elif isinstance(val, (numbers.Number, type(''))):
+        if isinstance(val, (numbers.Number, type(''))):
             return json.dumps(val)
         return '???'
 

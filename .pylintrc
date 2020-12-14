@@ -1,12 +1,12 @@
 [MASTER]
 # Python code to execute, usually for sys.path manipulation such as pygtk.require().
-init-hook='import sys; sys.path.append("./distribution/src")'
+init-hook='import sys; sys.path.append("./distribution")'
 
 # Add files or directories to the blacklist. They should be base names, not paths.
 ignore=tests
 
 # Add files or directories matching the regex patterns to the blacklist. The regex matches against base names, not paths.
-ignore-patterns=object_detection_grpc_client.py,prediction_pb2.py,prediction_pb2_grpc.py
+ignore-patterns=
 
 # Pickle collected data for later comparisons.
 persistent=no
@@ -310,7 +310,7 @@ max-locals=20
 max-returns=10
 
 # Maximum number of branch for function / method body
-max-branches=15
+max-branches=20
 
 # Maximum number of statements in function / method body
 max-statements=50
@@ -319,7 +319,7 @@ max-statements=50
 max-parents=7
 
 # Maximum number of attributes for a class (see R0902).
-max-attributes=7
+max-attributes=15
 
 # Minimum number of public methods for a class (see R0903).
 min-public-methods=0

@@ -2,19 +2,15 @@ import re
 import jsonschema
 
 from copy import deepcopy
-from typing import Callable
-from jadn.definitions import (
-    # Const values
-    FORMAT_JS_VALIDATE, FORMAT_VALIDATE, FORMAT_SERIALIZE
-)
+from typing import Any, Dict, Callable
+from ..definitions import FORMAT_JS_VALIDATE, FORMAT_VALIDATE, FORMAT_SERIALIZE
 
-"""
-Create a table of validation functions for format keywords
-"""
+FormatTable = Dict[str, Dict[str, Callable[[Any], Any]]]
 
 
+# Create a table of validation functions for format keywords
 # Generate validation function table
-def format_validators() -> dict:
+def format_validators() -> FormatTable:
     # Create a closure for a JSON Schema format keyword
     def make_jsonschema_validator(format_kw: str) -> Callable[[str], str]:
         def validate(val: str) -> str:
@@ -29,7 +25,7 @@ def format_validators() -> dict:
         return validate
 
     # Ensure code is in sync with jadn_defs
-    assert set(FORMAT_VALIDATE) == set([y for x in FORMAT_VALIDATE_FUNCTIONS for y in FORMAT_VALIDATE_FUNCTIONS[x]])
+    assert set(FORMAT_VALIDATE) == {y for x in FORMAT_VALIDATE_FUNCTIONS for y in FORMAT_VALIDATE_FUNCTIONS[x]}
 
     # Add JSON Schema validation functions to those defined here
     validation_functions = deepcopy(FORMAT_VALIDATE_FUNCTIONS)
@@ -37,12 +33,8 @@ def format_validators() -> dict:
     return validation_functions
 
 
-"""
-Return validation functions for the specified format keyword and data type
-"""
-
-
-def get_format_validate_function(format_table: dict, base_type: str, format_kw: str):
+# Return validation functions for the specified format keyword and data type
+def get_format_validate_function(format_table: FormatTable, base_type: str, format_kw: str) -> Callable[[Any], bool]:
     if not format_kw:
         return _format_ok
     try:
@@ -53,7 +45,7 @@ def get_format_validate_function(format_table: dict, base_type: str, format_kw: 
         raise
 
 
-def _format_ok(val) -> bool:
+def _format_ok(val: Any) -> bool:
     return True
 
 
@@ -83,7 +75,7 @@ def s_hostname(sval: str) -> str:
         hostname = hostname[:-1]  # strip exactly one dot from the right, if present
     if len(sval) > 253:
         raise ValueError
-    allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
     if all(allowed.match(x) for x in hostname.split(".")):
         return sval
     raise ValueError

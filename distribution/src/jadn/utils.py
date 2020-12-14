@@ -8,13 +8,10 @@ import re
 
 from functools import reduce
 from typing import Dict, List, NoReturn, Tuple, Union
-from jadn.definitions import (
-    # Field Indexes
+from .definitions import (
     TypeName, BaseType, TypeOptions, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
-    # Const values
-    DEFAULT_CONFIG, TYPE_OPTIONS, FIELD_OPTIONS, OPTION_ID, OPTION_TYPES,
-    # Functions
-    is_builtin, has_fields
+    DEFAULT_CONFIG, TYPE_OPTIONS, FIELD_OPTIONS, OPTION_ID, OPTION_TYPES, is_builtin, has_fields, TypeDefinition,
+    EnumFieldDefinition, GenFieldDefinition
 )
 
 
@@ -24,13 +21,11 @@ def raise_error(*s) -> NoReturn:
 
 
 # Dict conversion utilities
-def _dmerge(x: dict, y: dict) -> dict:
-    k, v = next(iter(y.items()))
-    if k in x:
-        _dmerge(x[k], v)
-    else:
-        x[k] = v
-    return x
+def dmerge(*dicts: dict) -> dict:
+    """
+    Merge any number of dicts
+    """
+    return {k: v for d in dicts for k, v in d.items()}
 
 
 def hdict(keys: str, value: any, sep: str = '.') -> dict:
@@ -48,7 +43,7 @@ def fluff(src: dict, sep: str = '.') -> dict:
     :param sep: separator character for keys
     :return: nested dict - e.g., {'a': {'b': {'c': 1, 'd': 2}}}
     """
-    return reduce(lambda x, y: _dmerge(x, y), [hdict(k, v, sep) for k, v in src.items()], {})
+    return reduce(dmerge, [hdict(k, v, sep) for k, v in src.items()], {})
 
 
 def flatten(cmd: dict, path: str = '', fc: dict = None, sep: str = '.') -> dict:
@@ -80,7 +75,7 @@ def dlist(src: dict) -> dict:
     if isinstance(src, dict):
         for k in src:
             src[k] = dlist(src[k])
-        if set(src) == set([str(k) for k in range(len(src))]):
+        if set(src) == {str(k) for k in range(len(src))}:
             src = [src[str(k)] for k in range(len(src))]
     return src
 
@@ -227,7 +222,7 @@ def cleanup_tagid(fields: List[list]) -> List[list]:
             if tx is not None:
                 to = f[FieldOptions][tx]
                 try:
-                    tag = int(to[1:])           # Check if already a Field Id
+                    int(to[1:])                 # Check if already a Field Id
                 except ValueError:              # Look up Id corresponding to Field Name
                     fx = {x[FieldName]: x[FieldID] for x in fields}
                     f[FieldOptions][tx] = to[0] + str(fx[to[1:]])
@@ -249,7 +244,7 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
     p_rangepat = r'(?:\{(.*)\})?'       # 4 'minv', 'maxv', 'pattern'
     p_format = r'(?:\s+\/(\w[-\w]*))?'  # 5 'format'
     p_unique = r'(\s+unique)?'          # 6 'unique'
-    pattern = '^' + p_name + p_id + p_func + p_rangepat + p_format + p_unique + '\s*$'
+    pattern = fr'^{p_name}{p_id}{p_func}{p_rangepat}{p_format}{p_unique}\s*$'
     m = re.match(pattern, typestring)
     if m is None:
         raise_error(f'TypeString2JADN: "{typestring}" does not match pattern {pattern}')
@@ -291,7 +286,7 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
     def _kvstr(optv: str) -> str:
         if optv[0] == OPTION_ID['enum']:
             return f'Enum[{optv[1:]}]'
-        elif optv[0] == OPTION_ID['pointer']:
+        if optv[0] == OPTION_ID['pointer']:
             return f'Pointer[{optv[1:]}]'
         return optv
 
@@ -413,3 +408,36 @@ def get_config(meta: dict) -> dict:
     config = dict(DEFAULT_CONFIG)
     config.update(meta['config'] if meta and 'config' in meta else {})
     return config
+
+
+# Schema conversion for object-like use
+def object_types(types: List[list]) -> List[TypeDefinition]:
+    rtn_types: List[TypeDefinition] = []
+    for t in types:
+        t = TypeDefinition(*t)
+        if t.BaseType == 'Enumerated':
+            t.Fields = [EnumFieldDefinition(*f) for f in t.Fields]
+        else:
+            t.Fields = [GenFieldDefinition(*f) for f in t.Fields]
+        rtn_types.append(t)
+    return rtn_types
+
+
+def object_type_schema(schema: dict) -> dict:
+    sc = copy.deepcopy(schema)
+    sc['types'] = object_types(sc['types'])
+    return sc
+
+
+def list_types(types: List[TypeDefinition]) -> List[list]:
+    rtn_types: List[list] = []
+    for t in types:
+        t.Fields = [list(f) for f in t.Fields]
+        rtn_types.append(list(t))
+    return rtn_types
+
+
+def list_type_schema(schema: dict) -> dict:
+    sc = copy.deepcopy(schema)
+    sc['types'] = list_types(sc['types'])
+    return sc

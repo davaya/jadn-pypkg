@@ -1,28 +1,23 @@
 """
 Translate JADN to HTML or Markdown property tables
 """
-
-import jadn
+from datetime import datetime
 from typing import List, NoReturn, Union
-from jadn.definitions import (
-    # Field Indexes
-    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID,
-    # Const Values
-    INFO_ORDER, SIMPLE_TYPES,
-    # Functions
+from ..definitions import (
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID, INFO_ORDER, SIMPLE_TYPES,
     is_builtin
 )
-from datetime import datetime
+from ..utils import jadn2fielddef, jadn2typestr, topts_s2d
 
 
 def _fmt(s: str, f: str) -> str:
     f1 = {'n': '', 's': '', 'd': '', 'b': '**', 'h': '**_'}
     f2 = {'n': '', 's': '', 'd': '', 'b': '**', 'h': '_**'}
-    ss = '\*' if s == '*' else s
+    ss = '\\*' if s == '*' else s
     return f'{f1[f]}{ss}{f2[f]}'
 
 
-# --------- Markdown ouput -----------------
+# --------- Markdown output -----------------
 def doc_begin_m() -> str:
     return '## Schema\n'
 
@@ -32,7 +27,6 @@ def doc_end_m() -> str:
 
 
 def sect_m(num, name) -> str:
-    n = ''
     # n = '.'.join([str(n) for n in num]) + ' '
     # return '\n' + len(num)*'#' + ' ' + n + name + '\n'
     return ''
@@ -258,8 +252,8 @@ def table_dumps(schema: dict, form=DEFAULT_FORMAT) -> str:
         text += meta_end()
 
     for td in schema['types']:
-        ttype = jadn.jadn2typestr(td[BaseType], td[TypeOptions])
-        to = jadn.topts_s2d(td[TypeOptions])
+        ttype = jadn2typestr(td[BaseType], td[TypeOptions])
+        to = topts_s2d(td[TypeOptions])
         if not is_builtin(td[BaseType]):
             text += 'Error - bad type: ' + str(td) + '\n'
         elif td[BaseType] in (SIMPLE_TYPES + ('ArrayOf', 'MapOf')) or 'enum' in to or 'pointer' in to:
@@ -280,7 +274,7 @@ def table_dumps(schema: dict, form=DEFAULT_FORMAT) -> str:
             else:
                 text += _tbegin(to, td[TypeName], ttype, ['ID', 'Name', 'Type', '#', 'Description'], cls)
             for fd in td[Fields]:
-                fn, ftype, fmult, fdesc = jadn.utils.jadn2fielddef(fd, td)
+                fn, ftype, fmult, fdesc = jadn2fielddef(fd, td)
                 text += _titem(to, [str(fd[FieldID]), fn, ftype, fmult, fdesc], cls)
         text += type_end()
 

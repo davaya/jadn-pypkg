@@ -1,23 +1,19 @@
 """
 Translate JADN to JSON Schema
 """
-
 import json
 
 from datetime import datetime
-from jadn import topts_s2d, ftopts_s2d, get_config
-from jadn.definitions import *
-from jadn.transform.transform import get_enum_items
+from typing import Optional, Union
+from ..definitions import (
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID, FieldName, FieldType,
+    FieldOptions, FieldDesc, OPTION_ID, is_builtin
+)
+from ..transform.transform import get_enum_items
+from ..utils import dmerge, topts_s2d, ftopts_s2d, get_config
 
 
-def dmerge(*dicts: dict) -> dict:
-    """
-    Merge any number of dicts
-    """
-    return {k: v for d in dicts for k, v in d.items()}
-
-
-def get_items(stype: str, ctx: dict) -> list:
+def get_items(stype: str, ctx: dict) -> Optional[list]:
     """
     return enumerated items if stype is Enumerated
     """
@@ -46,9 +42,16 @@ def fieldname(name: str) -> str:
     """
     return name.lower().replace('-', '_')
 
+
+def pattern(vals: list) -> str:
+    """
+    Return a regex string from a list of values
+    """
+
+    return f"^({'|'.join(map(str, vals))})$"
+
+
 # === Return JSON Schema keywords
-
-
 def w_td(tname: str, desc: str) -> dict:
     """
     Make type and type description
@@ -83,12 +86,6 @@ def w_kvtype(stype: str, ctx: dict) -> dict:
 
 
 def w_enum(fields: list, vcol: int, dcol: int, idopt: bool, ctx: dict) -> dict:
-    def pattern(vals: list) -> str:
-        """
-        Return an enum regex from a list of values
-        """
-        return f"^({'|'.join(map(str, vals))})$"
-
     def fdesc(fld: list, desc: str, idopt: bool) -> str:
         """
         Make field description
@@ -100,10 +97,9 @@ def w_enum(fields: list, vcol: int, dcol: int, idopt: bool, ctx: dict) -> dict:
     assert es in ['enum', 'const', 'regex']
     if es == 'regex':
         return {'type': 'string', 'pattern': pattern(values)}
-    elif es == 'const':
+    if es == 'const':
         return {'oneOf': [{'const': f[vcol], 'description': fdesc(f, f[dcol], idopt)} for f in fields]}
-    else:
-        return {'enum': values}
+    return {'enum': values}
 
 
 def w_export(exp: list, ctx: dict) -> dict:
@@ -261,7 +257,7 @@ def t_array_of(tdef: list, topts: dict, ctx: dict) -> dict:
 
 def t_map(tdef: list, topts: dict, ctx: dict) -> dict:
     def req(f: list) -> bool:
-        fo, to = ftopts_s2d(f[FieldOptions])
+        fo = ftopts_s2d(f[FieldOptions])[0]
         return fo['minc'] >= 1 if 'minc' in fo else True
 
     required = [f[FieldName] for f in tdef[Fields] if req(f)]

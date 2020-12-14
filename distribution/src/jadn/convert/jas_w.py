@@ -6,13 +6,11 @@ from copy import deepcopy
 from datetime import datetime
 from textwrap import fill
 from typing import NoReturn, Union
-from jadn import topts_s2d, ftopts_s2d
-from jadn.definitions import (
-    # Field Indexes
+from ..definitions import (
     TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
-    # Const values
     CORE_TYPES, INFO_ORDER, TYPE_OPTIONS, FIELD_OPTIONS
 )
+from ..utils import ftopts_s2d, topts_s2d
 
 stype_map = {                   # Map JADN built-in types to JAS type names (Equivalent ASN.1 types in comments)
     'Binary': 'BINARY',         # OCTET STRING
@@ -54,7 +52,7 @@ def jas_dumps(schema: dict) -> str:
         elif h == 'imports':
             hh = '{:14} '.format(h+':')
             for imp in meta[h]:
-                jas += hh + '{}: {}\n'.format(*imp)
+                jas += '{}{}: {}\n'.format(hh, *imp)
                 hh = 15*' '
         elif h == 'exports':
             jas += '{:14} {}\n'.format(h+':', ', '.join(meta[h]))
@@ -73,38 +71,38 @@ def jas_dumps(schema: dict) -> str:
         ttype = td[BaseType]
         topts = topts_s2d(td[TypeOptions])
         tostr = ''
-        range = ''
+        v_range = ''
         if 'minv' in topts or 'maxv' in topts:          # TODO: use jadn2typestr
             lo = topts['minv'] if 'minv' in topts else 0
             hi = topts['maxv'] if 'maxv' in topts else 0
             if lo or hi:
-                range = '(' + str(lo) + '..' + (str(hi) if hi else 'MAX') + ')'
+                v_range = f"({lo}..{str(hi) if hi else 'MAX'})"
         for opt in tolist:
             if opt in topts:
                 ov = topts[opt]
                 if opt == 'id':
                     tostr += '.ID'
-                elif opt =='vtype':
-                    tostr += '(' + ov + ')'
+                elif opt == 'vtype':
+                    tostr += f'({ov})'
                 elif opt == 'ktype':
                     pass            # fix MapOf(ktype, vtype)
                 elif opt == 'pattern':
-                    tostr += ' (PATTERN ("' + ov + '"))'
+                    tostr += f' (PATTERN ("{ov}"))'
                 elif opt == 'format':
-                    tostr += ' (CONSTRAINED BY {' + ov + '})'
+                    tostr += f' (CONSTRAINED BY {{{ov}}})'
                 elif opt in ('minv', 'maxv'):     # TODO fix to handle both
-                    if range:
+                    if v_range:
                         if ttype in ('Integer', 'Number'):
-                            tostr += ' ' + range
+                            tostr += f' {v_range}'
                         elif ttype in ('Binary', 'String', 'Array', 'ArrayOf', 'Map', 'MapOf', 'Record'):
-                            tostr += ' (Size ' + range + ')'
+                            tostr += f' (Size {v_range})'
                         else:
                             assert False        # Should never get here
-                    range = ''
+                    v_range = ''
                 else:
-                    tostr += ' %' + opt + ': ' + str(ov) + '%'
-        tdesc = '    -- ' + td[TypeDesc] if td[TypeDesc] else ''
-        jas += '\n' + tname + ' ::= ' + stype(ttype) + tostr
+                    tostr += f' %{opt}: {ov}%'
+        tdesc = f'    -- {td[TypeDesc]}' if td[TypeDesc] else ''
+        jas += f'\n{tname} ::= {stype(ttype)}{tostr}'
         if len(td) > Fields:
             titems = deepcopy(td[Fields])
             for n, i in enumerate(titems):      # 0:tag, 1:enum item name, 2:enum item desc  (enumerated), or
@@ -113,7 +111,7 @@ def jas_dumps(schema: dict) -> str:
                     i[FieldType] = stype(i[FieldType])
                 else:
                     desc = i[ItemDesc]
-                desc = '    -- ' + desc if desc else ''
+                desc = f'    -- {desc}' if desc else ''
                 i.append(',' + desc if n < len(titems) - 1 else (' ' + desc if desc else ''))   # TODO: fix hacked desc for join
             flen = min(32, max(12, max([len(i[FieldName]) for i in titems]) + 1 if titems else 0))
             jas += ' {' + tdesc + '\n'
@@ -127,9 +125,9 @@ def jas_dumps(schema: dict) -> str:
                 items = []
                 for n, i in enumerate(titems):                          # TODO: Convert to use jadn2fielddef
                     ostr = ''
-                    opts, ftopts = ftopts_s2d(i[FieldOptions])
+                    opts = ftopts_s2d(i[FieldOptions])[0]
                     if 'tagid' in opts:
-                        ostr += '(Tag(' + str(opts['tagid']) + '))'    # TODO: lookup field name
+                        ostr += f"(Tag({opts['tagid']}))"    # TODO: lookup field name
                         del opts['tagid']
                     if 'vtype' in opts:
                         ostr += '.*'
@@ -138,7 +136,7 @@ def jas_dumps(schema: dict) -> str:
                         if opts['minc'] == 0:         # TODO: handle array fields (max != 1)
                             ostr += ' OPTIONAL'
                         del opts['minc']
-                    items += [fmt.format(i[FieldID], i[FieldName], i[FieldType], ostr, i[5]) + (' %' + str(opts) if opts else '')]
+                    items += [fmt.format(i[FieldID], i[FieldName], i[FieldType], ostr, i[5]) + (f' %{opts}' if opts else '')]
                 jas += '\n'.join(items)
             jas += '\n}\n' if titems else '}\n'
         else:

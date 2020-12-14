@@ -10,7 +10,49 @@ For the enumerated type each field definition is a list of three items: (tag, na
 For other structure types (array, choice, map, record) each field definition is a list of five items:
 (tag, name, type, field options, field description).
 """
-from typing import Union
+from copy import deepcopy
+from dataclasses import Field, dataclass, field
+from inspect import isfunction
+from typing import List, Optional, Tuple, Union
+
+
+class BasicDataclass:
+    __annotations__: dict
+    __default__: dict
+    __keyindex__: Tuple[str, ...]
+
+    def __init_subclass__(cls, **kwargs):
+        cls.__keyindex__ = tuple(cls.__annotations__.keys())
+        cls.__default__ = {}
+        for k in cls.__keyindex__:
+            v = getattr(cls, k, None)
+            if isinstance(v, Field):
+                if isfunction(v.default):
+                    cls.__default__[k] = v.default()
+                elif isfunction(v.default_factory):
+                    cls.__default__[k] = v.default_factory()
+                else:
+                    cls.__default__[k] = None
+            else:
+                cls.__default__[k] = v if isinstance(v, (int, float, str)) else deepcopy(v)
+
+    def __getitem__(self, key: Union[int, str]):
+        if isinstance(key, int):
+            key = list(self.__keyindex__)[key]
+        return object.__getattribute__(self, key)
+
+    def __setitem__(self, key: Union[int, str], val: any):
+        if isinstance(key, int):
+            key = list(self.__keyindex__)[key]
+        return object.__setattr__(self, key, val)
+
+    def __delitem__(self, key: Union[int, str]):
+        if isinstance(key, int):
+            key = list(self.__keyindex__)[key]
+        object.__setattr__(self, self.__default__[key], self.__default__[key])
+
+    def __len__(self):
+        return len(self.__keyindex__)
 
 
 # Datatype Definition columns
@@ -31,6 +73,33 @@ FieldName = 1           # Name or label of the field
 FieldType = 2           # Type of the field
 FieldOptions = 3        # An array of zero or more FIELD_OPTIONS (and TYPE_OPTIONS if extended)
 FieldDesc = 4           # A non-normative description of the field
+
+
+# Dataclass Helpers
+@dataclass
+class EnumFieldDefinition(BasicDataclass):
+    ItemID: int = 0
+    ItemValue: str = ''
+    ItemDesc: str = ''
+
+
+@dataclass
+class GenFieldDefinition(BasicDataclass):
+    FieldID: int = 0
+    FieldName: str = 'FieldName'
+    FieldType: str = 'FieldType'
+    FieldOptions: List[str] = field(default_factory=lambda: [])
+    FieldDesc: str = ''
+
+
+@dataclass
+class TypeDefinition(BasicDataclass):
+    TypeName: str = 'DefinitionName'
+    BaseType: str = 'DefinitionType'
+    TypeOptions: List[str] = field(default_factory=lambda: [])
+    TypeDesc: str = ''
+    Fields: Optional[Union[List[EnumFieldDefinition], List[GenFieldDefinition]]] = field(default_factory=lambda: [])
+
 
 # Core datatypes
 SIMPLE_TYPES = (
@@ -96,19 +165,19 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
     0x3e: ('pointer', lambda x: x, 5),      # '>', enumeration of pointers derived from Array/Choice/Map/Record type
     0x2f: ('format', lambda x: x, 6),       # '/', semantic validation keyword, may affect serialization
     0x25: ('pattern', lambda x: x, 7),      # '%', regular expression that a string must match
-    0x79: ('minf', lambda x: float(x), 8),  # 'y', minimum Number value
-    0x7a: ('maxf', lambda x: float(x), 9),  # 'z', maximum Number value
-    0x7b: ('minv', lambda x: int(x), 10),   # '{', minimum byte or text string length, Integer value, element count
-    0x7d: ('maxv', lambda x: int(x), 11),   # '}', maximum byte or text string length, Integer value, element count
+    0x79: ('minf', float, 8),  # 'y', minimum Number value
+    0x7a: ('maxf', float, 9),  # 'z', maximum Number value
+    0x7b: ('minv', int, 10),   # '{', minimum byte or text string length, Integer value, element count
+    0x7d: ('maxv', int, 11),   # '}', maximum byte or text string length, Integer value, element count
     0x71: ('unique', lambda x: True, 12),   # 'q', ArrayOf instance must not contain duplicates
     0x2229: ('and', lambda x: x, 13),       # '∩', INTERSECTION - instance must also match referenced type (allOf)
     0x222a: ('or', lambda x: x, 14),        # '∪', UNION - instance must match at least one of the types (anyOf)
 }
 
 FIELD_OPTIONS = {
-    0x5b: ('minc', lambda x: int(x), 15),   # '[', minimum cardinality, default = 1, 0 = field is optional
-    0x5d: ('maxc', lambda x: int(x), 16),   # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
-    0x26: ('tagid', lambda x: int(x), 17),  # '&', field that specifies the type of this field
+    0x5b: ('minc', int, 15),   # '[', minimum cardinality, default = 1, 0 = field is optional
+    0x5d: ('maxc', int, 16),   # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
+    0x26: ('tagid', int, 17),  # '&', field that specifies the type of this field
     0x3c: ('dir', lambda x: True, 18),      # '<', pointer enumeration treats field as a collection
     0x4b: ('key', lambda x: True, 19),      # 'K', field is a primary key for this type
     0x4c: ('link', lambda x: True, 20),     # 'L', field is a link (foreign key) to an instance of FieldType
@@ -227,6 +296,8 @@ FORMAT_SERIALIZE = {        # Data representation formats for one or more serial
     'f64': 'Number',            # IEEE 754 Double-Precision Float (default binary representation of Number type)
 }
 
+VALID_FORMATS = { **FORMAT_JS_VALIDATE, **FORMAT_VALIDATE, **FORMAT_SERIALIZE}
+
 DEFAULT_CONFIG = {          # Configuration values to use if not specified in schema
     "$MaxBinary": 255,          # Maximum number of octets for Binary types
     "$MaxString": 255,          # Maximum number of characters for String types
@@ -247,7 +318,6 @@ EXTENSIONS = {
 
 INFO_ORDER = ('title', 'module', 'version', 'description', 'comments',
               'copyright', 'license', 'imports', 'exports', 'config')  # Display order
-
 
 # Type Hinting
 OPTION_TYPES = Union[int, float, str]
