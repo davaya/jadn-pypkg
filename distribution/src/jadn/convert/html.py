@@ -2,14 +2,13 @@ import re
 import json
 
 from datetime import datetime
-from typing import Dict, Generator, List, NoReturn, Tuple, Union
+from lxml import html
+from typing import Generator, NoReturn, Tuple, Union
 from xml.dom import minidom
 from ..definitions import Fields, ItemID, ItemDesc, FieldID, INFO_ORDER, TypeDefinition
 from ..utils import cleanup_tagid, fielddef2jadn, jadn2fielddef, jadn2typestr, typestr2jadn
+from .utils import HtmlTag
 # TODO: remove lxml??
-from lxml import html
-
-
 """
 Convert JADN schema to and from HTML format
 
@@ -50,61 +49,6 @@ jHmult:   Multiplicity
 jHdesc:   Description
 """
 
-class Tag:
-    """
-    HTML Tag element
-    """
-    name: str
-    contents: Union[str, List['Tag']]
-    attrs: Dict[str, str]
-    _escapes = {
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&apos;'
-    }
-    _self_closing = ('area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr')
-
-    def __init__(self, name: str, value: Union[str, 'Tag', List['Tag']] = None, **attrs: Dict[str, str]):
-        self.name = name.lower()
-        self.attrs = { **attrs }
-        if self.name in self._self_closing and value:
-            raise ValueError('Self closing tag should not have a value')
-        if isinstance(value, str):
-            self.contents = self._escape_value(value)
-        elif isinstance(value, list):
-            self.contents = value
-        elif isinstance(value, Tag):
-            self.contents = [value]
-        else:
-            self.contents = []
-
-    def __str__(self) -> str:
-        attrs = ' '.join(f'{k}="{v}"' for k, v in self.attrs.items())
-        attrs = f' {attrs}' if attrs else ''
-        if self.name in self._self_closing:
-            return f'<{self.name}{attrs} />'
-
-        value = self.contents if isinstance(self.contents, str) else ''.join(f'{v}' for v in self.contents)
-        return f'<{self.name}{attrs}>{value}</{self.name}>'
-
-    def append(self, *value: 'Tag') -> NoReturn:
-        if self.name in self._self_closing:
-            raise ValueError('Self closing tag should not have a value')
-        if isinstance(self.contents, str):
-            raise ValueError('Cannot add to string content')
-        self.contents.extend(value)
-
-    def prepend(self, *value: 'Tag') -> NoReturn:
-        if self.name in self._self_closing:
-            raise ValueError('Self closing tag should not have a value')
-        if isinstance(self.contents, str):
-            raise ValueError('Cannot add to string content')
-        self.contents = [*value, *self.contents]
-
-    def _escape_value(self, val: str) -> str:
-        return ''.join(self._escapes.get(c, c) for c in val)
-
 
 # Convert JADN to HTML
 def html_dumps(schema: dict) -> str:
@@ -114,71 +58,69 @@ def html_dumps(schema: dict) -> str:
         title = 'JADN Schema'
 
     # Make initial tree
-    doc = Tag('html',
-        Tag('head', [
-            Tag('meta', charset='UTF-8'),
-            Tag('title', title),
-            Tag('link', rel='stylesheet', href='css/dtheme.css', type='text/css')
-        ]),
-        lang='en'
-    )
-    body = Tag('body', Tag('h2', 'Schema'))
+    doc = HtmlTag('html', HtmlTag('head', [
+        HtmlTag('meta', charset='UTF-8'),
+        HtmlTag('title', title),
+        HtmlTag('link', rel='stylesheet', href='css/dtheme.css', type='text/css')
+    ]), lang='en')
+    body = HtmlTag('body', HtmlTag('h2', 'Schema'))
 
     # Add meta elements if present
-    if 'info' in schema:
-        m_html = Tag('div', **{'class': 'tBody'})
-        mlist = [k for k in INFO_ORDER if k in schema['info']]
-        for k in mlist + list({*schema['info']} - {*mlist}):
-            m_html.append(Tag('div', [
-                Tag('div', k + ':', **{'class': 'tCell jKey'}),
-                Tag('div', json.dumps(schema['info'][k]), **{'class': 'tCell jVal'})
+    if info := schema.get('info', None):
+        m_html = HtmlTag('div', **{'class': 'tBody'})
+        mlist = [k for k in INFO_ORDER if k in info]
+        for k in mlist + list({*info} - {*mlist}):
+            m_html.append(HtmlTag('div', [
+                HtmlTag('div', f'{k}:', **{'class': 'tCell jKey'}),
+                HtmlTag('div', json.dumps(info[k]), **{'class': 'tCell jVal'})
             ], **{'class': 'tRow'}))
         # top-level element of the metadata table
-        body.append(Tag('div', m_html, **{'class': 'tTable jinfo'}))
+        body.append(HtmlTag('div', m_html, **{'class': 'tTable jinfo'}))
 
     # Add type definitions
     for tdef in schema['types']:
         tdef = TypeDefinition(*tdef)
-        d_html = Tag('div', # top-level element of a type definition
-            Tag('div', [
-                Tag('div', [  # container for type definition column
-                    Tag('div', tdef.TypeName, **{'class': 'jTname'}),
-                    Tag('div', f' = {jadn2typestr(tdef.BaseType, tdef.TypeOptions)}', **{'class': 'jTstr'})
+        d_html = HtmlTag('div',  # top-level element of a type definition
+            HtmlTag('div', [
+                HtmlTag('div', [  # container for type definition column
+                    HtmlTag('div', tdef.TypeName, **{'class': 'jTname'}),
+                    HtmlTag('div', f' = {jadn2typestr(tdef.BaseType, tdef.TypeOptions)}', **{'class': 'jTstr'})
                 ], **{'class': 'jTdef'}),
-                Tag('div', tdef.TypeDesc or '', **{'class': 'jTdesc'})
+                HtmlTag('div', tdef.TypeDesc or '', **{'class': 'jTdesc'})
             ], **{'class': 'tCaption'}),
-        **{'class': 'tTable jType'})
+            **{'class': 'tTable jType'}
+        )
 
         if len(tdef) > Fields:
-            field_head = Tag('div', [
-                Tag('div', 'ID', **{'class': 'tHCell jHid'}),
-                Tag('div', 'Name', **{'class': 'tHCell jHname'})
+            field_head = HtmlTag('div', [
+                HtmlTag('div', 'ID', **{'class': 'tHCell jHid'}),
+                HtmlTag('div', 'Name', **{'class': 'tHCell jHname'})
             ], **{'class': 'tHead'})
             if tdef.Fields and len(tdef.Fields[0]) > ItemDesc + 1:
                 field_head.append(
-                    Tag('div', 'Type', **{'class': 'tHCell jHstr'}),
-                    Tag('div', '#', **{'class': 'tHCell jHmult'})
+                    HtmlTag('div', 'Type', **{'class': 'tHCell jHstr'}),
+                    HtmlTag('div', '#', **{'class': 'tHCell jHmult'})
                 )
-            field_head.append(Tag('div', 'Description', **{'class': 'tHCell jHdesc'}))
+            field_head.append(HtmlTag('div', 'Description', **{'class': 'tHCell jHdesc'}))
             d_html.append(field_head)
 
-            fields = Tag('div', **{'class': 'tBody'})
+            fields = HtmlTag('div', **{'class': 'tBody'})
             for fdef in tdef.Fields:
-                field_row = Tag('div', **{'class': 'tRow'})
-                fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, tdef)
+                field_row = HtmlTag('div', **{'class': 'tRow'})
+                fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, [*tdef])
                 if len(tdef.Fields[0]) > ItemDesc + 1:
                     field_row.append(
-                        Tag('div', str(fdef[FieldID]), **{'class': 'tCell jFid'}),
-                        Tag('div', fname, **{'class': 'tCell jFname'}),
-                        Tag('div', ftyperef, **{'class': 'tCell jFstr'}),
-                        Tag('div', fmult, **{'class': 'tCell jFmult'})
+                        HtmlTag('div', str(fdef[FieldID]), **{'class': 'tCell jFid'}),
+                        HtmlTag('div', fname, **{'class': 'tCell jFname'}),
+                        HtmlTag('div', ftyperef, **{'class': 'tCell jFstr'}),
+                        HtmlTag('div', fmult, **{'class': 'tCell jFmult'})
                     )
                 else:
                     field_row.append(
-                        Tag('div', str(fdef[ItemID]), **{'class': 'tCell jFid'}),
-                        Tag('div', fname, **{'class': 'tCell jFname'})
+                        HtmlTag('div', str(fdef[ItemID]), **{'class': 'tCell jFid'}),
+                        HtmlTag('div', fname, **{'class': 'tCell jFname'})
                     )
-                field_row.append(Tag('div', fdesc, **{'class': 'tCell jFdesc'}))
+                field_row.append(HtmlTag('div', fdesc, **{'class': 'tCell jFdesc'}))
                 fields.append(field_row)
             d_html.append(fields)
         body.append(d_html)
@@ -256,3 +198,11 @@ def html_loads(hdoc: str) -> dict:
 def html_load(fname: Union[bytes, str, int]) -> dict:
     with open(fname, 'r') as f:
         return html_loads(f.read())
+
+
+__all__ = [
+    'html_dump',
+    'html_dumps',
+    'html_load',
+    'html_loads'
+]

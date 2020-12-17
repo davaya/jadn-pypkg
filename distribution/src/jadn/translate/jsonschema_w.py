@@ -13,7 +13,7 @@ from ..transform.transform import get_enum_items
 from ..utils import dmerge, topts_s2d, ftopts_s2d, get_config
 
 
-def get_items(stype: str, ctx: dict) -> Optional[list]:
+def get_items(stype: str, ctx: dict) -> Optional[list]:  # pylint: disable=R1710
     """
     return enumerated items if stype is Enumerated
     """

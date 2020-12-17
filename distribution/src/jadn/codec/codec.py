@@ -220,7 +220,8 @@ def _decode_string(ts: SymbolTableField, sval, codec):
     return _check_pattern(ts, aval)
 
 
-def _encode_enumerated(ts: SymbolTableField, aval, codec):                # TODO: Serialization
+def _encode_enumerated(ts: SymbolTableField, aval, codec):  # pylint: disable=R1710
+    # TODO: Serialization
     _check_type(ts, aval, type(next(iter(ts.eMap))))
     if aval in ts.eMap:
         return ts.eMap[aval]
@@ -228,7 +229,7 @@ def _encode_enumerated(ts: SymbolTableField, aval, codec):                # TODO
     raise_error(f'{td.BaseType}: {aval} is not a valid {td.TypeName}')
 
 
-def _decode_enumerated(ts: SymbolTableField, sval, codec):
+def _decode_enumerated(ts: SymbolTableField, sval, codec):  # pylint: disable=R1710
     _check_type(ts, sval, type(next(iter(ts.dMap))))
     if sval in ts.dMap:
         return ts.dMap[sval]
@@ -300,7 +301,7 @@ def _decode_maprec(ts: SymbolTableField, sval, codec):
         val = {_check_key(ts, k): v for k, v in sval.items()}
     aval = dict()
     fx = FieldName if codec.verbose_str else FieldID  # Verbose or minified identifier strings
-    fnames = list(ts.Fld.keys())
+    fnames = list(ts.Fld)
     for f in ts.TypeDef.Fields:
         fs = ts.Fld[f[fx]]  # Symtab entry for field
         fd = fs.Def  # JADN field definition from symtab

@@ -1,13 +1,13 @@
 import base64
 import binascii
-import socket
 import string
 
+from ipaddress import IPv4Address, IPv6Address
 from typing import Any, Callable, Dict
-from socket import AF_INET, AF_INET6
 from ..definitions import FORMAT_SERIALIZE
 
 FormatTable = Dict[str, Dict[str, Callable[[Any], bool]]]
+# TODO: Convert a2s_ipvX_net and s2a_ipvX_net functions to use ipaddress.IPvXNetwork
 
 
 # Return serialization functions for the specified format keyword and data type
@@ -56,41 +56,19 @@ def s2b_base64url(sval: str) -> bytes:      # Convert from base64url string to b
 
 
 def b2s_ipv4_addr(bval: bytes) -> str:      # Convert IPv4 address from binary to string
-    try:
-        return socket.inet_ntop(AF_INET, bval)
-    except AttributeError:
-        try:
-            return socket.inet_ntoa(bval)       # Python 2 doesn't support inet_ntop on Windows
-        except IOError:
-            raise ValueError
-    except OSError:
-        raise ValueError
+    return IPv4Address(bval).compressed
 
 
 def b2s_ipv6_addr(bval: bytes) -> str:        # Convert ipv6 address from binary to string
-    try:
-        return socket.inet_ntop(AF_INET6, bval)     # Python 2 doesn't support inet_ntop on Windows
-    except OSError:
-        raise ValueError
+    return IPv6Address(bval).compressed
 
 
 def s2b_ipv4_addr(sval: str) -> bytes:    # Convert IPv4 addr from string to binary
-    try:
-        return socket.inet_pton(AF_INET, sval)
-    except AttributeError:       # Python 2 doesn't support inet_pton on Windows
-        try:
-            return socket.inet_aton(sval)
-        except IOError:
-            raise ValueError
-    except OSError:
-        raise ValueError
+    return IPv4Address(sval).packed
 
 
 def s2b_ipv6_addr(sval: str) -> bytes:    # Convert IPv6 address from string to binary
-    try:
-        return socket.inet_pton(AF_INET6, sval)
-    except OSError:         # Python 2 doesn't support inet_pton on Windows
-        raise ValueError
+    return IPv6Address(sval).packed
 
 
 FORMAT_CONVERT_BINARY_FUNCTIONS = {
@@ -104,16 +82,16 @@ FORMAT_CONVERT_BINARY_FUNCTIONS = {
 
 # IP Net (address, prefix length tuple) conversions
 def a2s_ipv4_net(aval: [str, int]) -> str:
-    if aval[1] < 0 or aval[1] > 32:         # Verify prefix length is valid
+    if aval[1] < 0 or aval[1] > 32:  # Verify prefix length is valid
         raise ValueError
-    sa = b2s_ipv4_addr(aval[0])             # Convert Binary bytes to type-specific string
+    sa = b2s_ipv4_addr(aval[0])      # Convert Binary bytes to type-specific string
     return f'{sa}/{aval[1]}'
 
 
 def a2s_ipv6_net(aval: [str, int]) -> str:
-    if aval[1] < 0 or aval[1] > 128:        # Verify prefix length is valid
+    if aval[1] < 0 or aval[1] > 128:  # Verify prefix length is valid
         raise ValueError
-    sa = b2s_ipv6_addr(aval[0])             # Convert Binary bytes to type-specific string
+    sa = b2s_ipv6_addr(aval[0])       # Convert Binary bytes to type-specific string
     return f'{sa}/{aval[1]}'
 
 

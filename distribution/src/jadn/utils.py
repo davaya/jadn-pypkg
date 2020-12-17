@@ -7,7 +7,7 @@ import copy
 import re
 
 from functools import reduce
-from typing import Dict, List, NoReturn, Tuple, Union
+from typing import Any, Dict, List, NoReturn, Tuple, Union
 from .definitions import (
     TypeName, BaseType, TypeOptions, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
     DEFAULT_CONFIG, TYPE_OPTIONS, FIELD_OPTIONS, OPTION_ID, OPTION_TYPES, is_builtin, has_fields, TypeDefinition,
@@ -430,14 +430,18 @@ def object_type_schema(schema: dict) -> dict:
 
 
 def list_types(types: List[TypeDefinition]) -> List[list]:
-    rtn_types: List[list] = []
-    for t in types:
-        t.Fields = [list(f) for f in t.Fields]
-        rtn_types.append(list(t))
-    return rtn_types
+    return [[*t[:-1], [list(f) for f in t.Fields]] for t in types]
 
 
 def list_type_schema(schema: dict) -> dict:
     sc = copy.deepcopy(schema)
     sc['types'] = list_types(sc['types'])
     return sc
+
+
+# General Utilities
+def list_get_default(l: list, idx: int, default: Any = None) -> Any:
+    try:
+        return l[idx]
+    except IndexError:
+        return default

@@ -36,9 +36,24 @@ class BadSchema(TestCase):
         ]
     }
 
+    schema_bad_ordinal_fields = {
+        'info': {'module': 'https://jadn.org/unittests-BadSchema'},
+        'types': [
+            ['Color', 'Record', [], '', [  # Invalid item ID for blue
+                [1, 'red', 'Integer', ['{0', '}255'], ''],
+                [2, 'green', 'Integer', ['{0', '}255'], ''],
+                [4, 'blue', 'Integer', ['{0', '}255'], '']
+            ]]
+        ]
+    }
+
     def test_bad_item_fields(self):
         with self.assertRaises(ValueError):
             jadn.check(self.schema_bad_item_fields)
+
+    def test_bad_ordinal_fields(self):
+        with self.assertRaises(ValueError):
+            jadn.check(self.schema_bad_ordinal_fields)
 
 
 class SpecExamples(TestCase):

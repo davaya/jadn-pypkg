@@ -1,5 +1,5 @@
 """
- JADN Definitions
+JADN Definitions
 
 A JSON Abstract Data Notation (JADN) file contains a list of datatype definitions.  Each type definition
 has a specified format - a list of four or five columns depending on whether the type is primitive or
@@ -22,7 +22,7 @@ class BasicDataclass:
     __keyindex__: Tuple[str, ...]
 
     def __init_subclass__(cls, **kwargs):
-        cls.__keyindex__ = tuple(cls.__annotations__.keys())
+        cls.__keyindex__ = tuple(cls.__annotations__)
         cls.__default__ = {}
         for k in cls.__keyindex__:
             v = getattr(cls, k, None)
@@ -36,7 +36,9 @@ class BasicDataclass:
             else:
                 cls.__default__[k] = v if isinstance(v, (int, float, str)) else deepcopy(v)
 
-    def __getitem__(self, key: Union[int, str]):
+    def __getitem__(self, key: Union[int, slice, str]):
+        if isinstance(key, slice):
+            return [self[k] for k in self.__keyindex__[key]]
         if isinstance(key, int):
             key = list(self.__keyindex__)[key]
         return object.__getattribute__(self, key)
@@ -98,7 +100,7 @@ class TypeDefinition(BasicDataclass):
     BaseType: str = 'DefinitionType'
     TypeOptions: List[str] = field(default_factory=lambda: [])
     TypeDesc: str = ''
-    Fields: Optional[Union[List[EnumFieldDefinition], List[GenFieldDefinition]]] = field(default_factory=lambda: [])
+    Fields: Optional[Union[List[GenFieldDefinition], List[EnumFieldDefinition]]] = field(default_factory=lambda: [])
 
 
 # Core datatypes

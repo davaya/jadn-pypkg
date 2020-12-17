@@ -9,6 +9,19 @@ from typing import NoReturn, Tuple, Union
 from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
 from ..utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error, typestr2jadn
 
+# JIDL -> JADN Type regexes
+p_tname = r'\s*([-$\w]+)'               # Type Name
+p_assign = r'\s*='                      # Type assignment operator
+p_tstr = r'\s*(.*?)\s*\{?'             # Type definition
+p_tdesc = r'(?:\s*\/\/\s*(.*?)\s*)?'    # Optional Type description
+
+# JIDL -> JADN Field regexes
+p_id = r'\s*(\d+)'  # Field ID
+p_fname = r'\s+([-:$\w]+\/?)?'  # Field Name with dir/ option (colon is deprecated, allow for now)
+p_fstr = r'\s*(.*?)'  # Field definition or Enum value
+p_range = r'\s*(?:\[([.*\w]+)\]|(optional))?'  # Multiplicity
+p_desc = r'\s*(?:\/\/\s*(.*?)\s*)?'  # Field description, including field name if .id option
+
 
 # Convert JADN to JIDL
 def jidl_columns() -> dict:
@@ -78,10 +91,6 @@ def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
         if m := re.match(p_info, line):
             return 'M', [m.group(1), m.group(2)]
 
-        p_tname = r'\s*([-$\w]+)'               # Type Name
-        p_assign = r'\s*='                      # Type assignment operator
-        p_tstr  = r'\s*(.*?)\s*\{?'             # Type definition
-        p_tdesc = r'(?:\s*\/\/\s*(.*?)\s*)?'    # Optional Type description
         p_type = fr'^{p_tname}{p_assign}{p_tstr}{p_tdesc}$'
         if m := re.match(p_type, line):
             btype, topts, fo = typestr2jadn(m.group(2))
@@ -89,11 +98,6 @@ def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
             newtype = [m.group(1), btype, topts, m.group(3) if m.group(3) else '', []]
             return 'T', newtype
 
-        p_id = r'\s*(\d+)'                      # Field ID
-        p_fname = r'\s+([-:$\w]+\/?)?'          # Field Name with dir/ option (colon is deprecated, allow for now)
-        p_fstr = r'\s*(.*?)'                    # Field definition or Enum value
-        p_range = r'\s*(?:\[([.*\w]+)\]|(optional))?'     # Multiplicity
-        p_desc = r'\s*(?:\/\/\s*(.*?)\s*)?'     # Field description, including field name if .id option
         pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[BaseType] == 'Array') else p_fname
         if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
             pattern = fr'^{p_id}{p_fstr}{p_desc}$'
@@ -134,3 +138,12 @@ def jidl_loads(doc: str) -> dict:
 def jidl_load(fname: Union[bytes, str, int]) -> dict:
     with open(fname, 'r') as f:
         return jidl_loads(f.read())
+
+
+__all__ = [
+    'jidl_dump',
+    'jidl_dumps',
+    'jidl_load',
+    'jidl_loads',
+    'jidl_columns'
+]
