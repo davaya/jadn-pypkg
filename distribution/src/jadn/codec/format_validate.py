@@ -5,36 +5,16 @@ from copy import deepcopy
 from typing import Any, Dict, Callable
 from ..definitions import FORMAT_JS_VALIDATE, FORMAT_VALIDATE, FORMAT_SERIALIZE
 
-FormatTable = Dict[str, Dict[str, Callable[[Any], Any]]]
+ValidationFunction = Callable[[Any], Any]
+FormatTable = Dict[str, Dict[str, ValidationFunction]]
 
 
-# Create a table of validation functions for format keywords
-# Generate validation function table
-def format_validators() -> FormatTable:
-    # Create a closure for a JSON Schema format keyword
-    def make_jsonschema_validator(format_kw: str) -> Callable[[str], str]:
-        def validate(val: str) -> str:
-            try:
-                jsonschema.validate(
-                    instance=val,
-                    schema={'type': 'string', 'format': format_kw},
-                    format_checker=jsonschema.draft7_format_checker)
-            except jsonschema.exceptions.ValidationError as e:
-                raise ValueError(e.message)
-            return val
-        return validate
-
-    # Ensure code is in sync with jadn_defs
-    assert set(FORMAT_VALIDATE) == {y for x in FORMAT_VALIDATE_FUNCTIONS for y in FORMAT_VALIDATE_FUNCTIONS[x]}
-
-    # Add JSON Schema validation functions to those defined here
-    validation_functions = deepcopy(FORMAT_VALIDATE_FUNCTIONS)
-    validation_functions['String'].update({f: make_jsonschema_validator(f) for f in FORMAT_JS_VALIDATE})
-    return validation_functions
+def _format_ok(val: Any) -> bool:
+    return True
 
 
 # Return validation functions for the specified format keyword and data type
-def get_format_validate_function(format_table: FormatTable, base_type: str, format_kw: str) -> Callable[[Any], bool]:
+def get_format_validate_function(format_table: FormatTable, base_type: str, format_kw: str) -> ValidationFunction:
     if not format_kw:
         return _format_ok
     try:
@@ -45,13 +25,8 @@ def get_format_validate_function(format_table: FormatTable, base_type: str, form
         raise
 
 
-def _format_ok(val: Any) -> bool:
-    return True
-
-
 # Regex from https://stackoverflow.com/questions/201323/how-to-validate-an-email-address-using-a-regular-expression
 #   A more comprehensive email address validator is available at http://isemail.info/about
-
 def s_email(sval: str) -> str:
     if not isinstance(sval, type('')):
         raise TypeError
@@ -101,7 +76,7 @@ def b_ipv6_addr(bval: bytes) -> bytes:      # IPv4 address
     return val_binary(bval, lambda x: len(x) == 16)
 
 
-def _ipnet(aval: list, condition: Callable):
+def _ipnet(aval: [bytes, int], condition: Callable[[list], bool]) -> [bytes, int]:
     if not (isinstance(aval, list) and len(aval) == 2 and isinstance(aval[0], bytes) and isinstance(aval[1], int)):
         raise TypeError
     if condition(aval):
@@ -109,15 +84,15 @@ def _ipnet(aval: list, condition: Callable):
     raise ValueError
 
 
-def a_ipv4_net(aval: list) -> list:       # IPv4 address and netmask
+def a_ipv4_net(aval: [bytes, int]) -> [bytes, int]:       # IPv4 address and netmask
     return _ipnet(aval, lambda x: len(x[0]) == 4 and 0 <= x[1] <= 32)
 
 
-def a_ipv6_net(aval: list) -> list:       # IPv4 address and netmask
+def a_ipv6_net(aval: [bytes, int]) -> [bytes, int]:       # IPv6 address and netmask
     return _ipnet(aval, lambda x: len(x[0]) == 16 and 0 <= x[1] <= 128)
 
 
-def val_int(ival: int, condition: Callable) -> int:
+def val_int(ival: int, condition: Callable[[int], bool]) -> int:
     if not isinstance(ival, int):
         raise TypeError
     if condition(ival):
@@ -169,3 +144,28 @@ FORMAT_VALIDATE_FUNCTIONS = {
 #   Duration        - Integer - min 0, max value for plausible durations
 #   Identifier      - String - regex pattern
 #   Port            - Integer - min 0, max 65535
+
+
+# Create a table of validation functions for format keywords
+def format_validators() -> FormatTable:  # Generate validation function table
+    # Create a closure for a JSON Schema format keyword
+    def make_jsonschema_validator(format_kw: str) -> Callable[[str], str]:
+        def validate(val: str) -> str:
+            try:
+                jsonschema.validate(
+                    instance=val,
+                    schema={'type': 'string', 'format': format_kw},
+                    format_checker=jsonschema.draft7_format_checker
+                )
+            except jsonschema.exceptions.ValidationError as e:
+                raise ValueError(e.message)
+            return val
+        return validate
+
+    # Ensure code is in sync with jadn_defs
+    assert set(FORMAT_VALIDATE) == {y for x in FORMAT_VALIDATE_FUNCTIONS.values() for y in x}
+
+    # Add JSON Schema validation functions to those defined here
+    validation_functions = deepcopy(FORMAT_VALIDATE_FUNCTIONS)
+    validation_functions['String'].update({f: make_jsonschema_validator(f) for f in FORMAT_JS_VALIDATE})
+    return validation_functions

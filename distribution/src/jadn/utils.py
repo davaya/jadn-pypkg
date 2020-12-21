@@ -85,7 +85,8 @@ def build_deps(schema: dict) -> Dict[str, List[str]]:
     Build a Dependency dict: {TypeName: {Dep1, Dep2, ...}}
     """
     def get_refs(tdef: list) -> list:         # Return all type references from a type definition
-        oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and'], OPTION_ID['or']]  # Options whose value is/has a type name
+        # Options whose value is/has a type name
+        oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and'], OPTION_ID['or']]
         oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]                       # Options that enumerate fields
         refs = [to[1:] for to in tdef[TypeOptions] if to[0] in oids and not is_builtin(to[1:])]
         refs += [to for to in tdef[TypeOptions] if to[0] in oids2]
@@ -93,7 +94,8 @@ def build_deps(schema: dict) -> Dict[str, List[str]]:
             for f in tdef[Fields]:
                 if not is_builtin(f[FieldType]):
                     refs.append(f[FieldType])                              # Add reference to type name
-                refs += get_refs(['', f[FieldType], f[FieldOptions], ''])  # Get refs from type opts in field (extension)
+                # Get refs from type opts in field (extension)
+                refs += get_refs(['', f[FieldType], f[FieldOptions], ''])
         return refs
 
     return {t[TypeName]: get_refs(t) for t in schema['types']}
@@ -107,15 +109,16 @@ def topo_sort(items: List[Tuple[str, List[str]]]) -> Tuple[list, set]:
     Returns the sorted list of items and a list of root items.  A single root indicates a fully-connected hierarchy;
     multiple roots indicate disconnected items or hierarchies, and no roots indicate a dependency cycle.
     """
+    out = []
+    deps = {i[0]: i[1] for i in items}  # TODO: update for items dict
+
     def walk_tree(it: str) -> NoReturn:
         for i in deps[it]:
             if i not in out:
                 walk_tree(i)
                 out.append(i)
 
-    out = []
-    deps = {i[0]: i[1] for i in items}           # TODO: update for items dict
-    roots = {i[0] for i in items} - set().union(*[i[1] for i in items])
+    roots = {i[0] for i in items} - {*[i[1] for i in items]}
     for item in roots:
         walk_tree(item)
         out.append(item)
@@ -124,8 +127,9 @@ def topo_sort(items: List[Tuple[str, List[str]]]) -> Tuple[list, set]:
 
 
 def get_optx(opts: List[OPTION_TYPES], oname: str) -> Union[OPTION_TYPES, None]:
-    n = [i for i, x in enumerate(opts) if x[0] == OPTION_ID[oname]]
-    return n[0] if n else None
+    if n := [i for i, x in enumerate(opts) if x[0] == OPTION_ID[oname]]:
+        return n[0]
+    return None
 
 
 def del_opt(opts: List[OPTION_TYPES], oname: str) -> NoReturn:
@@ -154,7 +158,8 @@ def ftopts_s2d(olist: Union[List[OPTION_TYPES], Tuple[OPTION_TYPES, ...]]) -> Tu
     returns - FieldOptions, TypeOptions
     """
     assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
-    fopts, topts = {}, {}
+    fopts = {}
+    topts = {}
     for o in olist:
         try:
             k = FIELD_OPTIONS[ord(o[0])]
@@ -340,7 +345,7 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
     if v := opts.pop('or', None):
         extra += f' ∪ {v}'
 
-    return f"{tname}{extra}{' ?' + str(map(str, opts)) + '?' if opts else ''}"  # Flag unrecognized options
+    return f"{tname}{extra}{f' ?{str(map(str, opts))}?' if opts else ''}"  # Flag unrecognized options
 
 
 def jadn2fielddef(fdef: list, tdef: list) -> Tuple[str, str, str, str]:
@@ -440,8 +445,8 @@ def list_type_schema(schema: dict) -> dict:
 
 
 # General Utilities
-def list_get_default(l: list, idx: int, default: Any = None) -> Any:
+def list_get_default(lst: list, idx: int, default: Any = None) -> Any:
     try:
-        return l[idx]
+        return lst[idx]
     except IndexError:
         return default

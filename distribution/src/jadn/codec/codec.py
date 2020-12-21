@@ -148,79 +148,79 @@ def _extra_value(ts: SymbolTableField, val, fld):
     raise_error(f'{td.TypeName}({td.BaseType}): unexpected field: {val} not in {fld}:')
 
 
-def _encode_binary(ts: SymbolTableField, aval, codec):    # Encode bytes to string
+def _encode_binary(ts: SymbolTableField, aval, codec: 'Codec'):    # Encode bytes to string
     _check_type(ts, aval, bytes)
     _check_size(ts, aval)
     return _format_encode(ts, aval)
 
 
-def _decode_binary(ts: SymbolTableField, sval, codec):    # Decode ASCII string to bytes
+def _decode_binary(ts: SymbolTableField, sval, codec: 'Codec'):    # Decode ASCII string to bytes
     aval = _format_decode(ts, sval)
     _check_type(ts, aval, bytes)        # assert format decode returns correct type
     return _check_size(ts, aval)
 
 
-def _encode_boolean(ts: SymbolTableField, val, codec):
+def _encode_boolean(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, bool)
     return val
 
 
-def _decode_boolean(ts: SymbolTableField, val, codec):
+def _decode_boolean(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, bool)
     return val
 
 
-def _encode_integer(ts: SymbolTableField, aval, codec):
+def _encode_integer(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, numbers.Integral, isinstance(aval, bool))
     _check_range(ts, aval)
     return _format_encode(ts, aval)
 
 
-def _decode_integer(ts: SymbolTableField, sval, codec):
+def _decode_integer(ts: SymbolTableField, sval, codec: 'Codec'):
     aval = _format_decode(ts, sval)
     _check_type(ts, aval, numbers.Integral, isinstance(aval, bool))
     return _check_range(ts, aval)
 
 
-def _encode_number(ts: SymbolTableField, aval, codec):
+def _encode_number(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, numbers.Real, isinstance(aval, bool))
     _check_frange(ts, aval)
     return _format_encode(ts, aval)
 
 
-def _decode_number(ts: SymbolTableField, sval, codec):
+def _decode_number(ts: SymbolTableField, sval, codec: 'Codec'):
     aval = _format_decode(ts, sval)
     _check_type(ts, aval, numbers.Real, isinstance(aval, bool))
     return _check_range(ts, aval)
 
 
-def _encode_null(ts: SymbolTableField, aval, codec):
+def _encode_null(ts: SymbolTableField, aval, codec: 'Codec'):
     if aval:                            # Treat any false-y value as Null: None, False, 0, '', [], set(), {}
         _bad_value(ts, aval)
     return aval
 
 
-def _decode_null(ts: SymbolTableField, val, codec):
+def _decode_null(ts: SymbolTableField, val, codec: 'Codec'):
     if val:
         _bad_value(ts, val)
     return val
 
 
-def _encode_string(ts: SymbolTableField, aval, codec):
+def _encode_string(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, type(''))
     _check_size(ts, aval)
     _check_pattern(ts, aval)
     return _format_encode(ts, aval)
 
 
-def _decode_string(ts: SymbolTableField, sval, codec):
+def _decode_string(ts: SymbolTableField, sval, codec: 'Codec'):
     aval = _format_decode(ts, sval)
     _check_type(ts, aval, type(''))
     _check_size(ts, aval)
     return _check_pattern(ts, aval)
 
 
-def _encode_enumerated(ts: SymbolTableField, aval, codec):  # pylint: disable=R1710
+def _encode_enumerated(ts: SymbolTableField, aval, codec: 'Codec'):  # pylint: disable=R1710
     # TODO: Serialization
     _check_type(ts, aval, type(next(iter(ts.eMap))))
     if aval in ts.eMap:
@@ -229,7 +229,7 @@ def _encode_enumerated(ts: SymbolTableField, aval, codec):  # pylint: disable=R1
     raise_error(f'{td.BaseType}: {aval} is not a valid {td.TypeName}')
 
 
-def _decode_enumerated(ts: SymbolTableField, sval, codec):  # pylint: disable=R1710
+def _decode_enumerated(ts: SymbolTableField, sval, codec: 'Codec'):  # pylint: disable=R1710
     _check_type(ts, sval, type(next(iter(ts.dMap))))
     if sval in ts.dMap:
         return ts.dMap[sval]
@@ -237,7 +237,7 @@ def _decode_enumerated(ts: SymbolTableField, sval, codec):  # pylint: disable=R1
     raise_error(f'{td.BaseType}: {sval} is not a valid {td.TypeName}')
 
 
-def _encode_choice(ts: SymbolTableField, val, codec):
+def _encode_choice(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, dict)
     if len(val) != 1:
         _bad_choice(ts, val)
@@ -249,7 +249,7 @@ def _encode_choice(ts: SymbolTableField, val, codec):
     return {k: codec.encode(f.FieldType, v)}
 
 
-def _decode_choice(ts: SymbolTableField, val, codec):  # Map Choice:  val == {key: value}
+def _decode_choice(ts: SymbolTableField, val, codec: 'Codec'):  # Map Choice:  val == {key: value}
     _check_type(ts, val, dict)
     if len(val) != 1:
         _bad_choice(ts, val)
@@ -262,7 +262,7 @@ def _decode_choice(ts: SymbolTableField, val, codec):  # Map Choice:  val == {ke
     return {k: codec.decode(f.FieldType, v)}
 
 
-def _encode_maprec(ts: SymbolTableField, aval, codec):
+def _encode_maprec(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, dict)
     sval = ts.EncType()
     assert isinstance(sval, (list, dict))
@@ -294,7 +294,7 @@ def _encode_maprec(ts: SymbolTableField, aval, codec):
     return sval
 
 
-def _decode_maprec(ts: SymbolTableField, sval, codec):
+def _decode_maprec(ts: SymbolTableField, sval, codec: 'Codec'):
     _check_type(ts, sval, ts.EncType)
     val = sval
     if ts.EncType == dict:
@@ -329,7 +329,7 @@ def _decode_maprec(ts: SymbolTableField, sval, codec):
     return aval
 
 
-def _encode_array(ts: SymbolTableField, aval, codec):
+def _encode_array(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, list)
     sval = list()
     extra = len(aval) > len(ts.Fld)
@@ -357,7 +357,7 @@ def _encode_array(ts: SymbolTableField, aval, codec):
     return _format_encode(ts, sval)
 
 
-def _decode_array(ts: SymbolTableField, sval, codec):  # Ordered list of types, returned as a list
+def _decode_array(ts: SymbolTableField, sval, codec: 'Codec'):  # Ordered list of types, returned as a list
     val = _format_decode(ts, sval)
     _check_type(ts, val, list)
     aval = list()
@@ -386,26 +386,26 @@ def _decode_array(ts: SymbolTableField, sval, codec):  # Ordered list of types, 
     return aval
 
 
-def _encode_array_of(ts: SymbolTableField, val, codec):
+def _encode_array_of(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, list)
     _check_size(ts, val)
     return [codec.encode(ts.TypeOpts['vtype'], v) for v in val]
 
 
-def _decode_array_of(ts: SymbolTableField, val, codec):
+def _decode_array_of(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, list)
     _check_size(ts, val)
     return [codec.decode(ts.TypeOpts['vtype'], v) for v in val]
 
 
-def _encode_map_of(ts: SymbolTableField, aval, codec):
+def _encode_map_of(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, dict)
     _check_size(ts, aval)
     to = ts.TypeOpts
     return {codec.encode(to['ktype'], k): codec.encode(to['vtype'], v) for k, v in aval.items()}
 
 
-def _decode_map_of(ts: SymbolTableField, sval, codec):
+def _decode_map_of(ts: SymbolTableField, sval, codec: 'Codec'):
     _check_type(ts, sval, dict)
     _check_size(ts, sval)
     return {k: codec.decode(ts.TypeOpts['vtype'], v) for k, v in sval.items()}

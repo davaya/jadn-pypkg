@@ -47,7 +47,24 @@ class JidlConvert(BasicConvert, unittest.TestCase):
         self.assertEqual(jadn.canonicalize(schema), jadn.canonicalize(schema_new))
 
 
-# TODO: Read formats
+# TODO: Read formats, compare to expected valid schema
+class CddlConvert(BasicConvert, unittest.TestCase):
+    def _convert(self, schema):
+        fmt = jadn.convert.ConversionFormats.CDDL
+        cddl_doc = jadn.convert.table_dumps(schema, fmt)
+        # schema_new = jadn.convert.table_loads(cddl_doc, fmt)
+        # self.maxDiff = None
+        # self.assertEqual(jadn.canonicalize(schema), jadn.canonicalize(schema_new))
+
+
+class JsonConvert(BasicConvert, unittest.TestCase):
+    def _convert(self, schema):
+        json_doc = jadn.translate.json_schema_dumps(schema)
+        # schema_new = jadn.convert.table_loads(cddl_doc, fmt)
+        # self.maxDiff = None
+        # self.assertEqual(jadn.canonicalize(schema), jadn.canonicalize(schema_new))
+
+
 class MarkdownConvert(BasicConvert, unittest.TestCase):
     def _convert(self, schema):
         fmt = jadn.convert.ConversionFormats.MarkDown
@@ -57,14 +74,15 @@ class MarkdownConvert(BasicConvert, unittest.TestCase):
         # self.assertEqual(jadn.canonicalize(schema), jadn.canonicalize(schema_new))
 
 
-class CddlConvert(BasicConvert, unittest.TestCase):
+'''
+class XsdConvert(BasicConvert, unittest.TestCase):
     def _convert(self, schema):
-        fmt = jadn.convert.ConversionFormats.CDDL
-        cddl_doc = jadn.convert.table_dumps(schema, fmt)
-        # schema_new = jadn.convert.table_loads(cddl_doc, fmt)
+        fmt = jadn.convert.ConversionFormats.XSD
+        xsd_doc = jadn.convert.table_dumps(schema, fmt)
+        # schema_new = jadn.convert.table_loads(markdown_doc, fmt)
         # self.maxDiff = None
         # self.assertEqual(jadn.canonicalize(schema), jadn.canonicalize(schema_new))
-
+'''
 
 if __name__ == '__main__':
     unittest.main()

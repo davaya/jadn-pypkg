@@ -3,33 +3,34 @@ import binascii
 import string
 
 from ipaddress import IPv4Address, IPv6Address
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Tuple
 from ..definitions import FORMAT_SERIALIZE
 
-FormatTable = Dict[str, Dict[str, Callable[[Any], bool]]]
+FormatFunction = Callable[[Any], Any]
+FormatTable = Dict[str, Dict[str, Tuple[FormatFunction, FormatFunction]]]
 # TODO: Convert a2s_ipvX_net and s2a_ipvX_net functions to use ipaddress.IPvXNetwork
 
 
-# Return serialization functions for the specified format keyword and data type
-def get_format_encode_function(format_table: FormatTable, base_type: str, format_kw: str) -> Callable[[Any], Any]:
-    return _codec_function(format_table, base_type, format_kw, 0)
+def _format_pass(val: Any) -> Any:
+    return val
 
 
-def get_format_decode_function(format_table: FormatTable, base_type: str, format_kw: str) -> Callable[[Any], Any]:
-    return _codec_function(format_table, base_type, format_kw, 1)
-
-
-def _codec_function(format_table: FormatTable, base_type: str, format_kw: str, direction: int) -> Callable[[Any], Any]:
+def _codec_function(format_table: FormatTable, base_type: str, format_kw: str, direction: int) -> FormatFunction:
     try:
         if not format_kw:
-            format_kw = {'Binary': 'b', 'Number': 'f64'}[base_type]   # Set default format for type if one exists
+            format_kw = {'Binary': 'b', 'Number': 'f64'}[base_type]  # Set default format for type if one exists
         return format_table[base_type][format_kw][direction]
     except KeyError:
         return _format_pass
 
 
-def _format_pass(val: Any) -> Any:
-    return val
+# Return serialization functions for the specified format keyword and data type
+def get_format_encode_function(format_table: FormatTable, base_type: str, format_kw: str) -> FormatFunction:
+    return _codec_function(format_table, base_type, format_kw, 0)
+
+
+def get_format_decode_function(format_table: FormatTable, base_type: str, format_kw: str) -> FormatFunction:
+    return _codec_function(format_table, base_type, format_kw, 1)
 
 
 # Binary to String, String to Binary conversion functions
@@ -49,7 +50,9 @@ def b2s_base64url(bval: bytes) -> str:      # Convert from binary to base64url s
 
 
 def s2b_base64url(sval: str) -> bytes:      # Convert from base64url string to binary
-    v = sval + ((4 - len(sval) % 4) % 4)*'='          # Pad b64 string out to a multiple of 4 characters
+    v = sval
+    if mod := len(sval) % 4:  # Pad b64 string out to a multiple of 4 characters
+        v = f"{sval}{'=' * (4-mod)}"
     if set(v) - set(string.ascii_letters + string.digits + '-_='):  # Python 2 doesn't support Validate
         raise TypeError('base64decode: bad character')
     return base64.b64decode(str(v), altchars=b'-_')
@@ -135,7 +138,7 @@ FORMAT_CONVERT_NUMBER_FUNCTIONS = {
 
 
 # Create a table listing the serialization functions for each format keyword
-def json_format_codecs():  # Return table of JSON format serialization functions
+def json_format_codecs() -> Dict[str, Dict[str, Tuple[FormatFunction, FormatFunction]]]:  # Return table of JSON format serialization functions
     # Ensure code is in sync with JADN definitions
     assert set(FORMAT_SERIALIZE) == \
            set(FORMAT_CONVERT_BINARY_FUNCTIONS) |\

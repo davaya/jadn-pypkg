@@ -181,6 +181,7 @@ def get_enum_items(tdef: list, topts: dict, types: dict) -> list:
 
 
 __all__ = [
+    'get_enum_items',
     'strip_comments',
     'simplify'
 ]

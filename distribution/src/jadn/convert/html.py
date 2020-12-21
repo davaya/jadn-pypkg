@@ -2,13 +2,11 @@ import re
 import json
 
 from datetime import datetime
-from lxml import html
 from typing import Generator, NoReturn, Tuple, Union
-from xml.dom import minidom
+from lxml import html
+from .utils import DocHTML
 from ..definitions import Fields, ItemID, ItemDesc, FieldID, INFO_ORDER, TypeDefinition
 from ..utils import cleanup_tagid, fielddef2jadn, jadn2fielddef, jadn2typestr, typestr2jadn
-from .utils import HtmlTag
-# TODO: remove lxml??
 """
 Convert JADN schema to and from HTML format
 
@@ -52,81 +50,61 @@ jHdesc:   Description
 
 # Convert JADN to HTML
 def html_dumps(schema: dict) -> str:
-    try:
-        title = schema['info']['title']
-    except KeyError:
-        title = 'JADN Schema'
-
     # Make initial tree
-    doc = HtmlTag('html', HtmlTag('head', [
-        HtmlTag('meta', charset='UTF-8'),
-        HtmlTag('title', title),
-        HtmlTag('link', rel='stylesheet', href='css/dtheme.css', type='text/css')
-    ]), lang='en')
-    body = HtmlTag('body', HtmlTag('h2', 'Schema'))
+    doc, tag = DocHTML('<!DOCTYPE html>', lang='en').context()
 
-    # Add meta elements if present
-    if info := schema.get('info', None):
-        m_html = HtmlTag('div', **{'class': 'tBody'})
-        mlist = [k for k in INFO_ORDER if k in info]
-        for k in mlist + list({*info} - {*mlist}):
-            m_html.append(HtmlTag('div', [
-                HtmlTag('div', f'{k}:', **{'class': 'tCell jKey'}),
-                HtmlTag('div', json.dumps(info[k]), **{'class': 'tCell jVal'})
-            ], **{'class': 'tRow'}))
-        # top-level element of the metadata table
-        body.append(HtmlTag('div', m_html, **{'class': 'tTable jinfo'}))
+    with tag('head'):
+        tag('meta', charset='UTF-8')
+        tag('title', schema.get('info', {}).get('title', 'JADN Schema'))
+        tag('link', rel='stylesheet', href='css/dtheme.css', type='text/css')
 
-    # Add type definitions
-    for tdef in schema['types']:
-        tdef = TypeDefinition(*tdef)
-        d_html = HtmlTag('div',  # top-level element of a type definition
-            HtmlTag('div', [
-                HtmlTag('div', [  # container for type definition column
-                    HtmlTag('div', tdef.TypeName, **{'class': 'jTname'}),
-                    HtmlTag('div', f' = {jadn2typestr(tdef.BaseType, tdef.TypeOptions)}', **{'class': 'jTstr'})
-                ], **{'class': 'jTdef'}),
-                HtmlTag('div', tdef.TypeDesc or '', **{'class': 'jTdesc'})
-            ], **{'class': 'tCaption'}),
-            **{'class': 'tTable jType'}
-        )
+    with tag('body'):
+        tag('h2', 'Schema')
 
-        if len(tdef) > Fields:
-            field_head = HtmlTag('div', [
-                HtmlTag('div', 'ID', **{'class': 'tHCell jHid'}),
-                HtmlTag('div', 'Name', **{'class': 'tHCell jHname'})
-            ], **{'class': 'tHead'})
-            if tdef.Fields and len(tdef.Fields[0]) > ItemDesc + 1:
-                field_head.append(
-                    HtmlTag('div', 'Type', **{'class': 'tHCell jHstr'}),
-                    HtmlTag('div', '#', **{'class': 'tHCell jHmult'})
-                )
-            field_head.append(HtmlTag('div', 'Description', **{'class': 'tHCell jHdesc'}))
-            d_html.append(field_head)
+        # Add meta elements if present
+        if info := schema.get('info', None):
+            with tag('div', klass='tBody'):
+                mlist = [k for k in INFO_ORDER if k in info]
+                for k in mlist + list({*info} - {*mlist}):
+                    with tag('div', klass='tRow'):
+                        tag('div', f'{k}:', klass='tCell jKey')
+                        tag('div', json.dumps(info[k]), klass='tCell jVal')
+                # top-level element of the metadata table
+                tag('div', klass='tTable jinfo')
 
-            fields = HtmlTag('div', **{'class': 'tBody'})
-            for fdef in tdef.Fields:
-                field_row = HtmlTag('div', **{'class': 'tRow'})
-                fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, [*tdef])
-                if len(tdef.Fields[0]) > ItemDesc + 1:
-                    field_row.append(
-                        HtmlTag('div', str(fdef[FieldID]), **{'class': 'tCell jFid'}),
-                        HtmlTag('div', fname, **{'class': 'tCell jFname'}),
-                        HtmlTag('div', ftyperef, **{'class': 'tCell jFstr'}),
-                        HtmlTag('div', fmult, **{'class': 'tCell jFmult'})
-                    )
-                else:
-                    field_row.append(
-                        HtmlTag('div', str(fdef[ItemID]), **{'class': 'tCell jFid'}),
-                        HtmlTag('div', fname, **{'class': 'tCell jFname'})
-                    )
-                field_row.append(HtmlTag('div', fdesc, **{'class': 'tCell jFdesc'}))
-                fields.append(field_row)
-            d_html.append(fields)
-        body.append(d_html)
-    doc.append(body)
-    tmp = '\n'.join(minidom.parseString(f'{doc}').toprettyxml().splitlines()[1:])
-    return f'<!DOCTYPE html>{tmp}'
+        # Add type definitions
+        for tdef in schema['types']:
+            tdef = TypeDefinition(*tdef)
+            with tag('div', klass='tTable jType'):  # top-level element of a type definition
+                with tag('div', klass='tCaption'):
+                    with tag('div', klass='jTdef'):  # container for type definition column
+                        tag('div', tdef.TypeName, klass='jTname')
+                        tag('div', f' = {jadn2typestr(tdef.BaseType, tdef.TypeOptions)}', klass='jTstr')
+                    tag('div', tdef.TypeDesc or '', klass='jTdesc')
+
+                if len(tdef) > Fields:
+                    with tag('div', klass='tHead'):
+                        tag('div', 'ID', klass='tHCell jHid')
+                        tag('div', 'Name', klass='tHCell jHname')
+                        if tdef.Fields and len(tdef.Fields[0]) > ItemDesc + 1:
+                            tag('div', 'Type', klass='tHCell jHstr')
+                            tag('div', '#', klass='tHCell jHmult')
+                        tag('div', 'Description', klass='tHCell jHdesc')
+
+                    with tag('div', klass='tBody'):
+                        for fdef in tdef.Fields:
+                            with tag('div', klass='tRow'):
+                                fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, [*tdef])
+                                if len(tdef.Fields[0]) > ItemDesc + 1:
+                                    tag('div', str(fdef[FieldID]), klass='tCell jFid')
+                                    tag('div', fname, klass='tCell jFname')
+                                    tag('div', ftyperef, klass='tCell jFstr')
+                                    tag('div', fmult, klass='tCell jFmult')
+                                else:
+                                    tag('div', str(fdef[ItemID]), klass='tCell jFid')
+                                    tag('div', fname, klass='tCell jFname')
+                                tag('div', fdesc, klass='tCell jFdesc')
+    return doc.getvalue(True)
 
 
 def html_dump(schema: dict, fname: Union[bytes, str, int], source='') -> NoReturn:

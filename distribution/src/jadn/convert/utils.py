@@ -1,80 +1,133 @@
 """
 Conversion utilities
 """
-from typing import Dict, List, NoReturn, Tuple, Union
+from typing import Callable, Tuple, Union
+from lxml.etree import Element, tostring  # pylint: disable=E0611
+from lxml.html import builder
 
 
-class Tag:
+class Doc:
     """
-    Tag element
+    Base class generating html/xml documents using context managers
     """
-    name: str
-    contents: Union[str, List['Tag']]
-    attrs: Dict[str, str]
-    _escapes: Dict[str, str] = {}
-    _self_closing: Tuple[str, ...] = ()
+    # Context vars
+    parent: Union[None, 'Doc.Tag']
+    # Class vars
+    init: str
+    value: None
 
-    def __init__(self, name: str, value: Union[str, 'Tag', List['Tag']] = None, **attrs: Union[int, float, str, None]):
-        self.name = name.lower()
-        self.attrs = {**attrs}
-        if self.name in self._self_closing and value:
-            raise ValueError('Self closing tag should not have a value')
-        if isinstance(value, str):
-            self.contents = self._escape_value(value)
-        elif isinstance(value, list):
-            self.contents = value
-        elif isinstance(value, Tag):
-            self.contents = [value]
-        else:
-            self.contents = []
+    def __init__(self, init: str = None, **kwargs):
+        # Context vars
+        self.parent = None
+        # Class Vars
+        self.init = init or ''
+        self.value = None
 
-    def __str__(self) -> str:
-        attrs = ' '.join(f'{k}="{v}"' if v else k for k, v in self.attrs.items())
-        attrs = f' {attrs}' if attrs else ''
-        if self._is_self_closing(self.name):
-            return f'<{self.name}{attrs} />'
+    def getvalue(self, pretty: bool = False) -> str:
+        return f"{self.init}{tostring(self.value, pretty_print=pretty).decode()}"
 
-        value = self.contents if isinstance(self.contents, str) else ''.join(f'{v}' for v in self.contents)
-        return f'<{self.name}{attrs}>{value}</{self.name}>'
+    def context(self) -> Tuple['Doc', Callable]:
+        return self, self.tag
 
-    def append(self, *value: 'Tag') -> NoReturn:
-        if self.name in self._self_closing:
-            raise ValueError('Self closing tag should not have a value')
-        if isinstance(self.contents, str):
-            raise ValueError('Cannot add to string content')
-        self.contents.extend(value)
+    def tag(self, name: str, text: str = None, **kwargs) -> 'Doc.Tag':
+        tmp = self.__class__.Tag(self, name, text, **kwargs)
+        (self.parent or self).value.append(tmp.value)
+        return tmp
 
-    def prepend(self, *value: 'Tag') -> NoReturn:
-        if self.name in self._self_closing:
-            raise ValueError('Self closing tag should not have a value')
-        if isinstance(self.contents, str):
-            raise ValueError('Cannot add to string content')
-        self.contents = [*value, *self.contents]
+    class Tag:
+        """
+        Base class for html/xml elements using context managers
+        """
+        # Context vars
+        doc: 'Doc'
+        parent: Union[None, 'Tag']
+        # Class vars
+        value: None
 
-    def _escape_value(self, val: str) -> str:
-        return ''.join(self._escapes.get(c, c) for c in val)
+        def __init__(self, doc: 'Doc', name: str, text: str = None, **kwargs):
+            # Context vars
+            self.doc = doc
+            self.parent = None
+            # Class Vars
+            self.value = None
 
-    def _is_self_closing(self, tag: str) -> bool:
-        return tag in self._self_closing
+        def __enter__(self):
+            self.parent = self.doc.parent
+            self.doc.parent = self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            (self.parent or self.doc).value.append(self.value)
+            self.doc.parent = self.parent
 
 
-class HtmlTag(Tag):
+class DocHTML(Doc):
     """
-    HTML Tag element
+    class generating html documents using context managers
     """
-    _escapes = {
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&apos;'
-    }
-    _self_closing = ('area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr')
+    # Context vars
+    parent: Union[None, 'Tag']
+    # Class vars
+    init: str
+    value: builder.HTML
+
+    def __init__(self, init: str = None, **kwargs):
+        super().__init__(init, **kwargs)
+        self.value = builder.HTML(**kwargs)
+
+    class Tag(Doc.Tag):
+        # Context vars
+        doc: 'DocHTML'
+        parent: Union[None, 'Tag']
+        # Class vars
+        value: builder.E
+
+        def __init__(self, doc: 'DocHTML', name: str, text: str = None, **kwargs):
+            super().__init__(doc, name, text, **kwargs)
+            if cls := kwargs.pop('klass', None):
+                kwargs['class'] = cls
+            child = (text, ) if text else ()
+            self.value = getattr(builder, name.upper())(*child, **kwargs)
 
 
-# TODO: fill in escape and self_closing vars
-class XmlTag(Tag):
+class DocXML(Doc):
     """
-    XML Tag element
+    Base class generating xml documents using context managers
     """
-    _escapes = {}
-    _self_closing = ()
+    # Context vars
+    parent: Union[None, 'DocXML.Tag']
+    # Class vars
+    init: str
+    value: Element
+
+    def __init__(self, init: str = None, **kwargs):
+        super().__init__(init, **kwargs)
+        self.value = builder.HTML(**kwargs)
+
+    class Tag(Doc.Tag):
+        # Context vars
+        doc: 'DocXML'
+        parent: Union[None, 'Tag']
+        # Class vars
+        value: Element
+
+        def __init__(self, doc: 'DocXML', name: str, text: str = None, **kwargs):
+            super().__init__(doc, name, text, **kwargs)
+            if cls := kwargs.pop('klass', None):
+                kwargs['class'] = cls
+            self.value = Element(name, attrib=kwargs)
+            if text:
+                self.value.text = text
+
+        def __enter__(self):
+            self.parent = self.doc.parent
+            self.doc.parent = self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            (self.parent or self.doc).value.append(self.value)
+            self.doc.parent = self.parent
+
+
+__all__ = [
+    'DocHTML',
+    'DocXML'
+]

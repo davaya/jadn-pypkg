@@ -44,20 +44,21 @@ class SchemaModule:
         self.clear()
 
     def load(self) -> NoReturn:     # Validate schema, build type dependencies and external references
-        if not self.deps:           # Ignore if already loaded
-            check(self.schema)
-            self.tx = {t[TypeName]: t for t in self.schema['types']}
-            self.deps = build_deps(self.schema)
-            self.refs = defaultdict(lambda: defaultdict(set))
-            for tn in self.deps:
-                for dn in self.deps[tn].copy():     # Iterate over copy so original can be modified safely
-                    if ':' in dn:
-                        self.deps[tn].remove(dn)
-                        nsid, typename = dn.split(':', maxsplit=1)
-                        try:
-                            self.refs[self.imports[nsid]][tn].add(typename)
-                        except KeyError as e:
-                            raise_error(f'Resolve: no namespace defined for {e}')
+        if self.deps:           # Ignore if already loaded
+            return
+        check(self.schema)
+        self.tx = {t[TypeName]: t for t in self.schema['types']}
+        self.deps = build_deps(self.schema)
+        self.refs = defaultdict(lambda: defaultdict(set))
+        for tn in self.deps:
+            for dn in list(self.deps[tn]):     # Iterate over copy so original can be modified safely
+                if ':' in dn:
+                    self.deps[tn].remove(dn)
+                    nsid, typename = dn.split(':', maxsplit=1)
+                    try:
+                        self.refs[self.imports[nsid]][tn].add(typename)
+                    except KeyError as e:
+                        raise_error(f'Resolve: no namespace defined for {e}')
 
     def clear(self) -> NoReturn:
         self.used = set()
@@ -83,12 +84,17 @@ def merge_tname(tref: str, module: str, imports: Dict[str, str], nsids: dict, sy
 
 
 def merge_typedef(tdef: list, module: str, imports: Dict[str, str], nsids: dict, sys: str = '$') -> list:
-    def update_opts(opts: List[str]) -> List[str]:
-        return [x[0] + merge_tname(x[1:], module, imports, nsids, sys) if x[0] in oids else x for x in opts]
-
     oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and']]  # Options whose value is/has a type name
-    tn = merge_tname(tdef[TypeName], module, imports, nsids, sys)
-    td = [tn, tdef[BaseType], update_opts(tdef[TypeOptions]), tdef[TypeDesc]]
+
+    def update_opts(opts: List[str]) -> List[str]:
+        return [f'{x[0]}{merge_tname(x[1:], module, imports, nsids, sys)}' if x[0] in oids else x for x in opts]
+
+    td = [
+        merge_tname(tdef[TypeName], module, imports, nsids, sys),
+        tdef[BaseType],
+        update_opts(tdef[TypeOptions]),
+        tdef[TypeDesc]
+    ]
     if len(tdef) > Fields:
         new_fields = copy.deepcopy(tdef[Fields])
         if td[BaseType] != 'Enumerated':
@@ -104,13 +110,13 @@ def make_enum(sm: SchemaModule, tname: str, sys: str = '$') -> bool:
         tn = tname[1:]
         if tn not in sm.used and tn in sm.tx:
             etype = 'Enum' if tname[0] == OPTION_ID['enum'] else 'Point'
-            edef = [f'{tn}{sys}{etype}', 'Enumerated', [], '', [[f[0], f[1], ''] for f in sm.tx[tn][Fields]]]
-            sm.schema['types'].append(edef)
+            sm.schema['types'].append([f'{tn}{sys}{etype}', 'Enumerated', [], '', [[f[0], f[1], ''] for f in sm.tx[tn][Fields]]])
         return True
     return False
 
 
-def add_types(sm: SchemaModule, tname: str, sys: str = '$') -> NoReturn:  # add referenced typenames in this module to used list
+# add referenced typenames in this module to used list
+def add_types(sm: SchemaModule, tname: str, sys: str = '$') -> NoReturn:
     if {tname} - sm.used:
         sm.add_used(tname)
         try:
@@ -121,7 +127,8 @@ def add_types(sm: SchemaModule, tname: str, sys: str = '$') -> NoReturn:  # add 
                 raise_error(f'Resolve: {e} not defined in {sm.module} ({sm.source})')
 
 
-def resolve(sm: SchemaModule, types: Set[str], modules: dict, sys: str = '$') -> NoReturn:  # add referenced types from other modules to used list
+# add referenced types from other modules to used list
+def resolve(sm: SchemaModule, types: Set[str], modules: dict, sys: str = '$') -> NoReturn:
     if set(types) - sm.used:
         sm.load()
         for tn in types:

@@ -1,5 +1,5 @@
 """
-JADN Definitions
+ JADN Definitions
 
 A JSON Abstract Data Notation (JADN) file contains a list of datatype definitions.  Each type definition
 has a specified format - a list of four or five columns depending on whether the type is primitive or
@@ -167,19 +167,19 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
     0x3e: ('pointer', lambda x: x, 5),      # '>', enumeration of pointers derived from Array/Choice/Map/Record type
     0x2f: ('format', lambda x: x, 6),       # '/', semantic validation keyword, may affect serialization
     0x25: ('pattern', lambda x: x, 7),      # '%', regular expression that a string must match
-    0x79: ('minf', float, 8),  # 'y', minimum Number value
-    0x7a: ('maxf', float, 9),  # 'z', maximum Number value
-    0x7b: ('minv', int, 10),   # '{', minimum byte or text string length, Integer value, element count
-    0x7d: ('maxv', int, 11),   # '}', maximum byte or text string length, Integer value, element count
+    0x79: ('minf', float, 8),               # 'y', minimum Number value
+    0x7a: ('maxf', float, 9),               # 'z', maximum Number value
+    0x7b: ('minv', int, 10),                # '{', minimum byte or text string length, Integer value, element count
+    0x7d: ('maxv', int, 11),                # '}', maximum byte or text string length, Integer value, element count
     0x71: ('unique', lambda x: True, 12),   # 'q', ArrayOf instance must not contain duplicates
     0x2229: ('and', lambda x: x, 13),       # '∩', INTERSECTION - instance must also match referenced type (allOf)
     0x222a: ('or', lambda x: x, 14),        # '∪', UNION - instance must match at least one of the types (anyOf)
 }
 
 FIELD_OPTIONS = {
-    0x5b: ('minc', int, 15),   # '[', minimum cardinality, default = 1, 0 = field is optional
-    0x5d: ('maxc', int, 16),   # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
-    0x26: ('tagid', int, 17),  # '&', field that specifies the type of this field
+    0x5b: ('minc', int, 15),                # '[', minimum cardinality, default = 1, 0 = field is optional
+    0x5d: ('maxc', int, 16),                # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
+    0x26: ('tagid', int, 17),               # '&', field that specifies the type of this field
     0x3c: ('dir', lambda x: True, 18),      # '<', pointer enumeration treats field as a collection
     0x4b: ('key', lambda x: True, 19),      # 'K', field is a primary key for this type
     0x4c: ('link', lambda x: True, 20),     # 'L', field is a link (foreign key) to an instance of FieldType
@@ -298,7 +298,7 @@ FORMAT_SERIALIZE = {        # Data representation formats for one or more serial
     'f64': 'Number',            # IEEE 754 Double-Precision Float (default binary representation of Number type)
 }
 
-VALID_FORMATS = { **FORMAT_JS_VALIDATE, **FORMAT_VALIDATE, **FORMAT_SERIALIZE}
+VALID_FORMATS = {**FORMAT_JS_VALIDATE, **FORMAT_VALIDATE, **FORMAT_SERIALIZE}
 
 DEFAULT_CONFIG = {          # Configuration values to use if not specified in schema
     "$MaxBinary": 255,          # Maximum number of octets for Binary types

@@ -8,7 +8,7 @@ import os
 import jadn
 
 from datetime import datetime
-from typing import NoReturn, Union
+from typing import Any, NoReturn, Union
 from .definitions import (
     FieldID, FieldName, FieldDesc, FIELD_LENGTH,
     OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, VALID_FORMATS, is_builtin, has_fields
@@ -46,7 +46,7 @@ def check_typeopts(type_name: str, base_type: str, topts: dict) -> NoReturn:
         raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
 
 
-# TODO: convert to use dataclasses??
+# TODO: finish convert to use dataclasses??
 def check(schema: dict) -> dict:
     """
     Validate JADN schema against JSON schema,
@@ -104,14 +104,14 @@ def check(schema: dict) -> dict:
 
         # Full Fields -> Array, Choice, Map, Record
         if flen > FieldDesc:  # Full field, not an Enumerated item
-            for field in fields:
-                field = field if isinstance(field, GenFieldDefinition) else GenFieldDefinition(*field)
+            for field in [f if isinstance(f, GenFieldDefinition) else GenFieldDefinition(*f) for f in fields]:
                 fo, fto = jadn.ftopts_s2d(field.FieldOptions)
-                minc, maxc = (fo.get(o, 1) for o in ['minc', 'maxc'])
+                minc = fo.get('minc', 1)
+                maxc = fo.get('maxc', 1)
                 if minc < 0 or maxc < 0 or (0 < maxc < minc):
                     raise_error(f'{type_def.TypeName}/{field.FieldName} bad multiplicity {minc} {maxc}')
 
-                if tf := fo.get('tagid'):
+                if tf := fo.get('tagid', None):
                     if tf not in fids:
                         raise_error(f'{type_def.TypeName}/{field.FieldName}({field.FieldType}) choice has bad external tag {tf}')
                 if is_builtin(field.FieldType):
@@ -134,9 +134,10 @@ def analyze(schema: dict) -> dict:
     # TODO: Check for extension usages
     items = jadn.build_deps(schema)
     # out, roots = topo_sort(items)
-    meta = schema.get('info', {})
-    imports = meta.get('imports', {})
-    exports = meta.get('exports', [])
+    info = schema.get('info', {})
+    imports = info.get('imports', {})
+    exports = info.get('exports', [])
+
     defs = set(items) | set(imports)
     refs = {ns(r, imports) for i in items for r in items[i]} | set(exports)
     oids = (OPTION_ID['enum'], OPTION_ID['pointer'])
@@ -154,32 +155,33 @@ def loads(jadn_str: str) -> dict:
 
 def load(fname: Union[str, bytes, int]) -> dict:
     with open(fname, encoding='utf-8') as f:
-        schema = json.load(f)
-    return check(schema)
+        return check(json.load(f))
+
+
+def dumps_rec(val: Any, level: int = 0, indent: int = 1, strip: bool = False, nlevel: int = None) -> str:
+    if isinstance(val, (numbers.Number, type(''))):
+        return json.dumps(val)
+
+    sp2 = (level + 1) * indent * ' '
+    sep2 = ',\n' if strip else ',\n\n'
+    if isinstance(val, dict):
+        sp = level * indent * ' '
+        sep = ',\n' if level > 0 else sep2
+        lines = sep.join(f'{sp2}"{k}": {dumps_rec(val[k], level + 1, indent, strip)}' for k in val)
+        return f'{{\n{lines}\n{sp}}}'
+    if isinstance(val, list):
+        sep = ',\n' if level > 1 else sep2
+        nest = val and isinstance(val[0], list)  # Not an empty list
+        vals = [f"{sp2 if nest else ''}{dumps_rec(v, level + 1, indent, strip, level)}" for v in val]
+        if nest:
+            spn = (nlevel if nlevel else level) * indent * ' '
+            return f"[\n{sep.join(vals)}\n{spn}]"
+        return f"[{', '.join(vals)}]"
+    return '???'
 
 
 def dumps(schema: dict, strip: bool = False) -> str:
-    def _d(val: any, level: int = 0, indent: int = 1, strip: bool = False, nlevel: int = None) -> str:
-        sp = level * indent * ' '
-        sp2 = (level + 1) * indent * ' '
-        sep2 = ',\n' if strip else ',\n\n'
-        if isinstance(val, dict):
-            sep = ',\n' if level > 0 else sep2
-            lines = sep.join(f'{sp2}"{k}": {_d(val[k], level + 1, indent, strip)}' for k in val)
-            return f'{{\n{lines}\n{sp}}}'
-        if isinstance(val, list):
-            sep = ',\n' if level > 1 else sep2
-            nest = val and isinstance(val[0], list)  # Not an empty list
-            vals = [f"{sp2 if nest else ''}{_d(v, level + 1, indent, strip, level)}" for v in val]
-            if nest:
-                spn = (nlevel if nlevel else level) * indent * ' '
-                return f'[\n{sep.join(vals)}\n{spn}]'
-            return f"[{', '.join(vals)}]"
-        if isinstance(val, (numbers.Number, type(''))):
-            return json.dumps(val)
-        return '???'
-
-    return _d(schema, strip=strip)
+    return dumps_rec(schema, strip=strip)
 
 
 def dump(schema: dict, fname: Union[str, bytes, int], source: str = '', strip: bool = False) -> NoReturn:
