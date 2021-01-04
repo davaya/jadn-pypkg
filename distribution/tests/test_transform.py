@@ -1,4 +1,7 @@
-
+"""
+Test JADN Schema transformations
+Transformation -> Reduce Complexity
+"""
 from unittest import main, TestCase
 
 import jadn
@@ -54,7 +57,6 @@ class StripComments(TestCase):
 
 
 class SimplifyExtensions(TestCase):
-
     def do_simplify_test(self, extension_schema, simplified_schema, extensions=EXTENSIONS):
         jadn.check(extension_schema)
         jadn.check(simplified_schema)

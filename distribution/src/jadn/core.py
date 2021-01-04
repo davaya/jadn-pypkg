@@ -36,6 +36,7 @@ def check_typeopts(type_name: str, base_type: str, topts: dict) -> NoReturn:
         raise_error(f'Unsupported type option {type_name} ({base_type}): {uo}')
     if 'maxv' in topts and 'minv' in topts and topts['maxv'] < topts['minv']:
         raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minv"]}..{topts["maxv"]}]')
+
     # TODO: if format defines array, add minv/maxv (prevents adding default max)
     if fmt := topts.get('format'):
         if fmt not in VALID_FORMATS or base_type != VALID_FORMATS[fmt]:

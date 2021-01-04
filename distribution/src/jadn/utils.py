@@ -7,7 +7,7 @@ import copy
 import re
 
 from functools import reduce
-from typing import Any, Dict, List, NoReturn, Tuple, Union
+from typing import Any, Dict, List, NoReturn, Set, Tuple, Union
 from .definitions import (
     TypeName, BaseType, TypeOptions, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
     DEFAULT_CONFIG, TYPE_OPTIONS, FIELD_OPTIONS, OPTION_ID, OPTION_TYPES, is_builtin, has_fields, TypeDefinition,
@@ -80,28 +80,31 @@ def dlist(src: dict) -> dict:
     return src
 
 
-def build_deps(schema: dict) -> Dict[str, List[str]]:
+def build_deps(schema: dict) -> Dict[str, Set[str]]:
     """
     Build a Dependency dict: {TypeName: {Dep1, Dep2, ...}}
     """
-    def get_refs(tdef: list) -> list:         # Return all type references from a type definition
-        # Options whose value is/has a type name
-        oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and'], OPTION_ID['or']]
-        oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]                       # Options that enumerate fields
-        refs = [to[1:] for to in tdef[TypeOptions] if to[0] in oids and not is_builtin(to[1:])]
-        refs += [to for to in tdef[TypeOptions] if to[0] in oids2]
+    # Options whose value is/has a type name
+    oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and'], OPTION_ID['or']]
+    # Options that enumerate fields
+    oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]
+
+    def get_refs(tdef: list) -> Set[str]:  # Return all type references from a type definition
+        refs = {to[1:] for to in tdef[TypeOptions] if to[0] in oids and not is_builtin(to[1:])}
+        refs.update([to for to in tdef[TypeOptions] if to[0] in oids2])
         if has_fields(tdef[BaseType]):
             for f in tdef[Fields]:
                 if not is_builtin(f[FieldType]):
-                    refs.append(f[FieldType])                              # Add reference to type name
+                    # Add reference to type name
+                    refs.add(f[FieldType])
                 # Get refs from type opts in field (extension)
-                refs += get_refs(['', f[FieldType], f[FieldOptions], ''])
+                refs.update(get_refs(['', f[FieldType], f[FieldOptions], '']))
         return refs
 
     return {t[TypeName]: get_refs(t) for t in schema['types']}
 
 
-def topo_sort(items: List[Tuple[str, List[str]]]) -> Tuple[list, set]:
+def topo_sort(items: List[Tuple[str, List[str]]]) -> Tuple[List[str], Set[str]]:
     """
     Topological sort with locality
     Sorts a list of (item: (dependencies)) pairs so that 1) all dependency items are listed before the parent item,
@@ -109,7 +112,7 @@ def topo_sort(items: List[Tuple[str, List[str]]]) -> Tuple[list, set]:
     Returns the sorted list of items and a list of root items.  A single root indicates a fully-connected hierarchy;
     multiple roots indicate disconnected items or hierarchies, and no roots indicate a dependency cycle.
     """
-    out = []
+    out: List[str] = []
     deps = {i[0]: i[1] for i in items}  # TODO: update for items dict
 
     def walk_tree(it: str) -> NoReturn:
@@ -118,7 +121,7 @@ def topo_sort(items: List[Tuple[str, List[str]]]) -> Tuple[list, set]:
                 walk_tree(i)
                 out.append(i)
 
-    roots = {i[0] for i in items} - {*[i[1] for i in items]}
+    roots = {i[0] for i in items} - {i[1] for i in items}
     for item in roots:
         walk_tree(item)
         out.append(item)
@@ -142,13 +145,13 @@ def topts_s2d(olist: Union[List[OPTION_TYPES], Tuple[OPTION_TYPES, ...]], frange
     Convert list of type definition option strings to options dictionary
     """
     assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
+    topts = {o for o in olist if ord(o[0]) in TYPE_OPTIONS}
+    if uopts := {*olist} - topts:
+        raise_error(f"Unknown type options: {','.join(uopts)}")
     opts = {}
-    for o in olist:
-        try:
-            k = TYPE_OPTIONS[ord(o[0])]
-            opts[k[0]] = k[1](o[1:])
-        except KeyError:
-            raise_error(f'Unknown type option: {o}')
+    for o in topts:
+        k, v, _ = TYPE_OPTIONS[ord(o[0])]
+        opts[k] = v(o[1:])
     return opts
 
 
@@ -162,18 +165,21 @@ def ftopts_s2d(olist: Union[List[OPTION_TYPES], Tuple[OPTION_TYPES, ...]]) -> Tu
     topts = {}
     for o in olist:
         try:
-            k = FIELD_OPTIONS[ord(o[0])]
-            fopts[k[0]] = k[1](o[1:])
+            k, v, _ = FIELD_OPTIONS[ord(o[0])]
+            fopts[k] = v(o[1:])
         except KeyError:
             topts.update(topts_s2d([o]))
     return fopts, topts
 
 
 def opts_d2s(to: dict) -> List[str]:
-    try:
-        return [OPTION_ID[k] + ('' if v is True else str(v)) for k, v in to.items()]
-    except KeyError:
-        raise_error(f'Unknown option tag {to}')
+    rtn: List[str] = []
+    for k, v in to.items():
+        try:
+            rtn.append(f"{OPTION_ID[k]}{'' if v is True else str(v)}")
+        except KeyError:
+            raise_error(f'Unknown option tag {k}')
+    return rtn
 
 
 def opts_sort(olist: Union[List[OPTION_TYPES], Tuple[OPTION_TYPES, ...]]) -> NoReturn:
@@ -316,10 +322,9 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
 
     opts = topts_s2d(topts)
     extra = '.ID' if opts.pop('id', None) else ''   # SIDE EFFECT: remove known options from opts.
-    if tname == 'ArrayOf':
-        extra += f"({_kvstr(opts.pop('vtype'))})"
-    elif tname == 'MapOf':
-        extra += f"({_kvstr(opts.pop('ktype'))}, {_kvstr(opts.pop('vtype'))})"
+    if tname in ('ArrayOf', 'MapOf'):
+        extra += f"({_kvstr(opts.pop('ktype'))}, " if tname == 'MapOf' else '('
+        extra += f"{_kvstr(opts.pop('vtype'))})"
 
     if v := opts.pop('enum', None):
         extra += f'(Enum[{v}])'
@@ -351,24 +356,24 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
 def jadn2fielddef(fdef: list, tdef: list) -> Tuple[str, str, str, str]:
     idtype = tdef[BaseType] == 'Array' or get_optx(tdef[TypeOptions], 'id') is not None
     fname = '' if idtype else fdef[FieldName]
-    fdesc = fdef[FieldName] + ':: ' if idtype else ''
-    if tdef[BaseType] == 'Enumerated':
-        fdesc += fdef[ItemDesc]
-        ftyperef, fmult = '', ''
-    else:
-        fdesc += fdef[FieldDesc]
+    fdesc = f'{fdef[FieldName]}:: ' if idtype else ''
+    is_enum = tdef[BaseType] == 'Enumerated'
+    fdesc += fdef[ItemDesc if is_enum else FieldDesc]
+    ftyperef = ''
+    fmult = ''
+
+    if not is_enum:
         fo, fto = ftopts_s2d(fdef[FieldOptions])
         fname += '/' if 'dir' in fo else ''
-        tagid = fo.get('tagid')
         tf = ''
-        if tagid:
-            tf = {f[FieldID]: f[FieldName] for f in tdef[Fields]}[tagid]
-            tf = tf if tf else str(tagid)
-            tf = f'(TagId[{tf}])'
-        ft = jadn2typestr(fdef[FieldType] + tf, opts_d2s(fto))
+        if tagid := fo.get('tagid', None):
+            tf = [f[FieldName] for f in tdef[Fields] if f[FieldID] == tagid][0]
+            tf = f'(TagId[{tf if tf else tagid}])'
+        ft = jadn2typestr(f'{fdef[FieldType]}{tf}', opts_d2s(fto))
         ftyperef = f'Key({ft})' if 'key' in fo else f'Link({ft})' if 'link' in fo else ft
-        minc, maxc = fo.get('minc', 1), fo.get('maxc', 1)
-        fmult = '1' if minc == 1 and maxc == 1 else str(minc) + '..' + ('*' if maxc == 0 else str(maxc))
+        minc = fo.get('minc', 1)
+        maxc = fo.get('maxc', 1)
+        fmult = '1' if minc == 1 and maxc == 1 else f"{minc}..{'*' if maxc == 0 else maxc}"
     return fname, ftyperef, fmult, fdesc
 
 
@@ -385,13 +390,13 @@ def fielddef2jadn(fid: int, fname: str, fstr: str, fmult: str, fdesc: str) -> li
         if fname.endswith('/'):
             fo.update({'dir': True})
             fname = fname.rstrip('/')
-        if m := re.match(r'^(\d+)\.\.(\d+|\*)|(\d+)$', fmult) if fmult else None:
-            if m.group(3):
-                minc = int(m.group(3))
-                maxc = minc
+        if m := re.match(r'^(\d+)(?:\.\.(\d+|\*))?$', fmult) if fmult else None:
+            groups = m.groups()
+            if maxc := groups[1]:
+                minc = int(groups[0])
+                maxc = 0 if maxc == '*' else int(maxc)
             else:
-                minc = int(m.group(1))
-                maxc = 0 if m.group(2) == '*' else int(m.group(2))
+                minc = maxc = int(groups[0])
             fo.update({'minc': minc} if minc != 1 else {})
             fo.update({'maxc': maxc} if maxc != 1 else {})
         elif fmult:
@@ -411,7 +416,8 @@ def fielddef2jadn(fid: int, fname: str, fstr: str, fmult: str, fdesc: str) -> li
 
 def get_config(meta: dict) -> dict:
     config = dict(DEFAULT_CONFIG)
-    config.update(meta['config'] if meta and 'config' in meta else {})
+    if meta:
+        config.update(meta.get('config', {}))
     return config
 
 

@@ -1,4 +1,6 @@
-
+"""
+Test JADN Codec
+"""
 import json
 import os
 import binascii

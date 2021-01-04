@@ -56,11 +56,8 @@ schema.update({                 # JSON Schema conversion needs root type (Person
 js_schema = jadn.translate.json_schema_dumps(schema)
 print(js_schema)
 
-"""
-Validate and serialize test data
-"""
 
-
+# Validate and serialize test data
 def print_encoded_data(codec):
     data = [
         {'id': 14912, 'name': 'Joe'},                                       # Valid "Person" record
