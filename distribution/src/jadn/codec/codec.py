@@ -66,10 +66,10 @@ def _bad_choice(ts: SymbolTableField, val: Any) -> NoReturn:
 def _bad_value(ts: SymbolTableField, val: Any, fld: GenFieldDefinition = None) -> NoReturn:
     td = ts.TypeDef
     if fld is not None:
-        raise_error(f'{td.TypeName}({td.BaseType}: missing required field "{fld.FieldName}": {val}')
+        raise_error(f'{td.TypeName}({td.BaseType}): missing required field "{fld.FieldName}": {val}')
     else:
         v = next(iter(val)) if isinstance(val, dict) else val
-        raise_error(f'{td.TypeName}({td.BaseType}: bad value: {v}')
+        raise_error(f'{td.TypeName}({td.BaseType}): bad value: {v}')
 
 
 # fail forces rejection of boolean vals for number types
