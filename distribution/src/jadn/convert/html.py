@@ -1,13 +1,12 @@
 import re
 import json
+
 from datetime import datetime
-from lxml import etree, html
-from lxml.html.builder import *
-from jadn.definitions import *
-from jadn import raise_error
-from jadn import jadn2typestr, typestr2jadn, jadn2fielddef, fielddef2jadn, cleanup_tagid, get_optx
-
-
+from typing import Generator, NoReturn, Tuple, Union
+from lxml import html
+from .utils import DocHTML
+from ..definitions import Fields, ItemID, ItemDesc, FieldID, INFO_ORDER, TypeDefinition
+from ..utils import cleanup_tagid, fielddef2jadn, jadn2fielddef, jadn2typestr, typestr2jadn
 """
 Convert JADN schema to and from HTML format
 
@@ -48,89 +47,80 @@ jHmult:   Multiplicity
 jHdesc:   Description
 """
 
-"""
-Convert JADN to HTML
-"""
 
-def html_dumps(schema):
-    try:
-        title = schema['info']['title']
-    except KeyError:
-        title = 'JADN Schema'
-    doc = HTML(ATTR({'lang': 'en'}),        # Make initial etree
-        HEAD(
-            META(charset='UTF-8'),
-            TITLE(title),
-            LINK(rel='stylesheet', href='css/dtheme.css', type='text/css')
-        ),
-        BODY(
-            H2('Schema')
-        )
-    )
-    body = doc.find('body')
+# Convert JADN to HTML
+def html_dumps(schema: dict) -> str:
+    # Make initial tree
+    doc, tag = DocHTML('<!DOCTYPE html>', lang='en').context()
 
-    if 'info' in schema:                    # Add meta elements if present
-        het = etree.Element('div', {'class': 'tTable jinfo'})       # top-level element of the metadata table
-        he2 = etree.SubElement(het, 'div', {'class': 'tBody'})
-        mlist = [k for k in INFO_ORDER if k in schema['info']]
-        for k in mlist + list(set(schema['info']) - set(mlist)):
-            he3 = etree.SubElement(he2, 'div', {'class': 'tRow'})
-            etree.SubElement(he3, 'div', {'class': 'tCell jKey'}).text = k + ':'
-            etree.SubElement(he3, 'div', {'class': 'tCell jVal'}).text = json.dumps(schema['info'][k])
-        body.append(het)
+    with tag('head'):
+        tag('meta', charset='UTF-8')
+        tag('title', schema.get('info', {}).get('title', 'JADN Schema'))
+        tag('link', rel='stylesheet', href='css/dtheme.css', type='text/css')
 
-    for tdef in schema['types']:            # Add type definitions
-        het = etree.Element('div', {'class': 'tTable jType'})       # top-level element of a type definition
-        he2 = etree.SubElement(het, 'div', {'class': 'tCaption'})
-        he3 = etree.SubElement(he2, 'div', {'class': 'jTdef'})      # container for type definition column
-        etree.SubElement(he3, 'div', {'class': 'jTname'}).text = tdef[TypeName]
-        etree.SubElement(he3, 'div', {'class': 'jTstr'}).text = ' = ' + jadn2typestr(tdef[BaseType], tdef[TypeOptions])
-        etree.SubElement(he2, 'div', {'class': 'jTdesc'}).text = tdef[TypeDesc] if tdef[TypeDesc] else ''
-        if len(tdef) > Fields:
-            he2 = etree.SubElement(het, 'div', {'class': 'tHead'})
-            etree.SubElement(he2, 'div', {'class': 'tHCell jHid'}).text = 'ID'
-            etree.SubElement(he2, 'div', {'class': 'tHCell jHname'}).text = 'Name'
-            if tdef[Fields] and len(tdef[Fields][0]) > ItemDesc + 1:
-                etree.SubElement(he2, 'div', {'class': 'tHCell jHstr'}).text = 'Type'
-                etree.SubElement(he2, 'div', {'class': 'tHCell jHmult'}).text = '#'
-            etree.SubElement(he2, 'div', {'class': 'tHCell jHdesc'}).text = 'Description'
-            he2 = etree.SubElement(het, 'div', {'class': 'tBody'})
-            for fdef in tdef[Fields]:
-                he3 = etree.SubElement(he2, 'div', {'class': 'tRow'})
-                fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, tdef)
-                if len(tdef[Fields][0]) > ItemDesc + 1:
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFid'}).text = str(fdef[FieldID])
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFname'}).text = fname
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFstr'}).text = ftyperef
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFmult'}).text = fmult
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdesc
-                else:
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFid'}).text = str(fdef[ItemID])
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFname'}).text = fname
-                    etree.SubElement(he3, 'div', {'class': 'tCell jFdesc'}).text = fdesc
-        body.append(het)
+    with tag('body'):
+        tag('h2', 'Schema')
 
-    return html.tostring(doc, pretty_print=True, doctype='<!DOCTYPE html>').decode('utf-8')
+        # Add meta elements if present
+        if info := schema.get('info', None):
+            with tag('div', klass='tBody'):
+                mlist = [k for k in INFO_ORDER if k in info]
+                for k in mlist + list({*info} - {*mlist}):
+                    with tag('div', klass='tRow'):
+                        tag('div', f'{k}:', klass='tCell jKey')
+                        tag('div', json.dumps(info[k]), klass='tCell jVal')
+                # top-level element of the metadata table
+                tag('div', klass='tTable jinfo')
+
+        # Add type definitions
+        for tdef in schema['types']:
+            tdef = TypeDefinition(*tdef)
+            with tag('div', klass='tTable jType'):  # top-level element of a type definition
+                with tag('div', klass='tCaption'):
+                    with tag('div', klass='jTdef'):  # container for type definition column
+                        tag('div', tdef.TypeName, klass='jTname')
+                        tag('div', f' = {jadn2typestr(tdef.BaseType, tdef.TypeOptions)}', klass='jTstr')
+                    tag('div', tdef.TypeDesc or '', klass='jTdesc')
+
+                if len(tdef) > Fields:
+                    with tag('div', klass='tHead'):
+                        tag('div', 'ID', klass='tHCell jHid')
+                        tag('div', 'Name', klass='tHCell jHname')
+                        if tdef.Fields and len(tdef.Fields[0]) > ItemDesc + 1:
+                            tag('div', 'Type', klass='tHCell jHstr')
+                            tag('div', '#', klass='tHCell jHmult')
+                        tag('div', 'Description', klass='tHCell jHdesc')
+
+                    with tag('div', klass='tBody'):
+                        for fdef in tdef.Fields:
+                            with tag('div', klass='tRow'):
+                                fname, ftyperef, fmult, fdesc = jadn2fielddef(fdef, [*tdef])
+                                if len(tdef.Fields[0]) > ItemDesc + 1:
+                                    tag('div', str(fdef[FieldID]), klass='tCell jFid')
+                                    tag('div', fname, klass='tCell jFname')
+                                    tag('div', ftyperef, klass='tCell jFstr')
+                                    tag('div', fmult, klass='tCell jFmult')
+                                else:
+                                    tag('div', str(fdef[ItemID]), klass='tCell jFid')
+                                    tag('div', fname, klass='tCell jFname')
+                                tag('div', fdesc, klass='tCell jFdesc')
+    return doc.getvalue(True)
 
 
-def html_dump(schema, fname, source=''):
+def html_dump(schema: dict, fname: Union[bytes, str, int], source='') -> NoReturn:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
-            f.write('<! Generated from ' + source + ', ' + datetime.ctime(datetime.now()) + '>\n\n')
+            f.write(f'<! Generated from {source}, {datetime.ctime(datetime.now())}>\n\n')
         f.write(html_dumps(schema))
 
 
-"""
-Convert HTML to JADN
-"""
-
-
-def line2jadn(lt, tdef):
-    def default(x, d):
+# Convert HTML to JADN
+def line2jadn(lt: dict, tdef) -> Tuple[str, list]:
+    def default(x: str, d: str) -> str:
         return x if x else d
 
     if 'jKey' in lt:
-        return 'M', (lt['jKey'].rstrip(':'), lt['jVal'])
+        return 'M', [lt['jKey'].rstrip(':'), lt['jVal']]
     if 'jTname' in lt:
         btype, topts, fo = typestr2jadn(lt['jTstr'])
         assert fo == []                     # field options MUST not be included in typedefs
@@ -147,14 +137,16 @@ def line2jadn(lt, tdef):
         return 'F', fielddef2jadn(int(lt['jFid']), fname, fstr, fmult, fdesc)
 
 
-def html_loads(hdoc):
-    def get_line(hdoc):
+def html_loads(hdoc: str) -> dict:
+    tclass = ('jKey', 'jVal', 'jTname', 'jTstr', 'jTdesc', 'jFid', 'jFname', 'jFstr', 'jFmult', 'jFdesc')
+
+    # TODO: convert to use minidom
+    def get_line(hdoc: str) -> Generator[dict, None, None]:
         line = {}
-        tclass = ('jKey', 'jVal', 'jTname', 'jTstr', 'jTdesc', 'jFid', 'jFname', 'jFstr', 'jFmult', 'jFdesc')
         for element in html.fromstring(hdoc).iter():
-            cl = [c for c in element.get('class', '').split() if c in tclass]    # Get element's token class
+            cl = [c for c in element.get('class', '').split() if c in tclass]  # Get element's token class
             if cl:
-                assert len(cl) == 1     # TODO: Can't be more than one - replace assertions with proper errors
+                assert len(cl) == 1  # TODO: Can't be more than one - replace assertions with proper errors
                 if cl[0] in ('jKey', 'jTname', 'jFid'):
                     if line:
                         yield line
@@ -165,7 +157,7 @@ def html_loads(hdoc):
     meta = {}
     types = []
     fields = None
-    for n, line in enumerate(get_line(hdoc), start=1):
+    for line in get_line(hdoc):
         if line:
             t, v = line2jadn(line, types[-1] if types else None)
             if t == 'F':
@@ -181,6 +173,14 @@ def html_loads(hdoc):
     return {'info': meta, 'types': types} if meta else {'types': types}
 
 
-def html_load(fname):
+def html_load(fname: Union[bytes, str, int]) -> dict:
     with open(fname, 'r') as f:
         return html_loads(f.read())
+
+
+__all__ = [
+    'html_dump',
+    'html_dumps',
+    'html_load',
+    'html_loads'
+]

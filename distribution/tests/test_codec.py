@@ -1,4 +1,6 @@
-
+"""
+Test JADN Codec
+"""
 import json
 import os
 import binascii
@@ -12,7 +14,6 @@ def _j(data):
 
 
 class BasicTypes(unittest.TestCase):
-
     schema = {                # JADN schema for datatypes used in Basic Types tests
         'types': [
             ['T-bool', 'Boolean', [], ''],
@@ -730,7 +731,6 @@ class BasicTypes(unittest.TestCase):
 
 
 class Compound(unittest.TestCase):  # TODO: arrayOf(rec,map,array,arrayof,choice), array(), map(), rec()
-
     schema = {
         'types': [
             ['T-choice', 'Choice', [], '', [
@@ -1048,7 +1048,6 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
 
 
 class ListCardinality(unittest.TestCase):      # TODO: arrayOf(rec,map,array,arrayof,choice), array(), map(), rec()
-
     schema = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
         'types': [
             ['T-array0', 'ArrayOf', ['*String', '}2'], ''],         # Min array length = 0 (default), Max = 2
@@ -1333,7 +1332,6 @@ class Bounds(unittest.TestCase):        # TODO: check max and min string length,
 
 
 class Format(unittest.TestCase):
-
     schema = {                          # JADN schema for value constraint tests
         'types': [
             ['IPv4-Bin', 'Binary', ['{4', '}4'], ''],  # Check length = 32 bits with format function
@@ -1616,6 +1614,7 @@ class Format(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.tc.decode('Int64', self.int64v4)
 
+
 class JADN(unittest.TestCase):
 
     def setUp(self):
@@ -1634,7 +1633,6 @@ class JADN(unittest.TestCase):
 
 
 class Simplify(unittest.TestCase):
-
     schema_enum_optimized = {
         'types': [
             ['Pixel', 'Record', [], '', [

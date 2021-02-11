@@ -1,4 +1,6 @@
-
+"""
+Test JADN Schema Validation
+"""
 import os
 from binascii import a2b_hex
 from unittest import main, TestCase
@@ -6,9 +8,10 @@ from unittest import main, TestCase
 import jadn
 from jadn.codec import Codec
 
+dir_path = os.path.abspath(os.path.dirname(__file__))
+
 
 class JADN(TestCase):
-
     def setUp(self):
         fn = os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')
         self.schema = jadn.load(fn)
@@ -35,9 +38,24 @@ class BadSchema(TestCase):
         ]
     }
 
+    schema_bad_ordinal_fields = {
+        'info': {'module': 'https://jadn.org/unittests-BadSchema'},
+        'types': [
+            ['Color', 'Record', [], '', [  # Invalid item ID for blue
+                [1, 'red', 'Integer', ['{0', '}255'], ''],
+                [2, 'green', 'Integer', ['{0', '}255'], ''],
+                [4, 'blue', 'Integer', ['{0', '}255'], '']
+            ]]
+        ]
+    }
+
     def test_bad_item_fields(self):
         with self.assertRaises(ValueError):
             jadn.check(self.schema_bad_item_fields)
+
+    def test_bad_ordinal_fields(self):
+        with self.assertRaises(ValueError):
+            jadn.check(self.schema_bad_ordinal_fields)
 
 
 class SpecExamples(TestCase):
@@ -46,7 +64,7 @@ class SpecExamples(TestCase):
     """
 
     def setUp(self):
-        self.schema = jadn.load('jadn-v1.0-examples.jadn')
+        self.schema = jadn.load(os.path.join(dir_path, 'jadn-v1.0-examples.jadn'))
         self.tc = Codec(self.schema, verbose_rec=True, verbose_str=True)
 
     def test_choice_explicit(self):
@@ -81,6 +99,7 @@ class SpecExamples(TestCase):
             self.tc.decode('Hashes2', msg_explicit_bad_alg)
         with self.assertRaises(ValueError):
             self.tc.decode('Hashes2', msg_explicit_bad_val)
+
 
 if __name__ == '__main__':
     main()
