@@ -24,7 +24,7 @@ class Doc:
         self.value = None
 
     def getvalue(self, pretty: bool = False) -> str:
-        return f"{self.init}{tostring(self.value, pretty_print=pretty).decode()}"
+        return tostring(self.value, pretty_print=pretty, doctype=self.init).decode()
 
     def context(self) -> Tuple['Doc', Callable]:
         return self, self.tag
@@ -73,6 +73,9 @@ class DocHTML(Doc):
     def __init__(self, init: str = None, **kwargs):
         super().__init__(init, **kwargs)
         self.value = builder.HTML(**kwargs)
+
+    def getvalue(self, pretty: bool = False) -> str:
+        return tostring(self.value, method='html', pretty_print=pretty, doctype=self.init).decode()
 
     class Tag(Doc.Tag):
         # Context vars
