@@ -36,6 +36,8 @@ def check_typeopts(type_name: str, base_type: str, topts: dict) -> NoReturn:
         raise_error(f'Unsupported type option {type_name} ({base_type}): {uo}')
     if 'maxv' in topts and 'minv' in topts and topts['maxv'] < topts['minv']:
         raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minv"]}..{topts["maxv"]}]')
+    if 'maxf' in topts and 'minf' in topts and topts['maxf'] < topts['minf']:
+        raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minf"]}..{topts["maxf"]}]')
 
     # TODO: if format defines array, add minv/maxv (prevents adding default max)
     if fmt := topts.get('format'):
@@ -118,8 +120,9 @@ def check(schema: dict) -> dict:
                 if is_builtin(field.FieldType):
                     check_typeopts(f'{type_def.TypeName}/{field.FieldName}', field.FieldType, fto)
                 elif fto:
-                    # unique option is moved to generated ArrayOf
-                    if maxc != 1 and 'unique' in fto:
+                    # unique option will be moved to generated ArrayOf
+                    allowed = {'unique', } if maxc != 1 else set()
+                    if set(fto) - allowed:
                         raise_error(f'{type_def.TypeName}/{field.FieldName}({field.FieldType}) cannot have Type options {fto}')
                 if 'dir' in fo:
                     if is_builtin(field.FieldType) and not has_fields(field.FieldType):  # TODO: check defined type

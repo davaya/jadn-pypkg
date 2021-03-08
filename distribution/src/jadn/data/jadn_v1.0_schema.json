@@ -8,17 +8,17 @@
   "properties": {
     "info": {
       "type": "object",
-      "required": ["module"],
+      "required": ["package"],
       "additionalProperties": false,
       "properties": {
-        "module": {"type": "string"},
+        "package": {"type": "string"},
         "version": {"type": "string"},
         "title": {"type": "string"},
         "description": {"type": "string"},
         "comment": {"type":  "string"},
         "copyright": {"type": "string"},
         "license": {"type": "string"},
-        "imports": {"$ref": "#/definitions/Imports"},
+        "namespaces": {"$ref": "#/definitions/Namespaces"},
         "exports": {"$ref": "#/definitions/Exports"},
         "config": {"$ref": "#/definitions/Config"}
       }
@@ -27,10 +27,10 @@
       "type": "array",
       "items": {
         "type": "array",
-        "minItems": 5,
+        "minItems": 1,
         "maxItems": 5,
         "items": [
-          {"$ref": "#/definitions/TypeName"},
+          {"$ref": "#/definitions/TypeRef"},
           {"$ref": "#/definitions/BaseType"},
           {"$ref": "#/definitions/Options"},
           {"$ref": "#/definitions/Description"},
@@ -40,7 +40,7 @@
     }
   },
   "definitions": {
-    "Imports": {
+    "Namespaces": {
       "type": "object",
       "propertyNames": {"$ref": "#/definitions/NSID"},
       "patternProperties": {
@@ -78,7 +78,7 @@
     },
     "Item": {
       "type": "array",
-      "minItems": 3,
+      "minItems": 2,
       "maxItems": 3,
       "items": [
         {"type": "integer"},
@@ -88,7 +88,7 @@
     },
     "Field": {
       "type": "array",
-      "minItems": 5,
+      "minItems": 3,
       "maxItems": 5,
       "items": [
         {"type": "integer"},

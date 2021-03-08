@@ -1,6 +1,6 @@
 {
  "info": {
-  "module": "https://oasis-open.org/jadn/v1.0/examples",
+  "package": "https://oasis-open.org/jadn/v1.0/examples",
   "description": "Example type definitions from JADN Specification"
  },
 

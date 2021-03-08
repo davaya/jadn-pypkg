@@ -28,7 +28,6 @@ class JADN(TestCase):
 
 class BadSchema(TestCase):
     schema_bad_item_fields = {
-        'info': {'module': 'https://jadn.org/unittests-BadSchema'},
         'types': [
             ['Color', 'Map', [], '', [          # Enumerated items not applicable to Container types
                 [1, 'red', ''],
@@ -39,7 +38,6 @@ class BadSchema(TestCase):
     }
 
     schema_bad_ordinal_fields = {
-        'info': {'module': 'https://jadn.org/unittests-BadSchema'},
         'types': [
             ['Color', 'Record', [], '', [  # Invalid item ID for blue
                 [1, 'red', 'Integer', ['{0', '}255'], ''],

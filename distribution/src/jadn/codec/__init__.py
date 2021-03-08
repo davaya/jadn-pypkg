@@ -6,7 +6,7 @@ Object schema is specified in JSON Abstract Data Notation (JADN) format.
 Codec currently supports three JSON concrete message formats (verbose,
 concise, and minified) but can be extended to support XML or binary formats.
 
-Copyright 2016, 2019 David Kemp
+Copyright 2016, 2021 David Kemp
 Licensed under the Apache License, Version 2.0
 http://www.apache.org/licenses/LICENSE-2.0
 """
@@ -19,13 +19,11 @@ from ..definitions import (
     # Field Indexes
     BaseType, FieldID, FieldName,
     # Const values
-    SIMPLE_TYPES, CORE_TYPES,
+    PRIMITIVE_TYPES, CORE_TYPES,
     # Dataclass
     TypeDefinition, GenFieldDefinition
 )
 from ..transform import simplify
-
-__version__ = '0.2'
 
 
 class Codec:
@@ -144,7 +142,7 @@ class Codec:
         self.symtab = {t.TypeName: sym(t) for t in object_types(self.schema['types'])}
         if 'TypeRef' in self.types:
             self.symtab['TypeRef'].TypeOpts = make_typeref_pattern(self.config['$NSID'], self.config['$TypeName'])
-        for t in SIMPLE_TYPES:
+        for t in PRIMITIVE_TYPES:
             self.symtab[t] = SymbolTableField(
                 TypeDef=TypeDefinition('', t),
                 Encode=enctab[t].Enc,

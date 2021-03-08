@@ -14,4 +14,4 @@ import jadn.convert
 import jadn.transform
 import jadn.translate
 
-__version__ = '0.6.2'
+__version__ = '0.6.3'
