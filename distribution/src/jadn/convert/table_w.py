@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, NoReturn, Type, Union
 from ..definitions import (
-    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID, INFO_ORDER, SIMPLE_TYPES,
+    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID, INFO_ORDER, PRIMITIVE_TYPES,
     is_builtin
 )
 from ..utils import jadn2fielddef, jadn2typestr, topts_s2d
@@ -61,7 +61,7 @@ class BasicConversion:
             to = topts_s2d(td[TypeOptions])
             if not is_builtin(td[BaseType]):
                 types += 'Error - bad type: ' + str(td) + '\n'
-            elif td[BaseType] in (SIMPLE_TYPES + ('ArrayOf', 'MapOf')) or 'enum' in to or 'pointer' in to:
+            elif td[BaseType] in (PRIMITIVE_TYPES + ('ArrayOf', 'MapOf')) or 'enum' in to or 'pointer' in to:
                 cls = ['b', 's', 'd']
                 types += self.type_begin('', '', ['Type Name', 'Type Definition', 'Description'], cls)
                 types += self.type_item([td[TypeName], ttype, td[TypeDesc]], cls)

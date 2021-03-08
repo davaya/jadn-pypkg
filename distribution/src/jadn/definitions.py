@@ -104,7 +104,7 @@ class TypeDefinition(BasicDataclass):
 
 
 # Core datatypes
-SIMPLE_TYPES = (
+PRIMITIVE_TYPES = (
     'Binary',
     'Boolean',
     'Integer',
@@ -118,7 +118,7 @@ SELECTOR_TYPES = (
     'Choice',
 )
 
-CONTAINER_TYPES = (
+STRUCTURED_TYPES = (
     'Array',
     'ArrayOf',          # (value_type): instance is a container but definition has no fields
     'Map',
@@ -126,7 +126,7 @@ CONTAINER_TYPES = (
     'Record',
 )
 
-CORE_TYPES = SIMPLE_TYPES + SELECTOR_TYPES + CONTAINER_TYPES
+CORE_TYPES = PRIMITIVE_TYPES + SELECTOR_TYPES + STRUCTURED_TYPES
 
 FIELD_LENGTH = {
     'Binary': 0,
@@ -160,54 +160,60 @@ def has_fields(t: str) -> bool:      # Is a type with fields listed in definitio
 #   The tables list the unicode codepoint of the ID and the corresponding Name and value type.
 
 TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII ID
-    0x3d: ('id', lambda x: True, 1),        # '=', Enumerated type and Choice/Map/Record keys are ID not Name
-    0x2b: ('ktype', lambda x: x, 2),        # '+', Key type for MapOf
-    0x2a: ('vtype', lambda x: x, 3),        # '*', Value type for ArrayOf and MapOf
-    0x23: ('enum', lambda x: x, 4),         # '#', enumeration derived from Array/Choice/Map/Record type
-    0x3e: ('pointer', lambda x: x, 5),      # '>', enumeration of pointers derived from Array/Choice/Map/Record type
-    0x2f: ('format', lambda x: x, 6),       # '/', semantic validation keyword, may affect serialization
-    0x25: ('pattern', lambda x: x, 7),      # '%', regular expression that a string must match
-    0x79: ('minf', float, 8),               # 'y', minimum Number value
-    0x7a: ('maxf', float, 9),               # 'z', maximum Number value
-    0x7b: ('minv', int, 10),                # '{', minimum byte or text string length, Integer value, element count
-    0x7d: ('maxv', int, 11),                # '}', maximum byte or text string length, Integer value, element count
-    0x71: ('unique', lambda x: True, 12),   # 'q', ArrayOf instance must not contain duplicates
-    0x2229: ('and', lambda x: x, 13),       # '∩', INTERSECTION - instance must also match referenced type (allOf)
-    0x222a: ('or', lambda x: x, 14),        # '∪', UNION - instance must match at least one of the types (anyOf)
+    61: ('id', lambda x: True, 1),          # '=', Enumerated type and Choice/Map/Record keys are ID not Name
+    42: ('vtype', lambda x: x, 2),          # '*', Value type for ArrayOf and MapOf
+    43: ('ktype', lambda x: x, 3),          # '+', Key type for MapOf
+    35: ('enum', lambda x: x, 4),           # '#', enumeration derived from Array/Choice/Map/Record type
+    62: ('pointer', lambda x: x, 5),        # '>', enumeration of pointers derived from Array/Choice/Map/Record type
+    47: ('format', lambda x: x, 6),         # '/', semantic validation keyword, may affect serialization
+    37: ('pattern', lambda x: x, 7),        # '%', regular expression that a string must match
+    121: ('minf', float, 8),                # 'y', minimum Number value
+    122: ('maxf', float, 9),                # 'z', maximum Number value
+    123: ('minv', int, 10),                 # '{', minimum byte or text string length, Integer value, element count
+    125: ('maxv', int, 11),                 # '}', maximum byte or text string length, Integer value, element count
+    113: ('unique', lambda x: True, 12),    # 'q', ArrayOf instance must not contain duplicates
+    115: ('set', lambda x: True, 13),       # 's', ArrayOf instance is unordered and unique
+    98: ('unordered', lambda x: True, 14),  # 'b', ArrayOf instance is unordered and not unique (bag)
+    88: ('extend', lambda x: True, 15),     # 'X', Type has an extension point where fields may be appended
+    33: ('default', lambda x: x, 16),       # '!', Default or constant value of instances of this type
+    0x2229: ('and', lambda x: x, 17),       # '∩', INTERSECTION - instance must also match referenced type (allOf)
+    0x222a: ('or', lambda x: x, 18),        # '∪', UNION - instance must match at least one of the types (anyOf)
 }
 
 FIELD_OPTIONS = {
-    0x5b: ('minc', int, 15),                # '[', minimum cardinality, default = 1, 0 = field is optional
-    0x5d: ('maxc', int, 16),                # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
-    0x26: ('tagid', int, 17),               # '&', field that specifies the type of this field
-    0x3c: ('dir', lambda x: True, 18),      # '<', pointer enumeration treats field as a collection
-    0x4b: ('key', lambda x: True, 19),      # 'K', field is a primary key for this type
-    0x4c: ('link', lambda x: True, 20),     # 'L', field is a link (foreign key) to an instance of FieldType
-    0x21: ('default', lambda x: x, 21),     # '!', default value for an instance of this type
+    91: ('minc', int, 19),                  # '[', minimum cardinality, default = 1, 0 = field is optional
+    93: ('maxc', int, 20),                  # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
+    38: ('tagid', int, 21),                 # '&', field that specifies the type of this field
+    60: ('dir', lambda x: True, 22),        # '<', pointer enumeration treats field as a collection
+    75: ('key', lambda x: True, 23),        # 'K', field is a primary key for this type
+    76: ('link', lambda x: True, 24),       # 'L', field is a link (foreign key) to an instance of FieldType
 }
 
 OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD_OPTIONS
-    'id':       chr(0x3d),
-    'ktype':    chr(0x2b),
-    'vtype':    chr(0x2a),
-    'enum':     chr(0x23),
-    'pointer':  chr(0x3e),
-    'format':   chr(0x2f),
-    'pattern':  chr(0x25),
-    'minf':     chr(0x79),
-    'maxf':     chr(0x7a),
-    'minv':     chr(0x7b),
-    'maxv':     chr(0x7d),
-    'unique':   chr(0x71),
+    'id':       chr(61),
+    'vtype':    chr(42),
+    'ktype':    chr(43),
+    'enum':     chr(35),
+    'pointer':  chr(62),
+    'format':   chr(47),
+    'pattern':  chr(37),
+    'minf':     chr(121),
+    'maxf':     chr(122),
+    'minv':     chr(123),
+    'maxv':     chr(125),
+    'unique':   chr(113),
+    'set':      chr(115),
+    'unordered': chr(98),
+    'extend':   chr(88),
+    'default':  chr(33),
     'and':      chr(0x2229),
     'or':       chr(0x222a),
-    'minc':     chr(0x5b),
-    'maxc':     chr(0x5d),
-    'tagid':    chr(0x26),
-    'dir':      chr(0x3c),
-    'key':      chr(0x4b),
-    'link':     chr(0x4c),
-    'default':  chr(0x21),
+    'minc':     chr(91),
+    'maxc':     chr(93),
+    'tagid':    chr(38),
+    'dir':      chr(60),
+    'key':      chr(75),
+    'link':     chr(76),
 }
 
 REQUIRED_TYPE_OPTIONS = {
@@ -227,19 +233,19 @@ REQUIRED_TYPE_OPTIONS = {
 }
 
 ALLOWED_TYPE_OPTIONS = {
-    'Binary': ['and', 'or', 'minv', 'maxv', 'format'],
+    'Binary': ['format', 'minv', 'maxv', 'and', 'or'],
     'Boolean': ['and', 'or'],
-    'Integer': ['and', 'or', 'minv', 'maxv', 'format'],
-    'Number': ['and', 'or', 'minf', 'maxf', 'format'],
+    'Integer': ['format', 'minv', 'maxv', 'and', 'or'],
+    'Number': ['format', 'minf', 'maxf', 'and', 'or'],
     'Null': ['and', 'or'],
-    'String': ['and', 'or', 'minv', 'maxv', 'format', 'pattern'],
-    'Enumerated': ['and', 'or', 'id', 'enum', 'pointer'],
-    'Choice': ['and', 'or', 'id'],
-    'Array': ['and', 'or', 'minv', 'maxv', 'format'],
-    'ArrayOf': ['and', 'or', 'vtype', 'minv', 'maxv', 'unique'],
-    'Map': ['and', 'or', 'id', 'minv', 'maxv'],
-    'MapOf': ['and', 'or', 'ktype', 'vtype', 'minv', 'maxv'],
-    'Record': ['and', 'or', 'minv', 'maxv'],
+    'String': ['format', 'pattern', 'minv', 'maxv', 'and', 'or'],
+    'Enumerated': ['id', 'enum', 'pointer', 'extend', 'and', 'or'],
+    'Choice': ['id', 'extend', 'and', 'or'],
+    'Array': ['extend', 'format', 'minv', 'maxv', 'and', 'or'],
+    'ArrayOf': ['vtype', 'minv', 'maxv', 'unique', 'set', 'and', 'or'],
+    'Map': ['id', 'extend', 'minv', 'maxv', 'and', 'or'],
+    'MapOf': ['ktype', 'vtype', 'minv', 'maxv', 'and', 'or'],
+    'Record': ['extend', 'minv', 'maxv', 'and', 'or'],
 }
 
 # Ensure jsonschema prerequisite packages are installed, e.g., rfc3987 for uri/iri validation
@@ -277,12 +283,12 @@ FORMAT_VALIDATE = {         # Semantic validation formats defined by JADN
     'i16': 'Integer',           # Signed 16 bit integer [-32768 .. 32767]
     'i32': 'Integer',           # Signed 32 bit integer [-2147483648 .. 2147483647]
     'i64': 'Integer',           # Signed 64 bit integer [-2^63 .. 2^63 -1]
-    # 'u#': 'Integer',            # Unsigned "#"-bit integer or bit field where #>0, [0 .. 2^# -1]
+    # 'u#': 'Integer',            # Unsigned '#'-bit integer or bit field where #>0, [0 .. 2^# -1]
 }
 
 FORMAT_SERIALIZE = {        # Data representation formats for one or more serializations
-    'eui': 'Binary',            # IEEE EUI, "hex-byte-colon" text representation, (e.g., 00:1B:44:11:3A:B7)
-    'ipv4-addr': 'Binary',      # IPv4 "dotted-quad" text representation, RFC 2673 Section 3.2
+    'eui': 'Binary',            # IEEE EUI, 'hex-byte-colon' text representation, (e.g., 00:1B:44:11:3A:B7)
+    'ipv4-addr': 'Binary',      # IPv4 'dotted-quad' text representation, RFC 2673 Section 3.2
     'ipv6-addr': 'Binary',      # IPv6 text representation, RFC 4291 Section 2.2
     'ipv4-net': 'Array',        # IPv4 Network Address CIDR text string, RFC 4632 Section 3.1
     'ipv6-net': 'Array',        # IPv6 Network Address CIDR text string, RFC 4291 Section 2.3
@@ -301,14 +307,14 @@ FORMAT_SERIALIZE = {        # Data representation formats for one or more serial
 VALID_FORMATS = {**FORMAT_JS_VALIDATE, **FORMAT_VALIDATE, **FORMAT_SERIALIZE}
 
 DEFAULT_CONFIG = {          # Configuration values to use if not specified in schema
-    "$MaxBinary": 255,          # Maximum number of octets for Binary types
-    "$MaxString": 255,          # Maximum number of characters for String types
-    "$MaxElements": 100,        # Maximum number of items/properties for container types
-    "$Sys": "$",                # System reserved character for TypeName
-    "$TypeName": "^[A-Z][-$A-Za-z0-9]{0,31}$",   # Type Name regex
-    "$FieldName": "^[a-z][_A-Za-z0-9]{0,31}$",   # Field Name regex
-    "$NSID": "^[A-Za-z][A-Za-z0-9]{0,7}$",       # Namespace ID regex
-    "$TypeRef": "^$"            # Placeholder.  Actual pattern is ($NSID ":")? $TypeName
+    '$MaxBinary': 255,          # Maximum number of octets for Binary types
+    '$MaxString': 255,          # Maximum number of characters for String types
+    '$MaxElements': 100,        # Maximum number of items/properties for container types
+    '$Sys': '$',                # System reserved character for TypeName
+    '$TypeName': '^[A-Z][-$A-Za-z0-9]{0,31}$',   # Type Name regex
+    '$FieldName': '^[a-z][_A-Za-z0-9]{0,31}$',   # Field Name regex
+    '$NSID': '^[A-Za-z][A-Za-z0-9]{0,7}$',       # Namespace ID regex
+    '$TypeRef': '^$'            # Placeholder.  Actual pattern is ($NSID ':')? $TypeName
 }
 
 EXTENSIONS = {
@@ -316,10 +322,11 @@ EXTENSIONS = {
     'Multiplicity',             # maxc other than 1, or minv other than 0 (optional) or 1 (required)
     'DerivedEnum',              # enum and pointer/dir options, create Enumerated type of fields or JSON Pointers
     'MapOfEnum',                # ktype option specifies an Enumerated type
+    'Link',                     # key and link options
 }
 
-INFO_ORDER = ('title', 'module', 'version', 'description', 'comments',
-              'copyright', 'license', 'imports', 'exports', 'config')  # Display order
+INFO_ORDER = ('title', 'package', 'version', 'description', 'comments',
+              'copyright', 'license', 'namespaces', 'exports', 'config')    # Display order
 
 # Type Hinting
 OPTION_TYPES = Union[int, float, str]

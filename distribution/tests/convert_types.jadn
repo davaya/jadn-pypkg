@@ -1,11 +1,11 @@
 {
  "info": {
-  "module": "https://jadn.org/test/convert/v0.1",
+  "package": "https://jadn.org/test/convert/v0.1",
   "version": "0",
   "title": "JADN format conversion",
   "description": "Test schema for checking conversion to different formats",
   "exports": ["Command"],
-  "imports": {"td": "https://jadn.org/test/type_defs/v0.1"},
+  "namespaces": {"td": "https://jadn.org/test/type_defs/v0.1"},
   "config": {"$MaxString": 128,
              "$Sys": "%",
              "$NSID": "^[$*a-zA-Z]{1,4}$"}

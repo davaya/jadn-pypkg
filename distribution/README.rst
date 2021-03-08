@@ -64,6 +64,11 @@ script illustrates how to use these functions:
   * JSON
   * Minimized JSON
 
+Contributors
+############
+
+Jerry Czachor - type hinting, refactor using datatypes
+
 Feedback
 ########
 
