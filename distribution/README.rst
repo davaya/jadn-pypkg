@@ -31,6 +31,7 @@ The software in this package is organized by function:
   * text-based Interface Definition Language (IDL)
   * html tables
   * markdown tables
+  * GraphViz dot file
 
 * **transform:** Process a JADN schema to produce another JADN schema:
 
@@ -67,7 +68,7 @@ script illustrates how to use these functions:
 Contributors
 ############
 
-Jerry Czachor - type hinting, refactor using datatypes
+Jerome Czachor - Massive code cleanup, type hinting, conversion classes, refactor using datatypes
 
 Feedback
 ########
