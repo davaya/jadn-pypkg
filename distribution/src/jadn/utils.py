@@ -20,6 +20,11 @@ def raise_error(*s) -> NoReturn:
     raise ValueError(*s)
 
 
+# Truncate a string to "n" characters, replacing end with ".." if truncated
+def etrunc(s: str, n: int) -> str:
+    return s if n is None else s[:n-2] + (s[n-2:], '..')[len(s) > n] if n > 1 else s[:n]
+
+
 # Dict conversion utilities
 def dmerge(*dicts: dict) -> dict:
     """

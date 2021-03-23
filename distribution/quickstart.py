@@ -32,7 +32,7 @@ print(jidl_doc)
 assert schema == jadn.convert.jidl_loads(jidl_doc)      # Verify lossless round-trip conversion.
 
 print('\nSchema (JADN IDL, adjust columns, truncate comments):\n------------------')
-print(jadn.convert.jidl_dumps(jadn.transform.strip_comments(schema, width=9), columns={'id':2, 'name':8, 'desc':30}))
+print(jadn.convert.jidl_dumps(jadn.transform.strip_comments(schema, width=9), style={'id': 2, 'name': 8, 'desc': 30}))
 
 print('\nSchema (HTML):\n------------------')
 html_doc = jadn.convert.html_dumps(schema)

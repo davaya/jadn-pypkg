@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from typing import NoReturn, Tuple, Union
 from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
-from ..utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error, typestr2jadn
+from ..utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error, typestr2jadn, etrunc
 
 # JIDL -> JADN Type regexes
 p_tname = r'\s*([-$\w]+)'               # Type Name
@@ -23,8 +23,8 @@ p_range = r'\s*(?:\[([.*\w]+)\]|(optional))?'  # Multiplicity
 p_desc = r'\s*(?:\/\/\s*(.*?)\s*)?'  # Field description, including field name if .id option
 
 
-# Convert JADN to JIDL
-def jidl_columns() -> dict:
+def jidl_style() -> dict:
+    # Return default column positions
     return {
         'info': 12,     # Width of info name column (e.g., module:)
         'id': 4,        # Width of Field Id column
@@ -35,18 +35,18 @@ def jidl_columns() -> dict:
     }
 
 
-def jidl_dumps(schema: dict, columns: dict = None) -> str:
+def jidl_dumps(schema: dict, style: dict = None) -> str:
     """
     Convert JADN schema to JADN-IDL
 
     :param dict schema: JADN schema
-    :param dict columns: Override default column widths if specified
+    :param dict style: Override default column widths if specified
     :return: JADN-IDL text
     :rtype: str
     """
-    w = jidl_columns()
-    if columns:
-        w.update(columns)   # Override any specified column widths
+    w = jidl_style()
+    if style:
+        w.update(style)   # Override any specified column widths
 
     text = ''
     info = schema['info'] if 'info' in schema else {}
@@ -73,20 +73,20 @@ def jidl_dumps(schema: dict, columns: dict = None) -> str:
                 fs = f'{fd[FieldID]:>{w["id"]}} {fname:<{wn}} {fdef}'
                 wf = w['id'] + w['type'] if idt else wt
             wf = w['desc'] if w['desc'] else wf
-            text += f'{fs:{wf}}{fdesc}'[:w['page']].rstrip() + '\n'
+            text += etrunc(f'{fs:{wf}}{fdesc}'.rstrip(), w['page']) + '\n'
     return text
 
 
-def jidl_dump(schema: dict, fname: Union[bytes, str, int], source='', columns=None) -> NoReturn:
+def jidl_dump(schema: dict, fname: Union[bytes, str, int], source='', style=None) -> NoReturn:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write(f'/* Generated from {source}, {datetime.ctime(datetime.now())} */\n\n')
-        f.write(jidl_dumps(schema, columns))
+        f.write(jidl_dumps(schema, style))
 
 
 # Convert JIDL to JADN
 def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
-    if line:
+    if line.split('//', maxsplit=1)[0].strip():
         p_info = r'^\s*([-\w]+):\s*(.+?)\s*$'
         if m := re.match(p_info, line):
             return 'M', [m.group(1), m.group(2)]
@@ -98,20 +98,21 @@ def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
             newtype = [m.group(1), btype, topts, m.group(3) if m.group(3) else '', []]
             return 'T', newtype
 
-        pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[BaseType] == 'Array') else p_fname
-        if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
-            pattern = fr'^{p_id}{p_fstr}{p_desc}$'
-            if m := re.match(pattern, line):
-                return 'F', fielddef2jadn(int(m.group(1)), m.group(2), '', '', m.group(3) if m.group(3) else '')
-        else:                                   # Parse Field
-            pattern = f'^{p_id}{pn}{p_fstr}{p_range}{p_desc}$'
-            if m := re.match(pattern, line):
-                m_range = '0..1' if m.group(5) else m.group(4)        # Convert 'optional' to range
-                fdesc = m.group(6) if m.group(6) else ''
-                return 'F', fielddef2jadn(int(m.group(1)), m.group(2), m.group(3), m_range if m_range else '', fdesc)
+        if tdef:        # looking for fields
+            pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[BaseType] == 'Array') else p_fname
+            if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
+                pattern = fr'^{p_id}{p_fstr}{p_desc}$'
+                if m := re.match(pattern, line):
+                    return 'F', fielddef2jadn(int(m.group(1)), m.group(2), '', '', m.group(3) if m.group(3) else '')
+            else:                                   # Parse Field
+                pattern = f'^{p_id}{pn}{p_fstr}{p_range}{p_desc}$'
+                if m := re.match(pattern, line):
+                    m_range = '0..1' if m.group(5) else m.group(4)        # Convert 'optional' to range
+                    fdesc = m.group(6) if m.group(6) else ''
+                    return 'F', fielddef2jadn(int(m.group(1)), m.group(2), m.group(3), m_range if m_range else '', fdesc)
+        else:
+            raise_error(f'JIDL Load - field with no type: {repr(line)}')
 
-        if line.strip() not in ('', '}'):
-            raise_error(f'JIDL load{repr(line)}')
     return '', []
 
 
@@ -145,5 +146,5 @@ __all__ = [
     'jidl_dumps',
     'jidl_load',
     'jidl_loads',
-    'jidl_columns'
+    'jidl_style'
 ]

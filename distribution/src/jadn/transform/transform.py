@@ -5,20 +5,17 @@ from ..definitions import (
     TypeName, BaseType, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldName, FieldOptions, FieldDesc, OPTION_ID,
     EXTENSIONS, OPTION_TYPES, is_builtin, has_fields, TypeDefinition, EnumFieldDefinition, GenFieldDefinition
 )
-from ..utils import del_opt, ftopts_s2d, get_optx, list_type_schema, opts_d2s, object_type_schema, topts_s2d
+from ..utils import del_opt, ftopts_s2d, get_optx, list_type_schema, opts_d2s, object_type_schema, topts_s2d, etrunc
 
 
 def strip_comments(schema: dict, width=0) -> dict:  # Strip or truncate comments from schema
-    def estrip(s: str, n: int) -> str:
-        return s[:n-2] + (s[n-2:], '..')[len(s) > n] if n > 1 else s[:n]
-
     sc = copy.deepcopy(schema)
     for tdef in sc['types']:
-        tdef[TypeDesc] = estrip(tdef[TypeDesc], width)
+        tdef[TypeDesc] = etrunc(tdef[TypeDesc], width)
         if len(tdef) > Fields:
             fd = ItemDesc if tdef[BaseType] == 'Enumerated' else FieldDesc
             for fdef in tdef[Fields]:
-                fdef[fd] = estrip(fdef[fd], width)
+                fdef[fd] = etrunc(fdef[fd], width)
     return sc
 
 
