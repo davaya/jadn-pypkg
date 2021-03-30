@@ -14,7 +14,7 @@ def wrapstr(ss: str, lines: int=3) -> str:
     p = 0
     bp = len(ss)/lines
     wrapped = ''
-    for w in re.findall(r'[A-Z][a-z0-9]+', ss):
+    for w in re.findall(r'[A-Z][a-z0-9]+', ss): # TODO: update regex to support name formats other than PascalCase
         if p > 0 and p + len(w)/2 > bp:
             wrapped += '\\n'
             bp += len(ss)/lines
@@ -31,11 +31,14 @@ def multiplicity_str(ops: dict) -> str:
 
 
 def dot_style() -> dict:
-    # Return default GraphViz generation options and graph style attributes
+    # Return default generation options and GraphViz style attributes
     return {
-        'edge_label': True,
-        'multiplicity': True,
-        'dotfile': {
+        'links': True,              # Show link edges (dashed)
+        'attributes': False,        # Show node attributes connected to entities (ellipse)
+        'attr_color': 'palegreen',  # Attribute ellipse fill color
+        'edge_label': True,         # Show field name on edges
+        'multiplicity': True,       # Show multiplicity on edges
+        'dotfile': {                # Options defined in GraphViz "Node, Edge and Graph Attributes"
             'graph': {
                 'fontname': 'Times',
                 'fontsize': 12
@@ -52,7 +55,7 @@ def dot_style() -> dict:
                 'fontsize': 7,
                 'arrowsize': 0.5,
                 'labelangle': 45.0,
-                'labeldistance': 0.75
+                'labeldistance': 0.9
             },
             'bgcolor': 'transparent',
         }
@@ -82,19 +85,26 @@ def dot_dumps(schema: dict, style: dict=None) -> str:
         text += f'# {k}: {v}\n'
     text += f'\n{dot_header(s["dotfile"])}\n'
 
-    nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types'])}
+    atypes = (*PRIMITIVE_TYPES, 'Enumerated')
+    nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[BaseType] not in atypes}
     for td in schema['types']:
-        node_type = ', shape="ellipse", fillcolor="palegreen"' if td[BaseType] in (*PRIMITIVE_TYPES,'Enumerated') else ''
-        node_type = ', shape="hexagon"' if '<->' in td[TypeDesc] else node_type
-        text += f'  n{nodes[td[TypeName]]} [label="{wrapstr(td[TypeName])}"{node_type}]\n'
-        for fd in td[Fields]:
-            if fd[FieldType] in nodes:
-                if s['multiplicity']:
-                    opts_f = multiplicity_str(ftopts_s2d(fd[FieldOptions])[0])
-                    opts_r = m.group(1) if (m := re.search(r'\[([^\]]+)\]', fd[FieldDesc])) else ''
-                    mult = f', headlabel="{opts_f}", taillabel="{opts_r}"' if s['multiplicity'] else ''
-                label = f' [label="{fd[FieldName]}"{mult}]' if s['edge_label'] else ''
-                text += f'    n{nodes[td[TypeName]]} -> n{nodes[fd[FieldType]]}{label}\n'
+        node_type = f', shape="ellipse", fillcolor="{s["attr_color"]}"' if td[BaseType] in atypes else ''
+        if s['attributes'] or not node_type:
+            node_type = ', shape="hexagon"' if '<->' in td[TypeDesc] else node_type
+            text += f'  n{nodes[td[TypeName]]} [label="{wrapstr(td[TypeName])}"{node_type}]\n'
+            for fd in td[Fields]:
+                if fd[FieldType] in nodes:
+                    fopts, topts = ftopts_s2d(fd[FieldOptions])
+                    edge_attrs = ['style="dashed"'] if 'link' in fopts or '<=' in fd[FieldDesc] else []
+                    if s['links'] or not edge_attrs:
+                        edge_attrs += [f'label="{fd[FieldName]}"'] if s['edge_label'] else []
+                        if s['multiplicity']:
+                            opts_f = multiplicity_str(ftopts_s2d(fd[FieldOptions])[0])
+                            opts_r = m.group(1) if (m := re.search(r'\[([^\]]+)\]', fd[FieldDesc])) else '1'
+                            edge_attrs += [f'headlabel="{opts_f}", taillabel="{opts_r}"']
+                        edge_list = ', '.join(edge_attrs)
+                        edge = f' [{edge_list}]' if edge_list else ''
+                        text += f'    n{nodes[td[TypeName]]} -> n{nodes[fd[FieldType]]}{edge}\n'
     text += '}'
     return text
 

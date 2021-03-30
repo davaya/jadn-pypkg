@@ -88,10 +88,18 @@ def check(schema: dict) -> dict:
             raise_error(f'{type_def.TypeName}({type_def.BaseType}) should not have defined fields with the option enum/pointer')
 
         # Duplicates
-        fids = {f[FieldID] for f in fields}  # Field IDs
-        fnames = {f[FieldName] for f in fields}  # Field Names
-        if len(fields) != len(fids) or len(fields) != len(fnames):
-            raise_error(f'Duplicate field {type_def.TypeName} {len(fields)} fields, {len(fids)} unique tags, {len(fnames)} unique names')
+        def duplicates(seq):
+            seen = set()
+            return set(x for x in seq if x in seen or seen.add(x))
+
+        if dd := duplicates((f[FieldID] for f in fields)):
+            raise_error(f'Duplicate fieldID: {type_def.TypeName} {dd}')
+        if dd := duplicates((f[FieldName] for f in fields)):
+            raise_error(f'Duplicate field name {type_def.TypeName} {dd}')
+        # fids = {f[FieldID] for f in fields}  # Field IDs
+        # fnames = {f[FieldName] for f in fields}  # Field Names
+        # if len(fields) != len(fids) or len(fields) != len(fnames):
+        #    raise_error(f'Duplicate field {type_def.TypeName} {len(fields)} fields, {len(fids)} unique tags, {len(fnames)} unique names')
 
         # Invalid definitions of field
         flen = FIELD_LENGTH[type_def.BaseType]  # Field item count
@@ -101,7 +109,7 @@ def check(schema: dict) -> dict:
         # Specific checks
         # Ordinal indexes
         if type_def.BaseType in ('Array', 'Record'):
-            if invalid := list_get_default([(f, n) for n, f in enumerate(fields) if f[FieldID] != n + 1], 0):
+            if invalid := list_get_default([(f, n) for n, f in enumerate(fields, 1) if f[FieldID] != n], 0):
                 field, idx = invalid
                 raise_error(f'Item tag error: {type_def.TypeName}({type_def.BaseType}) [{field[FieldName]}] -- {field[FieldID]} should be {idx}')
 

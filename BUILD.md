@@ -4,8 +4,7 @@ following instructions in https://packaging.python.org/tutorials/packaging-proje
 and https://setuptools.readthedocs.io/en/latest/userguide/declarative_config.html.
 
 ### Windows build and upload
-From the project's `distribution` folder:
-* venv\Scripts\activate
+From the project's `distribution` folder (with Python venv active):
 * python -m pip install --upgrade pip build twine
 * python -m build
 * twine upload dist/*
