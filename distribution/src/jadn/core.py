@@ -123,7 +123,7 @@ def check(schema: dict) -> dict:
                     raise_error(f'{type_def.TypeName}/{field.FieldName} bad multiplicity {minc} {maxc}')
 
                 if tf := fo.get('tagid', None):
-                    if tf not in fids:
+                    if tf not in {f[FieldID] for f in fields}:
                         raise_error(f'{type_def.TypeName}/{field.FieldName}({field.FieldType}) choice has bad external tag {tf}')
                 if is_builtin(field.FieldType):
                     check_typeopts(f'{type_def.TypeName}/{field.FieldName}', field.FieldType, fto)

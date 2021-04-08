@@ -359,7 +359,7 @@ def json_schema_dumps(schema: dict, verbose=True, enum_style='enum', import_styl
     info = schema.get('info', {})
     td = {t[TypeName]: t for t in schema['types']}    # Build index of type definitions
     exports = [e for e in info.get('exports', []) if e in td]
-    imported_types = {k: {} for k in info.get('imports', {})}
+    imported_types = {k: {} for k in info.get('namespaces', {})}
     ctx = {  # Translation context
         'config': get_config(info),
         'type_defs': td,
@@ -378,9 +378,13 @@ def json_schema_dumps(schema: dict, verbose=True, enum_style='enum', import_styl
 
     return json.dumps(dmerge(
         {'$schema': 'http://json-schema.org/draft-07/schema#'},
-        {'$id': info['module'] if 'module' in info else ''},
-        {'title': info['title'] if 'title' in info else ''},
+        {'$id': info['package']} if 'package' in info else {},
+        {'title': info['title']} if 'title' in info else {},    # TODO: use items from INFO_ORDER
+        {'version': info['version']} if 'version' in info else {},
         {'description': info['description']} if 'description' in info else {},
+        {'comments': info['comments']} if 'comments' in info else {},
+        {'copyright': info['copyright']} if 'copyright' in info else {},
+        {'license': info['license']} if 'license' in info else {},
         w_export(exports, ctx),
         {'definitions': {t: tt(td[t], ctx) for t in (exports + [t for t in td if t not in exports])}},
         {'imports': imported_types} if imported_types else {}

@@ -143,9 +143,9 @@ def _check_size(ts: SymbolTableField, val):
     return val
 
 
-def _extra_value(ts: SymbolTableField, val, fld):
+def _extra_value(ts: SymbolTableField, val, extra: set):
     td = ts.TypeDef
-    raise_error(f'{td.TypeName}({td.BaseType}): unexpected field: {val} not in {fld}:')
+    raise_error(f'{td.TypeName}({td.BaseType}): unexpected field: \"{", ".join(str(k) for k in extra)}\"')
 
 
 def _encode_binary(ts: SymbolTableField, aval, codec: 'Codec'):    # Encode bytes to string
@@ -323,7 +323,7 @@ def _decode_maprec(ts: SymbolTableField, sval, codec: 'Codec'):
         else:
             if 'minc' not in fopts or fopts['minc'] > 0:
                 _bad_value(ts, val, fd)
-    extra = set(val) - set(fnames) if isinstance(val, dict) else len(val) > len(ts.Fld)
+    extra = set(val) - set(fnames) if isinstance(val, dict) else set(val[len(ts.Fld):])
     if extra:
         _extra_value(ts, val, extra)
     return aval
@@ -332,9 +332,8 @@ def _decode_maprec(ts: SymbolTableField, sval, codec: 'Codec'):
 def _encode_array(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, list)
     sval = list()
-    extra = len(aval) > len(ts.Fld)
-    if extra:
-        _extra_value(ts, aval, extra)
+    if len(aval) > len(ts.Fld):
+        _extra_value(ts, aval, set(aval[len(ts.Fld):]))
     for fn in ts.TypeDef.Fields:
         f = ts.Fld[fn.FieldID].Def  # Use symtab field definition
         fx = f.FieldID - 1
@@ -361,9 +360,8 @@ def _decode_array(ts: SymbolTableField, sval, codec: 'Codec'):  # Ordered list o
     val = _format_decode(ts, sval)
     _check_type(ts, val, list)
     aval = list()
-    extra = len(val) > len(ts.Fld)
-    if extra:
-        _extra_value(ts, val, extra)  # TODO: write sensible display of excess values
+    if len(val) > len(ts.Fld):
+        _extra_value(ts, val, set(aval[len(ts.Fld):]))
     for fn in ts.TypeDef.Fields:
         f = ts.Fld[fn[FieldID]].Def  # Use symtab field definition
         fx = f[FieldID] - 1
