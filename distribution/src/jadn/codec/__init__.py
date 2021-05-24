@@ -23,7 +23,7 @@ from ..definitions import (
     # Dataclass
     TypeDefinition, GenFieldDefinition
 )
-from ..transform import simplify
+from ..transform import unfold_extensions
 
 
 class Codec:
@@ -45,7 +45,7 @@ class Codec:
 
     def __init__(self, schema: dict, verbose_rec=False, verbose_str=False, config: dict = None):
         assert set(enctab) == set(CORE_TYPES)
-        self.schema = simplify(schema)             # Convert extensions to core definitions
+        self.schema = unfold_extensions(schema)         # Convert extensions to core definitions
         conf = config if config else schema
         self.config = get_config(conf['info'] if 'info' in conf else None)
         self.format_validate = format_validators()      # Initialize format validation functions

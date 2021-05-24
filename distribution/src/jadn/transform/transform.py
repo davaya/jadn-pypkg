@@ -19,14 +19,40 @@ def strip_comments(schema: dict, width=0) -> dict:  # Strip or truncate comments
     return sc
 
 
-# Simplify schema
+# Remove extensions from schema
+
+# Replace Key and Link options with explicit types
+def unfold_link(schema: dict, sys: str) -> NoReturn:
+    ltypes = []     # Types that have links
+    keys = {}       # Key names for types that have keys
+    for tdef in list(schema['types']):
+        if has_fields(tdef.BaseType):
+            for fdef in tdef.Fields:
+                fo, fto = ftopts_s2d(fdef.FieldOptions)
+                if 'key' in fo:
+                    del_opt(fdef.FieldOptions, 'key')
+                    newname = f'{tdef.TypeName}{sys}{fdef.FieldName}'
+                    newopts = [fdef.FieldOptions.pop(get_optx(fdef.FieldOptions, o)) for o in fto]
+                    schema['types'].append(TypeDefinition(newname, fdef.FieldType, newopts, fdef.FieldDesc))
+                    fdef.FieldType = newname           # Redirect field to explicit type definition
+                    keys.update({tdef.TypeName: newname})
+                elif 'link' in fo:
+                    ltypes.append(tdef)
+    for tdef in ltypes:
+        for fdef in tdef.Fields:
+            fo, fto = ftopts_s2d(fdef.FieldOptions)
+            if 'link' in fo:
+                del_opt(fdef.FieldOptions, 'link')
+                fdef.FieldType = keys[fdef.FieldType]
+
+
 # Return option array index of enum or pointer option
 def epx(topts: List[OPTION_TYPES]) -> Union[int, float, str, None]:
     ex = get_optx(topts, 'enum')
     return ex if ex is not None else get_optx(topts, 'pointer')
 
 
-def epname(topts: List[OPTION_TYPES], sys: str = '$') -> Union[str, None]:
+def epname(topts: List[OPTION_TYPES], sys: str) -> Union[str, None]:
     x = epx(topts)
     if x is None:
         return None
@@ -35,7 +61,7 @@ def epname(topts: List[OPTION_TYPES], sys: str = '$') -> Union[str, None]:
 
 
 # Replace field multiplicity with explicit ArrayOf type definitions
-def simplify_multiplicity(schema: dict, sys: str = '$') -> NoReturn:
+def unfold_multiplicity(schema: dict, sys: str) -> NoReturn:
     for tdef in list(schema['types']):
         if has_fields(tdef.BaseType):
             for fdef in tdef.Fields:
@@ -59,7 +85,7 @@ def simplify_multiplicity(schema: dict, sys: str = '$') -> NoReturn:
 
 
 # Replace anonymous types in fields with explicit type definitions
-def simplify_anonymous_types(schema: dict, sys: str = '$') -> NoReturn:
+def unfold_anonymous_types(schema: dict, sys: str) -> NoReturn:
     for tdef in list(schema['types']):
         if has_fields(tdef.BaseType):
             for fdef in tdef.Fields:
@@ -77,7 +103,7 @@ def simplify_anonymous_types(schema: dict, sys: str = '$') -> NoReturn:
 
 
 # Generate Enumerated list of fields or JSON Pointers
-def simplify_derived_enum(schema: dict, sys: str = '$') -> NoReturn:
+def unfold_derived_enum(schema: dict, sys: str) -> NoReturn:
     typex = {t[TypeName]: n for n, t in enumerate(schema['types'])}       # Build type index
 
     def update_eref(enums: dict, opts: List[OPTION_TYPES], optname: str) -> NoReturn:
@@ -126,7 +152,7 @@ def simplify_derived_enum(schema: dict, sys: str = '$') -> NoReturn:
             update_eref(enums, tdef.TypeOptions, 'ktype')
 
 
-def simplify_map_of_enum(schema: dict) -> NoReturn:
+def unfold_map_of_enum(schema: dict) -> NoReturn:
     """
     Replace MapOf(enumerated key) with explicit Map
     """
@@ -138,29 +164,32 @@ def simplify_map_of_enum(schema: dict) -> NoReturn:
             schema['types'][n] = TypeDefinition(tdef.TypeName, 'Map', [], tdef.TypeDesc, newfields)
 
 
-def simplify(schema: dict, extensions: Set[str] = None) -> dict:  # Remove schema extensions
+def unfold_extensions(schema: dict, extensions: Set[str] = None) -> dict:  # Remove schema extensions
     """
-    Given an input schema, return a simplified schema with some or all extensions removed.
+    Return a schema with listed extensions or all extensions removed.
 
     extensions = set of extension names to process:
         AnonymousType:   Replace all anonymous type definitions with explicit
         Multiplicity:    Replace all multi-value fields with explicit ArrayOf type definitions
         DerivedEnum:     Replace all derived and pointer enumerations with explicit Enumerated type definitions
         MapOfEnum:       Replace all MapOf types with listed keys with explicit Map type definitions
+        Link:            Replace Key and Link fields with explicit types
     """
     extensions = extensions or EXTENSIONS
     assert extensions - EXTENSIONS == set()
     sys = '$'  # Character reserved for tool-generated TypeNames
     sc = object_type_schema(copy.deepcopy(schema))  # Don't modify original schema
 
+    if 'Link' in extensions:                    # Replace Key and Link options with explicit types
+        unfold_link(sc, sys)
     if 'Multiplicity' in extensions:            # Expand repeated types into ArrayOf defintions
-        simplify_multiplicity(sc, sys)
+        unfold_multiplicity(sc, sys)
     if 'AnonymousType' in extensions:           # Expand inline definitions into named type definitions
-        simplify_anonymous_types(sc, sys)
+        unfold_anonymous_types(sc, sys)
     if 'DerivedEnum' in extensions:             # Generate Enumerated list of fields or JSON Pointers
-        simplify_derived_enum(sc, sys)
+        unfold_derived_enum(sc, sys)
     if 'MapOfEnum' in extensions:               # Generate explicit Map from MapOf
-        simplify_map_of_enum(sc)
+        unfold_map_of_enum(sc)
     return list_type_schema(sc)
 
 
@@ -180,5 +209,5 @@ def get_enum_items(tdef: list, topts: dict, types: dict) -> list:
 __all__ = [
     'get_enum_items',
     'strip_comments',
-    'simplify'
+    'unfold_extensions'
 ]

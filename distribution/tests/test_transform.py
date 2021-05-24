@@ -33,7 +33,7 @@ class StripComments(TestCase):
             ]
              ]]
     }
-    c20_schema = {
+    trunc20_schema = {
         'types': [
             ['Person', 'Record',                     [], 'JADN equivalent of..', [
                 [1, 'name', 'String',                [], 'The person\'s name.'],
@@ -51,22 +51,22 @@ class StripComments(TestCase):
 
     def test_truncate_comments(self):
         jadn.check(self.schema)
-        jadn.check(self.c20_schema)
+        jadn.check(self.trunc20_schema)
         ss = jadn.transform.strip_comments(self.schema, width=20)
-        self.assertEqual(ss['types'], self.c20_schema['types'])
+        self.assertEqual(ss['types'], self.trunc20_schema['types'])
 
 
-class SimplifyExtensions(TestCase):
-    def do_simplify_test(self, extension_schema, simplified_schema, extensions=EXTENSIONS):
-        jadn.check(extension_schema)
-        jadn.check(simplified_schema)
-        ss = jadn.transform.simplify(extension_schema, extensions)
-        self.assertEqual(ss['types'], simplified_schema['types'])
+class UnfoldExtensions(TestCase):
+    def do_unfold_test(self, folded_schema, unfolded_schema, extensions=EXTENSIONS):
+        jadn.check(folded_schema)
+        jadn.check(unfolded_schema)
+        us = jadn.transform.unfold_extensions(folded_schema, extensions)
+        self.assertEqual(us['types'], unfolded_schema['types'])
 
     """
     Type Definition in Fields Extension
     """
-    schema_anon_extension = {       # id, vtype, ktype, enum, pointer, format, pattern, minv, maxv, unique
+    schema_anon_folded = {       # id, vtype, ktype, enum, pointer, format, pattern, minv, maxv, unique
         'types': [
             ['Color', 'Map', [], '', [
                 [1, 'red', 'Integer', [], ''],
@@ -94,7 +94,7 @@ class SimplifyExtensions(TestCase):
             ]]
         ]
     }
-    schema_anon_simplified = {
+    schema_anon_unfolded = {
         'types': [
             ['Color', 'Map', [], '', [
                 [1, 'red', 'Integer', [], ''],
@@ -131,7 +131,7 @@ class SimplifyExtensions(TestCase):
             ['T-anon$unique', 'ArrayOf', ['*String', 'q'], ''],
         ]
     }
-    schema_all_simplified = {
+    schema_anon_unfolded_all = {
         'types': [
             ['Color', 'Map', [], '', [
                 [1, 'red', 'Integer', [], ''],
@@ -185,16 +185,16 @@ class SimplifyExtensions(TestCase):
         ]
     }
 
-    def test_anon_type_definitions(self):
-        self.do_simplify_test(self.schema_anon_extension, self.schema_anon_simplified, {'AnonymousType'})
+    def test_anon(self):
+        self.do_unfold_test(self.schema_anon_folded, self.schema_anon_unfolded, {'AnonymousType'})
 
-    def test_all_extensions(self):
-        self.do_simplify_test(self.schema_anon_extension, self.schema_all_simplified)
+    def test_anon_all(self):
+        self.do_unfold_test(self.schema_anon_folded, self.schema_anon_unfolded_all)
 
     """
     Field Multiplicity Extension
     """
-    schema_mult_extension = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
+    schema_mult_folded = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
         'types': [
             ['T-opt-list1', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
@@ -217,11 +217,11 @@ class SimplifyExtensions(TestCase):
                 [2, 'list', 'String', [']0'], '']           # Min default = 1, Max = 0 -> n
             ]]
         ]}
-    schema_mult_simplified = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
+    schema_mult_unfolded = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
         'types': [
             ['T-opt-list1', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
-                [2, 'list', 'T-array1', ['[0'], ''] # Min = 0, Max default = 1 (Undefined type OK for Extension tests)
+                [2, 'list', 'T-array1', ['[0'], '']  # Min = 0, Max default = 1 (Undefined type OK for Extension tests)
             ]],
             ['T-list-1-2', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
@@ -246,12 +246,15 @@ class SimplifyExtensions(TestCase):
         ]}
 
     def test_multiplicity(self):
-        self.do_simplify_test(self.schema_mult_extension, self.schema_mult_simplified, {'Multiplicity'})
+        self.do_unfold_test(self.schema_mult_folded, self.schema_mult_unfolded, {'Multiplicity'})
+
+    def test_multiplicity_all(self):
+        self.do_unfold_test(self.schema_mult_folded, self.schema_mult_unfolded)
 
     """
     Derived Enumeration Extension
     """
-    schema_enum_extension = {
+    schema_enum_folded = {
         'types': [
             ['Pixel', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
@@ -268,9 +271,18 @@ class SimplifyExtensions(TestCase):
                 [3, 'purple', 'Integer', [], '']
             ]],
             ['ChannelMask2', 'ArrayOf', ['*#Pixel2'], '', []],      # Array of items from generated derived enum
+
+            ['Foo', 'Array', [], '', [
+                [1, 'type', 'Enumerated', ['#Menu'], ''],           # Derived enumeration in a field
+                [2, 'value', 'String', [], '']
+            ]],
+            ['Menu', 'Choice', [], '', [
+                [1, 'open', 'String', [], ''],
+                [2, 'close', 'String', [], '']
+            ]]
         ]
     }
-    schema_enum_simplified = {
+    schema_enum_unfolded = {
         'types': [
             ['Pixel', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
@@ -295,6 +307,60 @@ class SimplifyExtensions(TestCase):
                 [3, 'purple', 'Integer', [], '']
             ]],
             ['ChannelMask2', 'ArrayOf', ['*Pixel2$Enum'], '', []],      # Array of items from generated derived enum
+
+            ['Foo', 'Array', [], '', [                                  # Derived enumeration in a field
+                [1, 'type', 'Enumerated', ['#Menu'], ''],
+                [2, 'value', 'String', [], '']
+            ]],
+            ['Menu', 'Choice', [], '', [
+                [1, 'open', 'String', [], ''],
+                [2, 'close', 'String', [], '']
+            ]],
+            ['Pixel2$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
+                [1, 'yellow', ''],
+                [2, 'orange', ''],
+                [3, 'purple', '']
+            ]],
+        ]
+    }
+    schema_enum_unfolded_all = {
+        'types': [
+            ['Pixel', 'Record', [], '', [
+                [1, 'red', 'Integer', [], 'rojo'],
+                [2, 'green', 'Integer', [], 'verde'],
+                [3, 'blue', 'Integer', [], '']
+            ]],
+            ['Channel', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelId', 'Enumerated', ['='], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelMask', 'ArrayOf', ['*Channel'], '', []],
+
+            ['Pixel2', 'Map', ['='], '', [
+                [1, 'yellow', 'Integer', [], ''],
+                [2, 'orange', 'Integer', [], ''],
+                [3, 'purple', 'Integer', [], '']
+            ]],
+            ['ChannelMask2', 'ArrayOf', ['*Pixel2$Enum'], '', []],      # Array of items from generated derived enum
+
+            ['Foo', 'Array', [], '', [                                  # Derived enumeration in a field
+                [1, 'type', 'Menu$Enum', [], ''],
+                [2, 'value', 'String', [], '']
+            ]],
+            ['Menu', 'Choice', [], '', [
+                [1, 'open', 'String', [], ''],
+                [2, 'close', 'String', [], '']
+            ]],
+            ['Menu$Enum', 'Enumerated', [], '', [
+                [1, 'open', ''],
+                [2, 'close', '']
+            ]],
             ['Pixel2$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
                 [1, 'yellow', ''],
                 [2, 'orange', ''],
@@ -304,12 +370,15 @@ class SimplifyExtensions(TestCase):
     }
 
     def test_derived_enum(self):
-        self.do_simplify_test(self.schema_enum_extension, self.schema_enum_simplified, {'DerivedEnum'})
+        self.do_unfold_test(self.schema_enum_folded, self.schema_enum_unfolded, {'DerivedEnum'})
+
+    def test_derived_enum_all(self):
+        self.do_unfold_test(self.schema_enum_folded, self.schema_enum_unfolded_all)
 
     """
     MapOf Enumerated Key Extension
     """
-    schema_mapof_extension = {
+    schema_mapof_folded = {
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
                 [1, 'red', 'rojo'],
@@ -319,7 +388,7 @@ class SimplifyExtensions(TestCase):
             ['Colors-Map', 'MapOf', ['+Colors-Enum', '*Number'], '']
         ]
     }
-    schema_mapof_simplified = {
+    schema_mapof_unfolded = {
         'types': [
             ['Colors-Enum', 'Enumerated', [], '', [
                 [1, 'red', 'rojo'],
@@ -335,12 +404,15 @@ class SimplifyExtensions(TestCase):
     }
 
     def test_mapof(self):
-        self.do_simplify_test(self.schema_mapof_extension, self.schema_mapof_simplified, {'MapOfEnum'})
+        self.do_unfold_test(self.schema_mapof_folded, self.schema_mapof_unfolded, {'MapOfEnum'})
+
+    def test_mapof_all(self):
+        self.do_unfold_test(self.schema_mapof_folded, self.schema_mapof_unfolded)
 
     """
     Pointers Extension
     """
-    schema_pointer_extension = {
+    schema_pointer_folded = {
         'types': [
             ['Catalog', 'Record', [], '', [
                 [1, 'a', 'TypeA', [], 'Leaf field (e.g., file)'],
@@ -361,7 +433,7 @@ class SimplifyExtensions(TestCase):
             ['Empty-Paths', 'Enumerated', ['>Simple'], '']
         ]
     }
-    schema_pointer_simplified = {
+    schema_pointer_unfolded = {
         'types': [
             ['Catalog', 'Record', [], '', [
                 [1, 'a', 'TypeA', [], 'Leaf field (e.g., file)'],
@@ -391,9 +463,78 @@ class SimplifyExtensions(TestCase):
     }
 
     def test_pointer(self):
-        self.do_simplify_test(self.schema_pointer_extension, self.schema_pointer_simplified, {'DerivedEnum'})
+        self.do_unfold_test(self.schema_pointer_folded, self.schema_pointer_unfolded, {'DerivedEnum'})
+
+    def test_pointer_all(self):
+        self.do_unfold_test(self.schema_pointer_folded, self.schema_pointer_unfolded)
+
+    """
+    Link Extension
+    """
+    schema_link_folded = {
+        'types': [
+            ['Person', 'Record', [], '', [
+                [1, 'id', 'Integer', ['K'], ''],
+                [2, 'name', 'String', [], ''],
+                [3, 'mother', 'Person', ['L'], ''],
+                [4, 'father', 'Person', ['L'], ''],
+                [5, 'siblings', 'Person', ['L', '[0', ']0'], ''],
+                [6, 'friends', 'Person', ['L', '[0', ']0'], ''],
+                [7, 'employer', 'Organization', ['L', '[0'], '']
+            ]],
+            ['Organization', 'Record', [], '', [
+                [1, 'name', 'String', [], ''],
+                [2, 'ein', 'String', ['K', '}10', '{10'], '']
+            ]]
+        ]
+    }
+    schema_link_unfolded = {
+        'types': [
+            ['Person', 'Record', [], '', [
+                [1, 'id', 'Person$id', [], ''],
+                [2, 'name', 'String', [], ''],
+                [3, 'mother', 'Person$id', [], ''],
+                [4, 'father', 'Person$id', [], ''],
+                [5, 'siblings', 'Person$id', ['[0', ']0'], ''],
+                [6, 'friends', 'Person$id', ['[0', ']0'], ''],
+                [7, 'employer', 'Organization$ein', ['[0'], '']
+            ]],
+            ['Organization', 'Record', [], '', [
+                [1, 'name', 'String', [], ''],
+                [2, 'ein', 'Organization$ein', [], '']
+            ]],
+            ['Person$id', 'Integer', [], '', []],
+            ['Organization$ein', 'String', ['}10', '{10'], '']
+        ]
+    }
+    schema_link_unfolded_all = {
+        'types': [
+            ['Person', 'Record', [], '', [
+                [1, 'id', 'Person$id', [], ''],
+                [2, 'name', 'String', [], ''],
+                [3, 'mother', 'Person$id', [], ''],
+                [4, 'father', 'Person$id', [], ''],
+                [5, 'siblings', 'Person$siblings', ['[0'], ''],
+                [6, 'friends', 'Person$friends', ['[0'], ''],
+                [7, 'employer', 'Organization$ein', ['[0'], '']
+            ]],
+            ['Organization', 'Record', [], '', [
+                [1, 'name', 'String', [], ''],
+                [2, 'ein', 'Organization$ein', [], '']
+            ]],
+            ['Person$id', 'Integer', [], '', []],
+            ['Organization$ein', 'String', ['}10', '{10'], ''],
+            ['Person$siblings', 'ArrayOf', ['*Person$id', '{1'], '', []],
+            ['Person$friends', 'ArrayOf', ['*Person$id', '{1']]
+        ]
+    }
+
+    def test_link(self):
+        self.do_unfold_test(self.schema_link_folded, self.schema_link_unfolded, {'Link'})
+
+    def test_link_all(self):
+        self.do_unfold_test(self.schema_link_folded, self.schema_link_unfolded_all)
 
 
 if __name__ == '__main__':
     main()
-

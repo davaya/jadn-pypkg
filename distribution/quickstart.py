@@ -84,6 +84,5 @@ def print_encoded_data(codec):
 print('\nSerialized Data:\n----------------')
 print('Verbose JSON:')          # Create a codec from schema, Validate and encode as verbose JSON
 print_encoded_data(jadn.codec.Codec(schema, verbose_rec=True, verbose_str=True))
-
-print('\nMinimized JSON:')      # Create a codec from schema, Validate and encode as optimized JSON
+print('\nConcise JSON:')        # Create a codec from schema, Validate and encode as machine-optimized JSON
 print_encoded_data(jadn.codec.Codec(schema, verbose_rec=False, verbose_str=False))
