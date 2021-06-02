@@ -12,7 +12,7 @@ from ..utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2
 # JIDL -> JADN Type regexes
 p_tname = r'\s*([-$\w]+)'               # Type Name
 p_assign = r'\s*='                      # Type assignment operator
-p_tstr = r'\s*(.*?)\s*\{?'             # Type definition
+p_tstr = r'\s*(.*?)\s*\{?'              # Type definition
 p_tdesc = r'(?:\s*\/\/\s*(.*?)\s*)?'    # Optional Type description
 
 # JIDL -> JADN Field regexes

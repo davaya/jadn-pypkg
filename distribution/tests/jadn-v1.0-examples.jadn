@@ -16,7 +16,7 @@
     [2, "appliance", "Appliance", [], ""],
     [3, "software", "Software", [], ""]
   ]],
-  ["Dept", "Enumerated", [], "Explicit Tag values = Enumerated type containing tags derived from the Choice", [
+  ["Dept", "Enumerated", [], "Explicit Tag values derived from the Choice", [
     [1, "furniture", ""],
     [2, "appliance", ""],
     [3, "software", ""]
@@ -110,6 +110,20 @@
     [1, "a", "Item 1"],
     [2, "b/foo", "Item 2"],
     [3, "b/bar", "Item 3"]
+  ]],
+
+  ["Person2", "Record", [], "", [
+    [1, "id", "Integer", ["K"], "key"],
+    [2, "name", "String", [], ""],
+    [3, "mother", "Person2", ["L"], "link"],
+    [4, "father", "Person2", ["L"], "link"],
+    [5, "siblings", "Person2", ["[0", "]0", "L"], "link"],
+    [6, "friends", "Person2", ["[0", "]0", "L"], "link"],
+    [7, "employer", "Organization", ["[0", "L"], ""]
+  ]],
+  ["Organization", "Record", [], "", [
+    [1, "ein", "String", ["{10", "}10", "K"], ""],
+    [2, "name", "String", [], ""]
   ]]
  ]
 }

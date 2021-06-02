@@ -55,5 +55,8 @@
     [1, "id", "Integer", ["K"], ""],
     [2, "roles", "Character", ["]0", "L"], ""],
     [3, "cards", "String", ["%^[A-Z]{2}$", "]0", "L"], ""]
-  ]]
-]}
+  ]],
+  ["Set", "ArrayOf", ["*Integer", "s"]],
+  ["Uniq", "ArrayOf", ["*Integer", "q"]],
+  ["Bag", "ArrayOf", ["*Integer", "b"]]
+ ]}

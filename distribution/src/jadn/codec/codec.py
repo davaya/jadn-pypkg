@@ -194,18 +194,6 @@ def _decode_number(ts: SymbolTableField, sval, codec: 'Codec'):
     return _check_range(ts, aval)
 
 
-def _encode_null(ts: SymbolTableField, aval, codec: 'Codec'):
-    if aval:                            # Treat any false-y value as Null: None, False, 0, '', [], set(), {}
-        _bad_value(ts, aval)
-    return aval
-
-
-def _decode_null(ts: SymbolTableField, val, codec: 'Codec'):
-    if val:
-        _bad_value(ts, val)
-    return val
-
-
 def _encode_string(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, type(''))
     _check_size(ts, aval)
@@ -387,12 +375,18 @@ def _decode_array(ts: SymbolTableField, sval, codec: 'Codec'):  # Ordered list o
 def _encode_array_of(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, list)
     _check_size(ts, val)
+    if 'set' in ts.TypeOpts or 'unique' in ts.TypeOpts:
+        if len(val) != len(set(val)):
+            _bad_value(ts, val)
     return [codec.encode(ts.TypeOpts['vtype'], v) for v in val]
 
 
 def _decode_array_of(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, list)
     _check_size(ts, val)
+    if 'set' in ts.TypeOpts or 'unique' in ts.TypeOpts:
+        if len(val) != len(set(val)):
+            _bad_value(ts, val)
     return [codec.decode(ts.TypeOpts['vtype'], v) for v in val]
 
 
@@ -414,7 +408,6 @@ enctab: Dict[str, CodecTableField] = {  # decode, encode, min encoded type
     'Boolean': CodecTableField(_decode_boolean, _encode_boolean, bool),
     'Integer': CodecTableField(_decode_integer, _encode_integer, int),
     'Number': CodecTableField(_decode_number, _encode_number, float),
-    'Null': CodecTableField(_decode_null, _encode_null, str),
     'String': CodecTableField(_decode_string, _encode_string, str),
     'Enumerated': CodecTableField(_decode_enumerated, _encode_enumerated, int),
     'Choice': CodecTableField(_decode_choice, _encode_choice, dict),

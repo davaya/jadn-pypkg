@@ -25,18 +25,20 @@ def strip_comments(schema: dict, width=0) -> dict:  # Strip or truncate comments
 def unfold_link(schema: dict, sys: str) -> NoReturn:
     ltypes = []     # Types that have links
     keys = {}       # Key names for types that have keys
+    typex = {t[TypeName]: n for n, t in enumerate(schema['types'])}       # Build type index
     for tdef in list(schema['types']):
         if has_fields(tdef.BaseType):
             for fdef in tdef.Fields:
                 fo, fto = ftopts_s2d(fdef.FieldOptions)
                 if 'key' in fo:
-                    del_opt(fdef.FieldOptions, 'key')
-                    newname = f'{tdef.TypeName}{sys}{fdef.FieldName}'
-                    newopts = [fdef.FieldOptions.pop(get_optx(fdef.FieldOptions, o)) for o in fto]
-                    schema['types'].append(TypeDefinition(newname, fdef.FieldType, newopts, fdef.FieldDesc))
-                    fdef.FieldType = newname           # Redirect field to explicit type definition
+                    if (newname := fdef.FieldType) not in typex:
+                        newname = f'{tdef.TypeName}{sys}{fdef.FieldName}'
+                        newopts = [fdef.FieldOptions.pop(get_optx(fdef.FieldOptions, o)) for o in fto]
+                        schema['types'].append(TypeDefinition(newname, fdef.FieldType, newopts, fdef.FieldDesc))
+                        fdef.FieldType = newname           # Redirect field to explicit type definition
                     keys.update({tdef.TypeName: newname})
-                elif 'link' in fo:
+                    del_opt(fdef.FieldOptions, 'key')
+                elif 'link' in fo and tdef not in ltypes:
                     ltypes.append(tdef)
     for tdef in ltypes:
         for fdef in tdef.Fields:

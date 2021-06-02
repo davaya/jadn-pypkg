@@ -16,7 +16,6 @@ stype_map = {                   # Map JADN built-in types to JAS type names (Equ
     'Boolean': 'BOOLEAN',       # BOOLEAN
     'Integer': 'INTEGER',       # INTEGER
     'Number': 'REAL',           # REAL
-    'Null': 'NULL',             # NULL
     'String': 'STRING',         # UTF8String
     'Array': 'ARRAY',           # SEQUENCE
     'ArrayOf': 'ARRAY_OF',      # SEQUENCE OF

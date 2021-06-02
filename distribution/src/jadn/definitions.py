@@ -109,7 +109,6 @@ PRIMITIVE_TYPES = (
     'Boolean',
     'Integer',
     'Number',
-    'Null',
     'String',
 )
 
@@ -133,7 +132,6 @@ FIELD_LENGTH = {
     'Boolean': 0,
     'Integer': 0,
     'Number': 0,
-    'Null': 0,
     'String': 0,
     'Enumerated': 3,    # 0 if Enumerated type definition contains enum or pointer option
     'Choice': 5,
@@ -221,7 +219,6 @@ REQUIRED_TYPE_OPTIONS = {
     'Boolean': [],
     'Integer': [],
     'Number': [],
-    'Null': [],
     'String': [],
     'Enumerated': [],
     'Choice': [],
@@ -237,12 +234,11 @@ ALLOWED_TYPE_OPTIONS = {
     'Boolean': ['and', 'or'],
     'Integer': ['format', 'minv', 'maxv', 'and', 'or'],
     'Number': ['format', 'minf', 'maxf', 'and', 'or'],
-    'Null': ['and', 'or'],
     'String': ['format', 'pattern', 'minv', 'maxv', 'and', 'or'],
     'Enumerated': ['id', 'enum', 'pointer', 'extend', 'and', 'or'],
     'Choice': ['id', 'extend', 'and', 'or'],
     'Array': ['extend', 'format', 'minv', 'maxv', 'and', 'or'],
-    'ArrayOf': ['vtype', 'minv', 'maxv', 'unique', 'set', 'and', 'or'],
+    'ArrayOf': ['vtype', 'minv', 'maxv', 'unique', 'set', 'unordered', 'and', 'or'],
     'Map': ['id', 'extend', 'minv', 'maxv', 'and', 'or'],
     'MapOf': ['ktype', 'vtype', 'minv', 'maxv', 'and', 'or'],
     'Record': ['extend', 'minv', 'maxv', 'and', 'or'],

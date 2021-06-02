@@ -202,16 +202,16 @@ def opts_sort(olist: Union[List[OPTION_TYPES], Tuple[OPTION_TYPES, ...]]) -> NoR
 
 
 def canonicalize(schema: dict) -> dict:
-    def can_opts(olist: List[OPTION_TYPES], btype: str):
+    def can_opts(olist: List[OPTION_TYPES], basetype: str):
         opts_sort(olist)                # Sort options into canonical order (for comparisons)
         fo, to = ftopts_s2d(olist)      # Remove default size and multiplicity options
-        if 'minv' in to and to['minv'] == 0 and btype != 'Integer':
+        if 'minv' in to and to['minv'] == 0 and basetype != 'Integer':
             del_opt(olist, 'minv')
         if 'minc' in fo and fo['minc'] == 1:
             del_opt(olist, 'minc')
         if 'maxc' in fo and fo['maxc'] == 1:
             del_opt(olist, 'maxc')
-        if btype == 'Number':           # TODO: fix corner case input = 2.000
+        if basetype == 'Number':           # TODO: fix corner case input = 2.000
             minf = get_optx(olist, 'minf')
             if minf is not None and '.' not in olist[minf]:
                 olist[minf] += '.0'
@@ -254,13 +254,13 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
 
     topts = {}
     fo = []
-    p_name = r'\s*=?\s*([-$:\w]+)'      # 1 type name
-    p_id = r'(\.ID)?'                   # 2 'id'
-    p_func = r'(?:\(([^)]+)\))?'        # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
-    p_rangepat = r'(?:\{(.*)\})?'       # 4 'minv', 'maxv', 'pattern'
-    p_format = r'(?:\s+\/(\w[-\w]*))?'  # 5 'format'
-    p_unique = r'(\s+unique)?'          # 6 'unique'
-    pattern = fr'^{p_name}{p_id}{p_func}{p_rangepat}{p_format}{p_unique}\s*$'
+    p_name = r'\s*=?\s*([-$:\w]+)'          # 1 type name
+    p_id = r'(\.ID)?'                       # 2 'id'
+    p_func = r'(?:\(([^)]+)\))?'            # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
+    p_rangepat = r'(?:\{(.*)\})?'           # 4 'minv', 'maxv', 'pattern'
+    p_format = r'(?:\s+\/(\w[-\w]*))?'      # 5 'format'
+    p_kw = r'(\s+(unique|set|unordered))?'  # 6 'unique', 'set', 'unordered'
+    pattern = fr'^{p_name}{p_id}{p_func}{p_rangepat}{p_format}{p_kw}\s*$'
     m = re.match(pattern, typestring)
     if m is None:
         raise_error(f'TypeString2JADN: "{typestring}" does not match pattern {pattern}')
@@ -271,7 +271,7 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
         if tname == 'MapOf':
             topts.update({'ktype': opts[0], 'vtype': opts[1]})
         elif tname == 'ArrayOf':
-            assert len(opts) == 1
+            assert len(opts) == 1       # TODO: raise proper error message
             topts.update({'vtype': opts[0]})
         else:
             assert len(opts) == 1
@@ -290,7 +290,7 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
                 topts.update({} if a == '*' else {'minv': int(a)})
                 topts.update({} if b == '*' else {'maxv': int(b)})
     topts.update({'format': m.group(5)} if m.group(5) else {})
-    topts.update({'unique': True} if m.group(6) else {})
+    topts.update({m.group(7): True} if m.group(7) else {})      # m.group(6) is space+keyword
     return tname, opts_d2s(topts), fo
 
 
@@ -348,6 +348,12 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
 
     if opts.pop('unique', None):
         extra += ' unique'
+
+    if opts.pop('set', None):
+        extra += ' set'
+
+    if opts.pop('unordered', None):
+        extra += ' unordered'
 
     if v := opts.pop('and', None):  # hack set operations for now.  TODO: generalize to any number
         extra += f' ∩ {v}'

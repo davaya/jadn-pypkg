@@ -2,10 +2,10 @@
 Test JADN Codec
 """
 import json
-import os
 import binascii
 import unittest
 import jadn
+from collections import Counter
 
 
 # Encode and decode data to verify that numeric object keys work properly when JSON converts them to strings
@@ -21,14 +21,17 @@ class BasicTypes(unittest.TestCase):
             ['T-num', 'Number', [], ''],
             ['T-str', 'String', [], ''],
             ['T-bin', 'Binary', [], ''],
-            ['T-array-of', 'ArrayOf', ['*Integer'], ''],
+            ['T-arrayof', 'ArrayOf', ['*Integer'], ''],
+            ['T-arrayof-set', 'ArrayOf', ['*Integer', 's']],
+            ['T-arrayof-unique', 'ArrayOf', ['*Integer', 'q']],
+            ['T-arrayof-unordered', 'ArrayOf', ['*Integer', 'b']],
             ['T-array', 'Array', [], '', [
                 [1, 'f_bool', 'Boolean', ['[0'], ''],
                 [2, 'f_int', 'Integer', [], ''],
                 [3, 'f_num', 'Number', [], ''],
                 [4, 'f_str', 'String', ['[0'], ''],
                 [5, 'f_arr', 'T-aa', ['[0'], ''],
-                [6, 'f_ao', 'T-array-of', ['[0'], '']
+                [6, 'f_ao', 'T-arrayof', ['[0'], '']
             ]],
             ['T-aa', 'Array', [], '', [
                 [1, 'a', 'Integer', [], ''],
@@ -131,17 +134,45 @@ class BasicTypes(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.tc.encode('T-str', 1)
 
-    def test_array_of(self):
-        self.assertEqual(self.tc.decode('T-array-of', [1, 4, 9, 16]), [1, 4, 9, 16])
-        self.assertEqual(self.tc.encode('T-array-of', [1, 4, 9, 16]), [1, 4, 9, 16])
+    def test_arrayof(self):                 # ordered, non-unique
+        self.assertEqual(self.tc.decode('T-arrayof', [1, 4, 4, 16]), [1, 4, 4, 16])
+        self.assertEqual(self.tc.encode('T-arrayof', [1, 4, 4, 16]), [1, 4, 4, 16])
+        self.assertNotEqual(self.tc.decode('T-arrayof', [1, 4, 9, 16]), [4, 9, 1, 16])
+        self.assertNotEqual(self.tc.encode('T-arrayof', [1, 4, 9, 16]), [4, 9, 1, 16])
         with self.assertRaises(ValueError):
-            self.tc.decode('T-array-of', [1, '4', 9, 16])
+            self.tc.decode('T-arrayof', [1, '4', 4, 16])
         with self.assertRaises(ValueError):
-            self.tc.decode('T-array-of', 9)
+            self.tc.decode('T-arrayof', 9)
         with self.assertRaises(ValueError):
-            self.tc.encode('T-array-of', [1, '4', 9, 16])
+            self.tc.encode('T-arrayof', [1, '4', 4, 16])
         with self.assertRaises(ValueError):
-            self.tc.decode('T-array-of', 9)
+            self.tc.encode('T-arrayof', 9)
+
+    def test_arrayof_unique(self):          # ordered, unique
+        self.assertEqual(self.tc.decode('T-arrayof-unique', [1, 4, 9, 16]), [1, 4, 9, 16])
+        self.assertEqual(self.tc.encode('T-arrayof-unique', [1, 4, 9, 16]), [1, 4, 9, 16])
+        self.assertNotEqual(self.tc.decode('T-arrayof-unique', [1, 4, 9, 16]), [4, 9, 1, 16])
+        self.assertNotEqual(self.tc.encode('T-arrayof-unique', [1, 4, 9, 16]), [4, 9, 1, 16])
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-arrayof-unique', [1, 4, 4, 16])
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-arrayof-unique', [1, 4, 4, 16])
+
+    def test_arrayof_set(self):             # unordered, unique
+        self.assertEqual(self.tc.decode('T-arrayof-set', [1, 4, 9, 16]), [1, 4, 9, 16])
+        self.assertEqual(self.tc.encode('T-arrayof-set', [1, 4, 9, 16]), [1, 4, 9, 16])
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-arrayof-set', [1, 4, 4, 16])
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-arrayof-set', [1, 4, 4, 16])
+
+    def test_arrayof_unordered(self):       # unordered, non-unique
+        self.assertEqual(self.tc.decode('T-arrayof-unordered', [1, 4, 9, 16]), [1, 4, 9, 16])
+        self.assertEqual(self.tc.encode('T-arrayof-unordered', [1, 4, 9, 16]), [1, 4, 9, 16])
+        # Codec does not do value comparison so it cannot validate unordered behavior
+        # Python Counter type is an unordered non-unique collection ("Bag")
+        self.assertEqual(Counter([1, 4, 4, 9, 16]), Counter([4, 9, 1, 16, 4]))
+        self.assertNotEqual(Counter([1, 4, 4, 9, 16]), Counter([9, 9, 1, 16, 4]))
 
     B1b = b'data to be encoded'
     B1s = 'ZGF0YSB0byBiZSBlbmNvZGVk'
@@ -1614,22 +1645,6 @@ class Format(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.tc.decode('Int64', self.int64v4)
 
-
-class JADN(unittest.TestCase):
-
-    def setUp(self):
-        fn = os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')
-        schema = jadn.load(fn)
-        self.schema = schema
-        sa = jadn.analyze(schema)
-        if sa['undefined']:
-            print('Warning - undefined:', sa['undefined'])
-        self.tc = jadn.codec.Codec(schema)
-
-    def test_jadn_self(self):
-        self.tc.set_mode(verbose_rec=True, verbose_str=True)
-        self.assertDictEqual(self.tc.encode('Schema', self.schema), self.schema)
-        self.assertDictEqual(self.tc.decode('Schema', self.schema), self.schema)
 
 if __name__ == '__main__':
     unittest.main()

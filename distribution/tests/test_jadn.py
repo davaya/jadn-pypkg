@@ -99,5 +99,65 @@ class SpecExamples(TestCase):
             self.tc.decode('Hashes2', msg_explicit_bad_val)
 
 
+class SpecExamplesUniversity(TestCase):
+    uni_verbose = {
+      "name": "Faber College",
+      "classes": [
+        {
+          "name": "ECE1010",
+          "room": "DRGN 105",
+          "teachers": ["U-004932"],
+          "students": ["U-194325", "U-029437"]
+        }, {
+          "name": "ECE1750",
+          "room": "FLRS 102",
+          "teachers": ["U-004932"],
+          "students": ["U-127439", "U-194325", "U-029437"]
+        }
+      ],
+      "people": [
+        {
+          "name": "Damien Braun",
+          "univ_id": "U-004932",
+          "email": "d.braun@faber.edu"
+        }, {
+          "name": "Ellie Osborne",
+          "univ_id": "U-194325",
+          "email": "ellie.osborne@faber.edu"
+        }, {
+          "name": "Pierre Cox",
+          "univ_id": "U-029437",
+          "email": "pc9000@outlook.com"
+        }, {
+          "name": "Alden Cantrel",
+          "univ_id": "U-127439",
+          "email": "alden.cantrel@faber.edu"
+        }
+      ]
+    }
+
+    uni_compact = [
+      "Faber College",
+      [
+        ["ECE1010", "DRGN 105", ["U-004932"], ["U-194325", "U-029437"]],
+        ["ECE1750", "FLRS 102", ["U-004932"], ["U-127439", "U-194325", "U-029437"]]
+      ],
+      [
+        ["Damien Braun", "U-004932", "d.braun@faber.edu"],
+        ["Ellie Osborne", "U-194325", "ellie.osborne@faber.edu"],
+        ["Pierre Cox", "U-029437", "pc9000@outlook.com"],
+        ["Alden Cantrel", "U-127439", "alden.cantrel@faber.edu"]
+      ]
+    ]
+
+    def test_university(self):
+        self.schema = jadn.load(os.path.join(dir_path, 'jadn-v1.0-examples-uni.jadn'))
+        self.tcv = Codec(self.schema, verbose_rec=True, verbose_str=True)
+        self.tcc = Codec(self.schema, verbose_rec=False, verbose_str=True)
+        uni_1 = self.tcv.decode("University", self.uni_verbose)
+        uni_2 = self.tcc.decode("University", self.uni_compact)
+        self.assertEqual(uni_1, uni_2)
+
+
 if __name__ == '__main__':
     main()

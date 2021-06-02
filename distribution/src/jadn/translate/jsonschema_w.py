@@ -311,7 +311,6 @@ TYPE_WRITERS = {
     'Boolean': t_boolean,
     'Integer': t_integer,
     'Number': t_number,
-    'Null': t_null,
     'String': t_string,
     'Enumerated': t_enumerated,
     'Choice': t_choice,
