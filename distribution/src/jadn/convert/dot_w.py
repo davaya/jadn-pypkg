@@ -3,6 +3,7 @@ Translate a JADN schema into a GraphViz (https://graphviz.org/) graph display fi
 """
 
 import re
+from datetime import datetime
 from typing import NoReturn
 from ..definitions import (TypeName, BaseType, TypeDesc, Fields, FieldName, FieldType, FieldOptions, FieldDesc,
                            PRIMITIVE_TYPES)
@@ -14,7 +15,7 @@ def wrapstr(ss: str, lines: int=3) -> str:
     p = 0
     bp = len(ss)/lines
     wrapped = ''
-    for w in re.findall(r'[A-Z][a-z0-9]+', ss): # TODO: update regex to support name formats other than PascalCase
+    for w in re.findall(r'[A-Z][a-z0-9]+', ss):     # TODO: update regex to support name formats other than PascalCase
         if p > 0 and p + len(w)/2 > bp:
             wrapped += '\\n'
             bp += len(ss)/lines
@@ -81,7 +82,7 @@ def dot_dumps(schema: dict, style: dict=None) -> str:
         s.update(style)
 
     text = ''
-    for k, v in schema["info"].items():
+    for k, v in schema.get('info', {}).items():
         text += f'# {k}: {v}\n'
     text += f'\n{dot_header(s["dotfile"])}\n'
 
@@ -90,7 +91,7 @@ def dot_dumps(schema: dict, style: dict=None) -> str:
     for td in schema['types']:
         node_type = f', shape="ellipse", fillcolor="{s["attr_color"]}"' if td[BaseType] in atypes else ''
         if s['attributes'] or not node_type:
-            node_type = ', shape="hexagon"' if '<->' in td[TypeDesc] else node_type
+            node_type = ', shape="hexagon"' if '<->' in td[TypeDesc] else node_type     # TODO: replace SOSA hacks
             text += f'  n{nodes[td[TypeName]]} [label="{wrapstr(td[TypeName])}"{node_type}]\n'
             for fd in td[Fields]:
                 if fd[FieldType] in nodes:

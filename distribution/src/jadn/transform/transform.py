@@ -3,9 +3,9 @@ import copy
 from typing import Generator, List, NoReturn, Set, Union
 from ..definitions import (
     TypeName, BaseType, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldName, FieldOptions, FieldDesc, OPTION_ID,
-    EXTENSIONS, OPTION_TYPES, is_builtin, has_fields, TypeDefinition, EnumFieldDefinition, GenFieldDefinition
-)
-from ..utils import del_opt, ftopts_s2d, get_optx, list_type_schema, opts_d2s, object_type_schema, topts_s2d, etrunc
+    EXTENSIONS, OPTION_TYPES, is_builtin, has_fields, TypeDefinition, EnumFieldDefinition, GenFieldDefinition)
+from ..utils import (
+    del_opt, ftopts_s2d, get_optx, list_type_schema, opts_d2s, object_type_schema, topts_s2d, etrunc, raise_error)
 
 
 def strip_comments(schema: dict, width=0) -> dict:  # Strip or truncate comments from schema
@@ -45,7 +45,10 @@ def unfold_link(schema: dict, sys: str) -> NoReturn:
             fo, fto = ftopts_s2d(fdef.FieldOptions)
             if 'link' in fo:
                 del_opt(fdef.FieldOptions, 'link')
-                fdef.FieldType = keys[fdef.FieldType]
+                try:
+                    fdef.FieldType = keys[fdef.FieldType]
+                except KeyError:
+                    raise_error(f'{tdef.TypeName}/{fdef.FieldName}: "{fdef.FieldType}" has no primary key')
 
 
 # Return option array index of enum or pointer option
