@@ -187,7 +187,7 @@ def unfold_extensions(schema: dict, extensions: Set[str] = None) -> dict:  # Rem
 
     if 'Link' in extensions:                    # Replace Key and Link options with explicit types
         unfold_link(sc, sys)
-    if 'Multiplicity' in extensions:            # Expand repeated types into ArrayOf defintions
+    if 'Multiplicity' in extensions or 'AnonymousType' in extensions:   # Expand repeated types into ArrayOf defintions
         unfold_multiplicity(sc, sys)
     if 'AnonymousType' in extensions:           # Expand inline definitions into named type definitions
         unfold_anonymous_types(sc, sys)

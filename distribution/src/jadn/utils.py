@@ -89,15 +89,15 @@ def build_deps(schema: dict) -> Dict[str, Set[str]]:
     """
     Build a Dependency dict: {TypeName: {Dep1, Dep2, ...}}
     """
-    # Options whose value is/has a type name
+    # Options whose value is/has a type name: strip option id
     oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and'], OPTION_ID['or']]
-    # Options that enumerate fields
+    # Options that enumerate fields: keep option id
     oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]
 
     def get_refs(tdef: list) -> Set[str]:  # Return all type references from a type definition
         refs = {to[1:] for to in tdef[TypeOptions] if to[0] in oids and not is_builtin(to[1:])}
         refs.update([to for to in tdef[TypeOptions] if to[0] in oids2])
-        if has_fields(tdef[BaseType]):
+        if has_fields(tdef[BaseType]):  # Ignore Enumerated
             for f in tdef[Fields]:
                 if not is_builtin(f[FieldType]):
                     # Add reference to type name

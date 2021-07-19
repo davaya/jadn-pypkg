@@ -1366,10 +1366,10 @@ class Format(unittest.TestCase):
     schema = {                          # JADN schema for value constraint tests
         'types': [
             ['IPv4-Bin', 'Binary', ['{4', '}4'], ''],  # Check length = 32 bits with format function
-            ['IPv4-Hex', 'Binary', ['{4', '}4', '/x'], ''],  # Check length = 32 bits with min/max size
+            ['IPv4-Hex', 'Binary', ['{4', '}4', '/X'], ''],  # Check length = 32 bits with min/max size
             ['IPv4-String', 'Binary', ['{4', '}4', '/ipv4-addr'], ''],
             ['IPv6-Base64url', 'Binary', ['{16', '}16'], ''],
-            ['IPv6-Hex', 'Binary', ['{16', '}16', '/x'], ''],
+            ['IPv6-Hex', 'Binary', ['{16', '}16', '/X'], ''],
             ['IPv6-String', 'Binary', ['{16', '}16', '/ipv6-addr'], ''],
             ['IPv4-Net', 'Array', ['/ipv4-net'], '', [
                 [1, 'addr', 'Binary', [], ''],
@@ -1384,6 +1384,7 @@ class Format(unittest.TestCase):
             ['Email-Addr', 'String', ['/email'], ''],
             ['Hostname', 'String', ['/hostname'], ''],
             ['URI', 'String', ['/uri'], ''],
+            ['DateTime', 'Integer', ['/datetime-ms'], ''],
             ['Int8', 'Integer', ['/i8'], ''],
             ['Int16', 'Integer', ['/i16'], ''],
             ['Int32', 'Integer', ['/i32'], ''],
@@ -1562,6 +1563,22 @@ class Format(unittest.TestCase):
                 self.tc.encode('URI', uri)
             with self.assertRaises(ValueError):
                 self.tc.decode('URI', uri)
+
+    dt1 = 1626634165000
+    dt4 = 1626634165394
+    dts1 = '2021-07-18T18:49:25+00:00'
+    dtsf = '2021-07-18T18:49:25.394+00:00'  # millisecond resolution
+    dts2 = '2021-07-18t18:49:25z'           # RFC 3339 allows lower-case t and z
+    dts3 = '2021-07-18 18:49:25Z'           # RFC 3339 allows space instead of T
+    dts4 = '2021-07-18 18:49:25.394Z'
+
+    def test_datetime(self):
+        self.assertEqual(self.tc.encode('DateTime', self.dt1), self.dts1)
+        self.assertEqual(self.tc.encode('DateTime', self.dt4), self.dtsf)
+        self.assertEqual(self.tc.decode('DateTime', self.dts1), self.dt1)
+        self.assertEqual(self.tc.decode('DateTime', self.dts2), self.dt1)
+        self.assertEqual(self.tc.decode('DateTime', self.dts3), self.dt1)
+        self.assertEqual(self.tc.decode('DateTime', self.dts4), self.dt4)
 
     int8v0 = 0
     int8v1 = -128

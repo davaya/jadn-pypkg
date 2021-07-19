@@ -289,7 +289,9 @@ FORMAT_SERIALIZE = {        # Data representation formats for one or more serial
     'ipv4-net': 'Array',        # IPv4 Network Address CIDR text string, RFC 4632 Section 3.1
     'ipv6-net': 'Array',        # IPv6 Network Address CIDR text string, RFC 4291 Section 2.3
     'b': 'Binary',              # Base64url - RFC 4648 Section 5 (default text representation of Binary type)
-    'x': 'Binary',              # Hex - RFC 4648 Section 8
+    'x': 'Binary',              # Hex - base16 - lowercase out, case-folding in
+    'X': 'Binary',              # Hex - RFC 4648 Section 8 - uppercase only
+    'datetime-ms': 'Integer',   # Milliseconds from the epoch, RFC 3339 date-time text representation
     'i8': 'Integer',            # 8 bit field - these affect packed (RFC 791 style) serializations
     'i16': 'Integer',           # 16 bit field
     'i32': 'Integer',           # 32 bit field

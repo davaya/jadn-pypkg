@@ -1,7 +1,9 @@
 import base64
 import binascii
+import re
 import string
 
+from datetime import datetime, timezone
 from ipaddress import IPv4Address, IPv6Address
 from typing import Any, Callable, Dict, Tuple
 from ..definitions import FORMAT_SERIALIZE
@@ -45,6 +47,17 @@ def s2b_hex(sval: str) -> bytes:      # Convert from hex string to binary
         raise TypeError
 
 
+def b2s_hex_lc(bval: bytes) -> str:      # Convert from binary to hex string
+    return base64.b16encode(bval).decode().lower()
+
+
+def s2b_hex_lc(sval: str) -> bytes:      # Convert from hex string to binary
+    try:
+        return base64.b16decode(sval, casefold=True)
+    except binascii.Error:
+        raise TypeError
+
+
 def b2s_base64url(bval: bytes) -> str:      # Convert from binary to base64url string
     return base64.urlsafe_b64encode(bval).decode().rstrip('=')
 
@@ -76,7 +89,8 @@ def s2b_ipv6_addr(sval: str) -> bytes:    # Convert IPv6 address from string to 
 
 FORMAT_CONVERT_BINARY_FUNCTIONS = {
     'b': (b2s_base64url, s2b_base64url),            # Base64url
-    'x': (b2s_hex, s2b_hex),                        # Hex
+    'x': (b2s_hex_lc, s2b_hex_lc),                  # Hex lower case
+    'X': (b2s_hex, s2b_hex),                        # Hex upper case (RFC conforming)
     'ipv4-addr': (b2s_ipv4_addr, s2b_ipv4_addr),    # IPv4 Address
     'ipv6-addr': (b2s_ipv6_addr, s2b_ipv6_addr),    # IPv6 Address
     'eui': (b2s_hex, s2b_hex),                      # EUI - TODO: write colon-hex A0:32:F9:...
@@ -121,8 +135,22 @@ FORMAT_CONVERT_MULTIPART_FUNCTIONS = {
     'ipv6-net': (a2s_ipv6_net, s2a_ipv6_net),       # IPv6 Net Address with CIDR prefix length
 }
 
-# No special serialization in JSON.  Define these for packed encoding.
+
+def int2datems(dt: int) -> str:
+    y = datetime.isoformat(datetime.fromtimestamp(dt/1000., timezone.utc))
+    if m := re.match(r'^(.+)(\.\d\d\d)(\d\d\d)(.+)$', y):   # strip microseconds to milliseconds
+        y = m.group(1) + m.group(2) + m.group(4)
+    return y
+
+
+def datems2int(dts: str) -> int:
+    x = datetime.fromisoformat(dts.upper().replace('Z', '+00:00').replace(' ', 'T'))
+    return int(1000 * datetime.timestamp(x))
+
+
+# No special sized integer serialization in JSON.  Define these for packed encoding.
 FORMAT_CONVERT_INTEGER_FUNCTIONS = {
+    'datetime-ms': (int2datems, datems2int),      # RFC 3339 milliseconds from epoch
     'i8': (_format_pass, _format_pass),
     'i16': (_format_pass, _format_pass),
     'i32': (_format_pass, _format_pass),

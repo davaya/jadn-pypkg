@@ -5,9 +5,9 @@ Translate a JADN schema into a GraphViz (https://graphviz.org/) graph display fi
 import re
 from datetime import datetime
 from typing import NoReturn
-from ..definitions import (TypeName, BaseType, TypeDesc, Fields, FieldName, FieldType, FieldOptions, FieldDesc,
-                           PRIMITIVE_TYPES)
-from ..utils import ftopts_s2d
+from ..definitions import (TypeName, BaseType, TypeDesc, PRIMITIVE_TYPES,
+                           Fields, FieldName, FieldType, FieldOptions, FieldDesc)
+from ..utils import topts_s2d, ftopts_s2d
 
 
 # Wrap typenames at word boundaries to minimize node width, using a max of "lines" lines.
@@ -15,7 +15,8 @@ def wrapstr(ss: str, lines: int=3) -> str:
     p = 0
     bp = len(ss)/lines
     wrapped = ''
-    for w in re.findall(r'[A-Z][a-z0-9]+', ss):     # TODO: update regex to support name formats other than PascalCase
+    for m in re.findall(r'([A-Z][a-z0-9]+)|([A-Z]+)|([a-z]+)', ss):  # TODO: update regex to support more word formats
+        w = ''.join(m)
         if p > 0 and p + len(w)/2 > bp:
             wrapped += '\\n'
             bp += len(ss)/lines
@@ -94,8 +95,9 @@ def dot_dumps(schema: dict, style: dict=None) -> str:
             node_type = ', shape="hexagon"' if '<->' in td[TypeDesc] else node_type     # TODO: replace SOSA hacks
             text += f'  n{nodes[td[TypeName]]} [label="{wrapstr(td[TypeName])}"{node_type}]\n'
             for fd in td[Fields]:
-                if fd[FieldType] in nodes:
-                    fopts, topts = ftopts_s2d(fd[FieldOptions])
+                fopts, topts = ftopts_s2d(fd[FieldOptions])
+                fieldtype = topts['vtype'] if fd[FieldType] == 'MapOf' else fd[FieldType]
+                if fieldtype in nodes:
                     edge_attrs = ['style="dashed"'] if 'link' in fopts or '<=' in fd[FieldDesc] else []
                     if s['links'] or not edge_attrs:
                         edge_attrs += [f'label="{fd[FieldName]}"'] if s['edge_label'] else []
@@ -105,7 +107,7 @@ def dot_dumps(schema: dict, style: dict=None) -> str:
                             edge_attrs += [f'headlabel="{opts_f}", taillabel="{opts_r}"']
                         edge_list = ', '.join(edge_attrs)
                         edge = f' [{edge_list}]' if edge_list else ''
-                        text += f'    n{nodes[td[TypeName]]} -> n{nodes[fd[FieldType]]}{edge}\n'
+                        text += f'    n{nodes[td[TypeName]]} -> n{nodes[fieldtype]}{edge}\n'
     text += '}'
     return text
 
