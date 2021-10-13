@@ -2,10 +2,9 @@
 JSON Abstract Data Notation (JADN)
 **********************************
 
-`JADN
-<https://github.com/oasis-tcs/openc2-jadn/blob/working/jadn-v1.0-wd01.md>`_ is an
-`information modeling
-<https://tools.ietf.org/html/rfc8477#section-2>`_ language used to define the information
+`JADN <https://docs.oasis-open.org/openc2/jadn/v1.0/cs01/jadn-v1.0-cs01.html>`_
+is an `information modeling <https://tools.ietf.org/html/rfc8477#section-2>`_
+language used to define the information
 needed by applications and to serialize that information using one or more data formats.
 It has several purposes, including convenient and expressive definition of data structures,
 validation of data instances, providing hints for user interfaces working with structured data,
@@ -31,7 +30,7 @@ The software in this package is organized by function:
   * text-based Interface Definition Language (IDL)
   * html tables
   * markdown tables
-  * GraphViz dot file
+  * GraphViz and PlantUML diagrams
 
 * **transform:** Process a JADN schema to produce another JADN schema:
 
@@ -65,6 +64,30 @@ script illustrates how to use these functions:
   * JSON
   * Minimized JSON
 
+Make Artifacts
+##############
+
+The `make_artifacts.py
+<https://github.com/davaya/jadn-pypkg/blob/main/distribution/make_artifacts.py>`_
+script translates all JADN schemas in a source directory to multiple formats in an output directory.
+
+Input formats are:
+
+* JADN
+* JADN IDL
+* HTML (with tags produced by this package)
+
+Output formats are:
+
+* JADN
+* Core JADN (with extensions removed)
+* JADN IDL
+* HTML tables
+* Markdown tables
+* GraphViz diagram
+* PlantUML diagram
+* JSON Schema
+
 Contributors
 ############
 
@@ -76,7 +99,8 @@ Feedback
 Comments on this software can be submitted using `GitHub
 <https://github.com/davaya/jadn-pypkg>`_ issues and pull requests.
 
-The JADN specification is being developed by the OASIS OpenC2 Technical Committee. OASIS members may
-participate directly in its development; others may participate indirectly using GitHub issues or the
-`openc2-comment
-<https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=openc2>`_ public mailing list.
+The `JADN <https://docs.oasis-open.org/openc2/jadn/v1.0/cs01/jadn-v1.0-cs01.html>`_
+specification is being developed by the OASIS OpenC2 Technical Committee.
+OASIS members may participate directly in its development;
+others may participate indirectly using GitHub issues or the
+`openc2-comment <https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=openc2>`_ public mail list.

@@ -364,6 +364,13 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
     return f"{tname}{extra}{f' ?{str(map(str, opts))}?' if opts else ''}"  # Flag unrecognized options
 
 
+def multiplicity_str(opts: dict) -> str:
+    lo = opts.get('minc', 1)
+    hi = opts.get('maxc', 1)
+    hs = '*' if hi < 1 else str(hi)
+    return f'{lo}..{hs}' if lo != 1 or hi != 1 else '1'
+
+
 def jadn2fielddef(fdef: list, tdef: list) -> Tuple[str, str, str, str]:
     idtype = tdef[BaseType] == 'Array' or get_optx(tdef[TypeOptions], 'id') is not None
     fname = '' if idtype else fdef[FieldName]
@@ -382,9 +389,7 @@ def jadn2fielddef(fdef: list, tdef: list) -> Tuple[str, str, str, str]:
             tf = f'(TagId[{tf if tf else tagid}])'
         ft = jadn2typestr(f'{fdef[FieldType]}{tf}', opts_d2s(fto))
         ftyperef = f'Key({ft})' if 'key' in fo else f'Link({ft})' if 'link' in fo else ft
-        minc = fo.get('minc', 1)
-        maxc = fo.get('maxc', 1)
-        fmult = '1' if minc == 1 and maxc == 1 else f"{minc}..{'*' if maxc == 0 else maxc}"
+        fmult = multiplicity_str(fo)
     return fname, ftyperef, fmult, fdesc
 
 

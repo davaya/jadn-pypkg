@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import NoReturn
 from ..definitions import (TypeName, BaseType, TypeDesc, PRIMITIVE_TYPES,
                            Fields, FieldName, FieldType, FieldOptions, FieldDesc)
-from ..utils import topts_s2d, ftopts_s2d
+from ..utils import ftopts_s2d, multiplicity_str
 
 
 # Wrap typenames at word boundaries to minimize node width, using a max of "lines" lines.
@@ -25,22 +25,16 @@ def wrapstr(ss: str, lines: int=3) -> str:
     return wrapped
 
 
-def multiplicity_str(ops: dict) -> str:
-    lo = ops.get('minc', 1)
-    hi = ops.get('maxc', 1)
-    hs = '*' if hi < 1 else str(hi)
-    return f'{lo}..{hs}' if lo != 1 or hi != 1 else '1'
-
-
 def dot_style() -> dict:
     # Return default generation options and GraphViz style attributes
     return {
+        'detail': 'conceptual',     # Level of detail: conceptual, logical, information
         'links': True,              # Show link edges (dashed)
         'attributes': False,        # Show node attributes connected to entities (ellipse)
         'attr_color': 'palegreen',  # Attribute ellipse fill color
         'edge_label': True,         # Show field name on edges
         'multiplicity': True,       # Show multiplicity on edges
-        'dotfile': {                # Options defined in GraphViz "Node, Edge and Graph Attributes"
+        'header': {                 # Options defined in GraphViz "Node, Edge and Graph Attributes"
             'graph': {
                 'fontname': 'Times',
                 'fontsize': 12
@@ -85,7 +79,7 @@ def dot_dumps(schema: dict, style: dict=None) -> str:
     text = ''
     for k, v in schema.get('info', {}).items():
         text += f'# {k}: {v}\n'
-    text += f'\n{dot_header(s["dotfile"])}\n'
+    text += f'\n{dot_header(s.get("header", ""))}\n'
 
     atypes = (*PRIMITIVE_TYPES, 'Enumerated')
     nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[BaseType] not in atypes}

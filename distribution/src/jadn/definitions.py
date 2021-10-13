@@ -326,5 +326,7 @@ EXTENSIONS = {
 INFO_ORDER = ('title', 'package', 'version', 'description', 'comments',
               'copyright', 'license', 'namespaces', 'exports', 'config')    # Display order
 
+GRAPH_DETAIL = ('conceptual', 'logical', 'information')
+
 # Type Hinting
 OPTION_TYPES = Union[int, float, str]
