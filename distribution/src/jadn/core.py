@@ -9,6 +9,7 @@ import jadn
 
 from datetime import datetime
 from typing import Any, NoReturn, Union
+from urllib.parse import urlparse
 from .definitions import (
     FieldID, FieldName, FieldDesc, FIELD_LENGTH,
     OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, VALID_FORMATS, is_builtin, has_fields
@@ -165,9 +166,14 @@ def loads(jadn_str: str) -> dict:
     return check(json.loads(jadn_str))
 
 
-def load(fname: Union[str, bytes, int]) -> dict:
-    with open(fname, encoding='utf-8') as f:
-        return check(json.load(f))
+def load(fname: Union[str, bytes, int], headers: dict = {}) -> dict:
+    u = urlparse(fname if isinstance(fname, str) else '')
+    if all([u.scheme, u.netloc]):
+        with urlopen(Request(path, headers=headers)) as f:
+            return check(json.load(f))
+    else:
+        with open(fname, encoding='utf-8') as f:
+            return check(json.load(f))
 
 
 def dumps_rec(val: Any, level: int = 0, indent: int = 1, strip: bool = False, nlevel: int = None) -> str:

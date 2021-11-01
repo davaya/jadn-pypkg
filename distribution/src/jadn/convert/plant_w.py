@@ -30,6 +30,7 @@ def plant_style() -> dict:
     return {
         'detail': 'conceptual',     # Level of detail: conceptual, logical, information
         'links': True,              # Show link edges (dashed)
+        'link_horizontal': True,    # Use e-w links vs. n-s containers
         'edge_label': True,         # Show field name on edges
         'multiplicity': True,       # Show multiplicity on edges
         'attributes': False,        # Show node attributes connected to entities (ellipse)
@@ -66,7 +67,7 @@ def plant_dumps(schema: dict, style: dict = None) -> str:
                 fopts, ftopts = ftopts_s2d(fd[FieldOptions])
                 fieldtype = ftopts['vtype'] if fd[FieldType] == 'MapOf' else fd[FieldType]
                 if fieldtype in nodes:
-                    rel = '..' if 'link' in fopts else '--'
+                    rel = ('.' if 'link_horizontal' in s else '..') if 'link' in fopts else '--'
                     elabel = ' : ' + fd[FieldName] if s['edge_label'] else ''
                     mult_f, mult_r = '', ''
                     if s['multiplicity']:
