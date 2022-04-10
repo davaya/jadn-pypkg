@@ -176,6 +176,21 @@ def load(fname: Union[str, bytes, int], headers: dict = {}) -> dict:
             return check(json.load(f))
 
 
+def load_any(path: str) -> (dict, None):
+    fn, ext = os.path.splitext(path)
+    try:
+        loader = {
+            '.jadn': jadn.load,
+            '.jidl': jadn.convert.jidl_load,
+            '.html': jadn.convert.html_load
+        }[ext]
+    except KeyError:
+        if os.path.isfile(path):
+            raise ValueError(f'Unsupported schema format: {path}')
+        return
+    return loader(path)
+
+
 def dumps_rec(val: Any, level: int = 0, indent: int = 1, strip: bool = False, nlevel: int = None) -> str:
     if isinstance(val, (numbers.Number, type(''))):
         return json.dumps(val)
@@ -215,6 +230,7 @@ __all__ = [
     'dump',
     'dumps',
     'load',
+    'load_any',
     'loads',
     'data_dir'
 ]

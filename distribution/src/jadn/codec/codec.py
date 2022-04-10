@@ -274,8 +274,8 @@ def _encode_maprec(ts: SymbolTableField, aval, codec: 'Codec'):
         elif sv is not None:  # Map or Verbose Record
             sval[fd[fx]] = sv
 
-    if set(aval) - set(fnames):
-        _extra_value(ts, aval, fnames)
+    if extras := set(aval) - set(fnames):
+        _extra_value(ts, aval, extras)
     if isinstance(sval, list):
         while sval and sval[-1] is None:  # Strip non-populated trailing optional values
             sval.pop()

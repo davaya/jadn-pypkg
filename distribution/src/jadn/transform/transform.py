@@ -133,7 +133,8 @@ def unfold_derived_enum(schema: dict, sys: str) -> NoReturn:
             if has_fields(tdef.BaseType):
                 for f in tdef.Fields:
                     if OPTION_ID['dir'] in f.FieldOptions:
-                        yield from pathnames(f.FieldType, f'{f.FieldName}/')
+                        if f.FieldType in typex:
+                            yield from pathnames(f.FieldType, f'{f.FieldName}/')
                     else:
                         yield [base + f.FieldName, f.FieldDesc]
         return [[n+1] + f for n, f in enumerate(pathnames(rtype))]
