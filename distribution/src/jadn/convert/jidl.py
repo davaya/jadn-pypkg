@@ -5,7 +5,7 @@ import json
 import re
 
 from datetime import datetime
-from typing import NoReturn, Tuple, Union
+from typing import NoReturn, TextIO, Tuple, Union
 from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
 from ..utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error, typestr2jadn, etrunc
 
@@ -136,9 +136,8 @@ def jidl_loads(doc: str) -> dict:
     return {'info': info, 'types': types} if info else {'types': types}
 
 
-def jidl_load(fname: Union[bytes, str, int]) -> dict:
-    with open(fname, 'r') as f:
-        return jidl_loads(f.read())
+def jidl_load(fp: TextIO) -> dict:
+    return jidl_loads(fp.read())
 
 
 __all__ = [

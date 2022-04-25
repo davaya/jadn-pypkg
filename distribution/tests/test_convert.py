@@ -7,7 +7,7 @@ import os
 import unittest
 
 
-# TODO: Read and Write JIDL and HTML, Write Markdown, JSON Schema, XSD, CDDL
+# TODO: Read and Write JIDL and HTML, Write Markdown, JSON Schema, XSD
 dir_path = os.path.abspath(os.path.dirname(__file__))
 quickstart_schema = {
     'types': [
@@ -27,13 +27,16 @@ class BasicConvert:
         self._convert(jadn.check(quickstart_schema))
 
     def test_1_types(self):
-        self._convert(jadn.load(os.path.join(dir_path, 'convert_types.jadn')))
+        with open(os.path.join(dir_path, 'convert_types.jadn')) as fp:
+            self._convert(jadn.load(fp))
 
     def test_2_jadn(self):
-        self._convert(jadn.load(os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')))
+        with open(os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')) as fp:
+            self._convert(jadn.load(fp))
 
     def test_3_examples(self):
-        self._convert(jadn.load(os.path.join(dir_path, 'jadn-v1.0-examples.jadn')))
+        with open(os.path.join(dir_path, 'jadn-v1.0-examples.jadn')) as fp:
+            self._convert(jadn.load(fp))
 
 
 class HtmlConvert(BasicConvert, unittest.TestCase):
@@ -51,16 +54,6 @@ class JidlConvert(BasicConvert, unittest.TestCase):
         self.assertEqual(jadn.canonicalize(schema), jadn.canonicalize(schema_new))
 
 
-# TODO: Read formats, compare to expected valid schema
-class CddlConvert(BasicConvert, unittest.TestCase):
-    def _convert(self, schema):
-        fmt = jadn.convert.ConversionFormats.CDDL
-        cddl_doc = jadn.convert.table_dumps(schema, fmt)
-        # schema_new = jadn.convert.table_loads(cddl_doc, fmt)
-        # self.maxDiff = None
-        # self.assertEqual(jadn.canonicalize(schema), jadn.canonicalize(schema_new))
-
-
 class JsonConvert(BasicConvert, unittest.TestCase):
     def _convert(self, schema):
         json_doc = jadn.translate.json_schema_dumps(schema)
@@ -71,9 +64,8 @@ class JsonConvert(BasicConvert, unittest.TestCase):
 
 class MarkdownConvert(BasicConvert, unittest.TestCase):
     def _convert(self, schema):
-        fmt = jadn.convert.ConversionFormats.MarkDown
-        markdown_doc = jadn.convert.table_dumps(schema, fmt)
-        # schema_new = jadn.convert.table_loads(markdown_doc, fmt)
+        markdown_doc = jadn.convert.markdown_dumps(schema)
+        # schema_new = jadn.convert.table_loads(markdown_doc)
         # self.maxDiff = None
         # self.assertEqual(jadn.canonicalize(schema), jadn.canonicalize(schema_new))
 

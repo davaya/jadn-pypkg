@@ -3,8 +3,8 @@ import json
 import os
 
 from collections import defaultdict
-from typing import Dict, Optional, List, NoReturn, Set, Tuple, Union
-from ..core import check
+from typing import Dict, Optional, List, NoReturn, Set, TextIO, Tuple, Union
+from ..core import check, load_any
 from ..definitions import (
     TypeName, BaseType, TypeOptions, TypeDesc, Fields, FieldType, FieldOptions, OPTION_ID, is_builtin
 )
@@ -12,35 +12,29 @@ from ..utils import build_deps, raise_error
 
 
 class SchemaPackage:
-    source: Optional[str]                 # Filename or URL
+    source: str                           # Filename or URL
     package: str                          # Namespace unique name
     schema: dict                          # JADN data
     namespaces: dict                      # Copy of meta['namespaces'] or empty {}
     tx: Dict[str, list]                   # Type index: {type name: type definition in schema}
-    deps: Dict[str, List[str]]            # Internal dependencies: {type1: {t2, t3}, type2: {t3, t4, t5}}
+    deps: Dict[str, Set[str]]            # Internal dependencies: {type1: {t2, t3}, type2: {t3, t4, t5}}
     refs: Dict[str, Dict[str, Set[str]]]  # External references {namespace1: {type1: {t2, t3}, ...}}
     used: Set[str]                        # Types from this package that have been referenced {t2, t3}
 
-    def __init__(self, source: Union[dict, str]):     # Read schema data, get package name
-        if isinstance(source, dict):    # If schema is provided, save data
+    def __init__(self, source: Union[dict, TextIO]):     # Read schema data, get package name
+        if isinstance(source, dict):      # If schema is provided, save data
             self.schema = source
-        elif isinstance(source, str):   # If filename or URL is provided, load data and record source
-            if '://' in source:
-                pass                    # TODO: read schema from URL
-            else:
-                with open(source, encoding='utf-8') as f:
-                    try:
-                        self.schema = json.load(f)
-                    except json.JSONDecodeError:
-                        print("Decoding", source)
-                        raise
-            self.source = source
+            self.source = ''
+        else:
+            self.schema = load_any(source)
+            self.source = source.name
 
         try:
             self.package = self.schema['info']['package']
-            self.namespaces = self.schema['info']['namespaces'] if 'namespaces' in self.schema['info'] else {}
         except KeyError:
             raise_error(f'Schema package {self.source} must have a package ID')
+
+        self.namespaces = self.schema['info']['namespaces'] if 'namespaces' in self.schema['info'] else {}
         self.clear()
 
     def load(self) -> NoReturn:     # Validate schema, build type dependencies and external references
@@ -121,7 +115,7 @@ def add_types(sm: SchemaPackage, tname: str, sys: str = '$') -> NoReturn:
         sm.add_used(tname)
         try:
             for tn in sm.deps[tname]:
-                add_types(sm, tn)
+                add_types(sm, tn, sys)
         except KeyError as e:
             if not make_enum(sm, tname, sys):
                 raise_error(f'Resolve: {e} not defined in {sm.package} ({sm.source})')
@@ -135,10 +129,10 @@ def resolve(sm: SchemaPackage, types: Set[str], packages: dict, sys: str = '$') 
             add_types(sm, tn, sys)
         for pkg in sm.refs:
             if pkg in packages:
-                resolve(packages[pkg], {t for k, v in sm.refs[pkg].items() if k in sm.used for t in v}, packages)
                 print(f'  Resolve {pkg} into {sm.package}')
+                resolve(packages[pkg], {t for k, v in sm.refs[pkg].items() if k in sm.used for t in v}, packages)
             else:
-                print('Resolve: package', pkg, 'not found.')
+                print(f'* Resolve: package {pkg} not found.')
 
 
 # Add referenced types to schema. dirname => other schema files
@@ -150,14 +144,15 @@ def resolve_imports(schema: dict, dirname: str, no_nsid: Tuple[str, ...] = ()):
     packages = {root.package: root}
     nsids = defaultdict(list)
 
-    for fn in (os.path.join(dirname, f) for f in os.listdir(dirname) if os.path.splitext(f)[1] == '.jadn'):
-        sm = SchemaPackage(fn)
+    for fn in (os.path.join(dirname, f) for f in os.listdir(dirname) if os.path.splitext(f)[1] in ('.jadn', '.jidl')):
+        with open(fn, 'r', encoding='utf-8') as fp:
+            sm = SchemaPackage(fp)
         if sm.package not in packages:            # Add new package to list
             packages.update({sm.package: sm})
         elif root.package == sm.package and root.schema == sm.schema:     # Update source of root schema if found
             packages[sm.package].source = fn
-        elif sm.source != fn:                   # Flag multiple files with same package name
-            print('* Duplicate package', sm.package, sm.source, 'Ignoring', fn)
+        elif packages[sm.package].source != fn:                   # Flag multiple files with same package name
+            print(f'* Duplicate package {sm.package}, Using: {packages[sm.package].source}, Ignoring: {fn}')
         for i, m in sm.namespaces.items():
             nsids[m].append('' if i in no_nsid else i)
     resolve(root, root.schema['info']['exports'] if 'exports' in root.schema['info'] else set(), packages)

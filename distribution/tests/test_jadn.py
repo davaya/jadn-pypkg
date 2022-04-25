@@ -13,8 +13,8 @@ dir_path = os.path.abspath(os.path.dirname(__file__))
 
 class JADN(TestCase):
     def setUp(self):
-        fn = os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')
-        self.schema = jadn.load(fn)
+        with open(os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')) as fp:
+            self.schema = jadn.load(fp)
         sa = jadn.analyze(self.schema)
         if sa['undefined']:
             print('Warning - undefined:', sa['undefined'])
@@ -62,7 +62,8 @@ class SpecExamples(TestCase):
     """
 
     def setUp(self):
-        self.schema = jadn.load(os.path.join(dir_path, 'jadn-v1.0-examples.jadn'))
+        with open(os.path.join(dir_path, 'jadn-v1.0-examples.jadn')) as fp:
+            self.schema = jadn.load(fp)
         self.tc = Codec(self.schema, verbose_rec=True, verbose_str=True)
 
     def test_choice_explicit(self):
@@ -151,7 +152,8 @@ class SpecExamplesUniversity(TestCase):
     ]
 
     def test_university(self):
-        self.schema = jadn.load(os.path.join(dir_path, 'jadn-v1.0-examples-uni.jadn'))
+        with open(os.path.join(dir_path, 'jadn-v1.0-examples-uni.jadn')) as fp:
+            self.schema = jadn.load(fp)
         self.tcv = Codec(self.schema, verbose_rec=True, verbose_str=True)
         self.tcc = Codec(self.schema, verbose_rec=False, verbose_str=True)
         uni_1 = self.tcv.decode("University", self.uni_verbose)

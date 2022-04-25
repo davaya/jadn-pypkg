@@ -44,7 +44,7 @@ assert schema == jadn.convert.html_loads(html_doc)      # Verify lossless round-
                                         # schema options must be canonical to avoid spurious mismatch.
 
 print('\nSchema (Markdown):\n------------------')
-print(jadn.convert.table_dumps(schema))
+print(jadn.convert.markdown_dumps(schema))
 
 print('\nSchema (JSON Schema):\n------------------')
 schema.update({                 # JSON Schema conversion needs root type (Person) and namespace $id

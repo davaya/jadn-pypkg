@@ -8,7 +8,7 @@ import os
 import jadn
 
 from datetime import datetime
-from typing import Any, NoReturn, Union
+from typing import Any, NoReturn, TextIO, Union
 from urllib.parse import urlparse
 from .definitions import (
     FieldID, FieldName, FieldDesc, FIELD_LENGTH,
@@ -166,18 +166,13 @@ def loads(jadn_str: str) -> dict:
     return check(json.loads(jadn_str))
 
 
-def load(fname: Union[str, bytes, int], headers: dict = {}) -> dict:
-    u = urlparse(fname if isinstance(fname, str) else '')
-    if all([u.scheme, u.netloc]):
-        with urlopen(Request(path, headers=headers)) as f:
-            return check(json.load(f))
-    else:
-        with open(fname, encoding='utf-8') as f:
-            return check(json.load(f))
+def load(fp: TextIO) -> dict:
+    return check(json.load(fp))
 
 
-def load_any(path: str) -> (dict, None):
-    fn, ext = os.path.splitext(path)
+def load_any(fp: TextIO) -> dict:
+    name = getattr(fp, 'name', getattr(getattr(fp, 'buffer'), 'url', ''))
+    fn, ext = os.path.splitext(name)
     try:
         loader = {
             '.jadn': jadn.load,
@@ -185,10 +180,8 @@ def load_any(path: str) -> (dict, None):
             '.html': jadn.convert.html_load
         }[ext]
     except KeyError:
-        if os.path.isfile(path):
-            raise ValueError(f'Unsupported schema format: {path}')
-        return
-    return loader(path)
+        raise ValueError(f'Unsupported schema format: {name}')
+    return loader(fp)
 
 
 def dumps_rec(val: Any, level: int = 0, indent: int = 1, strip: bool = False, nlevel: int = None) -> str:
