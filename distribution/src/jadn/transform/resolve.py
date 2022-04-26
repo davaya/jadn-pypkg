@@ -78,7 +78,7 @@ def merge_tname(tref: str, package: str, namespaces: Dict[str, str], nsids: dict
 
 
 def merge_typedef(tdef: list, package: str, namespaces: Dict[str, str], nsids: dict, sys: str = '$') -> list:
-    oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and']]  # Options whose value is/has a type name
+    oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['enum'], OPTION_ID['pointer'], OPTION_ID['and']]  # Options whose value is/has a type name
 
     def update_opts(opts: List[str]) -> List[str]:
         return [f'{x[0]}{merge_tname(x[1:], package, namespaces, nsids, sys)}' if x[0] in oids else x for x in opts]
