@@ -143,6 +143,17 @@ def _check_size(ts: SymbolTableField, val):
     return val
 
 
+def _check_count(ts: SymbolTableField, val):
+    op = ts.TypeOpts
+    tn = ts.TypeDef.TypeName
+    cnt = len([k for k in val if k is not None])
+    if 'minv' in op and cnt < op['minv']:
+        raise_error(f'{tn}: length {cnt} < minimum {op["minv"]}')
+    if 'maxv' in op and cnt > op['maxv']:
+        raise_error(f'{tn}: length {len(val)} > maximum {op["maxv"]}')
+    return val
+
+
 def _extra_value(ts: SymbolTableField, val, extra: set):
     td = ts.TypeDef
     raise_error(f'{td.TypeName}({td.BaseType}): unexpected field: \"{", ".join(str(k) for k in extra)}\"')
@@ -252,6 +263,7 @@ def _decode_choice(ts: SymbolTableField, val, codec: 'Codec'):  # Map Choice:  v
 
 def _encode_maprec(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, dict)
+    _check_size(ts, aval)
     sval = ts.EncType()
     assert isinstance(sval, (list, dict))
     fx = FieldName if codec.verbose_str else FieldID  # Verbose or minified identifier strings
@@ -284,6 +296,7 @@ def _encode_maprec(ts: SymbolTableField, aval, codec: 'Codec'):
 
 def _decode_maprec(ts: SymbolTableField, sval, codec: 'Codec'):
     _check_type(ts, sval, ts.EncType)
+    _check_size(ts, sval)   # TODO: _check_count() for concise records
     val = sval
     if ts.EncType == dict:
         val = {_check_key(ts, k): v for k, v in sval.items()}
@@ -319,6 +332,7 @@ def _decode_maprec(ts: SymbolTableField, sval, codec: 'Codec'):
 
 def _encode_array(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, list)
+    _check_count(ts, aval)
     sval = list()
     if len(aval) > len(ts.Fld):
         _extra_value(ts, aval, set(aval[len(ts.Fld):]))
@@ -347,6 +361,7 @@ def _encode_array(ts: SymbolTableField, aval, codec: 'Codec'):
 def _decode_array(ts: SymbolTableField, sval, codec: 'Codec'):  # Ordered list of types, returned as a list
     val = _format_decode(ts, sval)
     _check_type(ts, val, list)
+    _check_count(ts, sval)
     aval = list()
     if len(val) > len(ts.Fld):
         _extra_value(ts, val, set(aval[len(ts.Fld):]))

@@ -27,6 +27,9 @@ def unfold_link(schema: dict, sys: str) -> NoReturn:
     keys = {}       # Key names for types that have keys
     typex = {t[TypeName]: n for n, t in enumerate(schema['types'])}       # Build type index
     for tdef in list(schema['types']):
+        if tdef.BaseType == 'MapOf':
+            to = topts_s2d(tdef.TypeOptions)
+            keys.update({tdef.TypeName: to['ktype']})
         if has_fields(tdef.BaseType):
             for fdef in tdef.Fields:
                 fo, fto = ftopts_s2d(fdef.FieldOptions)
