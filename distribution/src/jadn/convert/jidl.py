@@ -17,7 +17,7 @@ p_tdesc = r'(?:\s*\/\/\s*(.*?)\s*)?'    # Optional Type description
 
 # JIDL -> JADN Field regexes
 p_id = r'\s*(\d+)'  # Field ID
-p_fname = r'\s+([-:$\w]+\/?)?'  # Field Name with dir/ option (colon is deprecated, allow for now)
+p_fname = r'\s+(\S+)' # Field Name
 p_fstr = r'\s*(.*?)'  # Field definition or Enum value
 p_range = r'\s*(?:\[([.*\w]+)\]|(optional))?'  # Multiplicity
 p_desc = r'\s*(?:\/\/\s*(.*?)\s*)?'  # Field description, including field name if .id option
