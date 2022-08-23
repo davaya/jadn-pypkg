@@ -254,23 +254,40 @@ class UnfoldExtensions(TestCase):
     """
     Derived Enumeration Extension
     """
-    schema_enum_folded = {
+    schema_enum1_folded = {
         'types': [
-            ['Pixel', 'Record', [], '', [
+            ['Pixel1', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
                 [2, 'green', 'Integer', [], 'verde'],
                 [3, 'blue', 'Integer', [], '']
             ]],
-            ['Channel', 'Enumerated', ['#Pixel'], '', []],          # Derived enumeration (explicitly named)
-            ['ChannelId', 'Enumerated', ['#Pixel', '='], '', []],   # Derived enumeration with ID option
-            ['ChannelMask', 'ArrayOf', ['*#Pixel'], '', []],        # Array of items from named derived enum
+            ['Channel', 'Enumerated', ['#Pixel1'], '', []],          # Derived enumeration (explicitly named)
+            ['ChannelId', 'Enumerated', ['#Pixel1', '='], '', []],   # Derived enumeration with ID option
+            ['ChannelMask', 'ArrayOf', ['*#Pixel1'], '', []],        # Array of items from named derived enum
+        ]
+    }
 
-            ['Pixel2', 'Map', ['='], '', [
+    schema_enum2_folded = {
+        'types': [
+            ['Pixel2', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['Channel2', 'Enumerated', ['#Pixel2'], '', []],  # Derived enumeration (explicitly named)
+            ['ChannelId2', 'Enumerated', ['#Pixel2', '='], '', []],  # Derived enumeration with ID option
+            ['ChannelMask2', 'ArrayOf', ['*#Pixel2'], '', []],  # Array of items from named derived enum
+        ]
+    }
+
+    schema_enum3_folded = {
+        'types': [
+            ['Pixel3', 'Map', ['='], '', [
                 [1, 'yellow', 'Integer', [], ''],
                 [2, 'orange', 'Integer', [], ''],
                 [3, 'purple', 'Integer', [], '']
             ]],
-            ['ChannelMask2', 'ArrayOf', ['*#Pixel2'], '', []],      # Array of items from generated derived enum
+            ['ChannelMask3', 'ArrayOf', ['*#Pixel3'], '', []],      # Array of items from generated derived enum
 
             ['Foo', 'Array', [], '', [
                 [1, 'type', 'Enumerated', ['#Menu'], ''],           # Derived enumeration in a field
@@ -282,9 +299,10 @@ class UnfoldExtensions(TestCase):
             ]]
         ]
     }
-    schema_enum_unfolded = {
+
+    schema_enum1_unfolded = {
         'types': [
-            ['Pixel', 'Record', [], '', [
+            ['Pixel1', 'Record', [], '', [
                 [1, 'red', 'Integer', [], 'rojo'],
                 [2, 'green', 'Integer', [], 'verde'],
                 [3, 'blue', 'Integer', [], '']
@@ -300,13 +318,80 @@ class UnfoldExtensions(TestCase):
                 [3, 'blue', '']
             ]],
             ['ChannelMask', 'ArrayOf', ['*Channel'], '', []],
+        ]
+    }
 
-            ['Pixel2', 'Map', ['='], '', [
+    schema_enum1_unfolded_all = {
+        'types': [
+            ['Pixel1', 'Record', [], '', [
+                [1, 'red', 'Integer', [], 'rojo'],
+                [2, 'green', 'Integer', [], 'verde'],
+                [3, 'blue', 'Integer', [], '']
+            ]],
+            ['Channel', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelId', 'Enumerated', ['='], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelMask', 'ArrayOf', ['*Channel'], '', []],
+        ]
+    }
+
+    schema_enum2_unfolded = {
+        'types': [
+            ['Pixel2', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['Channel2', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelId2', 'Enumerated', ['='], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelMask2', 'ArrayOf', ['*Channel2'], '', []],
+        ]
+    }
+
+    schema_enum2_unfolded_all = {
+        'types': [
+            ['Pixel2', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['Channel2', 'Enumerated', [], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelId2', 'Enumerated', ['='], '', [
+                [1, 'red', 'rojo'],
+                [2, 'green', 'verde'],
+                [3, 'blue', '']
+            ]],
+            ['ChannelMask2', 'ArrayOf', ['*Channel2'], '', []],
+        ]
+    }
+
+    schema_enum3_unfolded = {
+        'types': [
+            ['Pixel3', 'Map', ['='], '', [
                 [1, 'yellow', 'Integer', [], ''],
                 [2, 'orange', 'Integer', [], ''],
                 [3, 'purple', 'Integer', [], '']
             ]],
-            ['ChannelMask2', 'ArrayOf', ['*Pixel2$Enum'], '', []],      # Array of items from generated derived enum
+            ['ChannelMask3', 'ArrayOf', ['*Pixel3$Enum'], '', []],      # Array of items from generated derived enum
 
             ['Foo', 'Array', [], '', [                                  # Derived enumeration in a field
                 [1, 'type', 'Enumerated', ['#Menu'], ''],
@@ -316,38 +401,22 @@ class UnfoldExtensions(TestCase):
                 [1, 'open', 'String', [], ''],
                 [2, 'close', 'String', [], '']
             ]],
-            ['Pixel2$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
+            ['Pixel3$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
                 [1, 'yellow', ''],
                 [2, 'orange', ''],
                 [3, 'purple', '']
             ]],
         ]
     }
-    schema_enum_unfolded_all = {
-        'types': [
-            ['Pixel', 'Record', [], '', [
-                [1, 'red', 'Integer', [], 'rojo'],
-                [2, 'green', 'Integer', [], 'verde'],
-                [3, 'blue', 'Integer', [], '']
-            ]],
-            ['Channel', 'Enumerated', [], '', [
-                [1, 'red', 'rojo'],
-                [2, 'green', 'verde'],
-                [3, 'blue', '']
-            ]],
-            ['ChannelId', 'Enumerated', ['='], '', [
-                [1, 'red', 'rojo'],
-                [2, 'green', 'verde'],
-                [3, 'blue', '']
-            ]],
-            ['ChannelMask', 'ArrayOf', ['*Channel'], '', []],
 
-            ['Pixel2', 'Map', ['='], '', [
+    schema_enum3_unfolded_all = {
+        'types': [
+            ['Pixel3', 'Map', ['='], '', [
                 [1, 'yellow', 'Integer', [], ''],
                 [2, 'orange', 'Integer', [], ''],
                 [3, 'purple', 'Integer', [], '']
             ]],
-            ['ChannelMask2', 'ArrayOf', ['*Pixel2$Enum'], '', []],      # Array of items from generated derived enum
+            ['ChannelMask3', 'ArrayOf', ['*Pixel3$Enum'], '', []],      # Array of items from generated derived enum
 
             ['Foo', 'Array', [], '', [                                  # Derived enumeration in a field
                 [1, 'type', 'Menu$Enum', [], ''],
@@ -370,10 +439,14 @@ class UnfoldExtensions(TestCase):
     }
 
     def test_derived_enum(self):
-        self.do_unfold_test(self.schema_enum_folded, self.schema_enum_unfolded, {'DerivedEnum'})
+        self.do_unfold_test(self.schema_enum1_folded, self.schema_enum1_unfolded, {'DerivedEnum'})
+        self.do_unfold_test(self.schema_enum2_folded, self.schema_enum2_unfolded, {'DerivedEnum'})
+        self.do_unfold_test(self.schema_enum3_folded, self.schema_enum3_unfolded, {'DerivedEnum'})
 
     def test_derived_enum_all(self):
-        self.do_unfold_test(self.schema_enum_folded, self.schema_enum_unfolded_all)
+        self.do_unfold_test(self.schema_enum1_folded, self.schema_enum1_unfolded_all)
+        self.do_unfold_test(self.schema_enum2_folded, self.schema_enum2_unfolded_all)
+        self.do_unfold_test(self.schema_enum3_folded, self.schema_enum3_unfolded_all)
 
     """
     MapOf Enumerated Key Extension

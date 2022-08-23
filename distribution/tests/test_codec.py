@@ -1311,12 +1311,31 @@ class ListTypes(unittest.TestCase):
 
 class Bounds(unittest.TestCase):        # TODO: check max and min string length, integer and number values, array sizes
                                         # TODO: Schema default and options
+                                        # TODO: Array count for concise Records
     schema = {
         'types': [
             ['Int', 'Integer', [], ''],
             ['Num', 'Number', [], ''],
             ['Int-3-6', 'Integer', ['{3', '}6'], ''],
-            ['Num-3-6', 'Number', ['y3.0', 'z6.0'], '']
+            ['Num-3-6', 'Number', ['y3.0', 'z6.0'], ''],
+            ['T-Map23', 'Map', ['{2', '}3'], '', [
+                [2, 'red', 'Integer', ['[0'], ''],
+                [4, 'green', 'Integer', ['[0'], ''],
+                [6, 'blue', 'Integer', ['[0'], ''],
+                [9, 'alpha', 'Integer', [], '']
+            ]],
+            ['T-Arr23', 'Array', ['{2', '}3'], '', [
+                [1, 'red', 'Integer', ['[0'], ''],
+                [2, 'green', 'Integer', ['[0'], ''],
+                [3, 'blue', 'Integer', ['[0'], ''],
+                [4, 'alpha', 'Integer', [], '']
+            ]],
+            ['T-Rec23', 'Record', ['{2', '}3'], '', [
+                [1, 'red', 'Integer', ['[0'], ''],
+                [2, 'green', 'Integer', ['[0'], ''],
+                [3, 'blue', 'Integer', ['[0'], ''],
+                [4, 'alpha', 'Integer', [], '']
+            ]]
         ]
     }
 
@@ -1360,6 +1379,89 @@ class Bounds(unittest.TestCase):        # TODO: check max and min string length,
             self.tc.encode('Num-3-6', self.f1)
         with self.assertRaises(ValueError):
             self.tc.encode('Num-3-6', self.f9)
+
+    a0 = []
+    a1 = [30]
+    a1a = [None, None, None, 24]
+    a2a = [6, None, None, 16]
+    a3a = [None, 5, 8, 15]
+    a4a = [9, 12, 14, 20]
+
+    d0 = {}
+    d1 = {'red': 30}
+    d1a = {'alpha': 24}
+    d2a = {'red': 6, 'alpha': 16}
+    d3a = {'green': 5, 'blue': 8, 'alpha': 15}
+    d4a = {'red': 9, 'green': 12, 'blue': 14, 'alpha': 20}
+
+    def test_array23(self):
+        self.tc.set_mode(verbose_rec=True, verbose_str=True)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Arr23', self.a0)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Arr23', self.a0)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Arr23', self.a1)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Arr23', self.a1)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Arr23', self.a1a)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Arr23', self.a1a)
+        self.assertEqual(self.tc.encode('T-Arr23', self.a2a), self.a2a)
+        self.assertEqual(self.tc.decode('T-Arr23', self.a2a), self.a2a)
+        self.assertEqual(self.tc.encode('T-Arr23', self.a3a), self.a3a)
+        self.assertEqual(self.tc.decode('T-Arr23', self.a3a), self.a3a)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Arr23', self.a4a)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Arr23', self.a4a)
+
+    def test_map23(self):
+        self.tc.set_mode(verbose_rec=True, verbose_str=True)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Map23', self.d0)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Map23', self.d0)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Map23', self.d1)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Map23', self.d1)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Map23', self.d1a)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Map23', self.d1a)
+        self.assertEqual(self.tc.encode('T-Map23', self.d2a), self.d2a)
+        self.assertEqual(self.tc.decode('T-Map23', self.d2a), self.d2a)
+        self.assertEqual(self.tc.encode('T-Map23', self.d3a), self.d3a)
+        self.assertEqual(self.tc.decode('T-Map23', self.d3a), self.d3a)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Map23', self.d4a)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Map23', self.d4a)
+
+    def test_rec23(self):
+        self.tc.set_mode(verbose_rec=True, verbose_str=True)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Rec23', self.d0)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Rec23', self.d0)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Rec23', self.d1)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Rec23', self.d1)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Rec23', self.d1a)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Rec23', self.d1a)
+        self.assertEqual(self.tc.encode('T-Rec23', self.d2a), self.d2a)
+        self.assertEqual(self.tc.decode('T-Rec23', self.d2a), self.d2a)
+        self.assertEqual(self.tc.encode('T-Rec23', self.d3a), self.d3a)
+        self.assertEqual(self.tc.decode('T-Rec23', self.d3a), self.d3a)
+        with self.assertRaises(ValueError):
+            self.tc.encode('T-Rec23', self.d4a)
+        with self.assertRaises(ValueError):
+            self.tc.decode('T-Rec23', self.d4a)
 
 
 class Format(unittest.TestCase):

@@ -1,7 +1,9 @@
 # JADN TODO Items
 
+## Bugs
+* ArrayOf(Enum[Etype]) fails when Etype is Enumerated.  Needed to add/remove ID option.
+
 ## Minor
-* Add fire CLI to make_artifacts
 * load and save - dict options with string serialization
 * convert/
   - add logical/information detail styles to dot

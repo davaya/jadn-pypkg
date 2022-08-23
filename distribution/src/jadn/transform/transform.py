@@ -105,7 +105,7 @@ def unfold_anonymous_types(schema: dict, sys: str) -> NoReturn:
                     newname = name if name else f'{tdef.TypeName}{sys}{fdef.FieldName}'
                     if newname not in [t.TypeName for t in schema['types']]:
                         newtype = 'Enumerated' if epx(newopts) is not None else fdef.FieldType
-                        assert is_builtin(newtype)      # Don't create a bad type definition
+                        assert is_builtin(newtype), f'{newname} ({newtype})'   # Don't create a bad type definition
                         schema['types'].append(TypeDefinition(newname, newtype, newopts, fdef.FieldDesc))
                     fdef.FieldType = newname           # Redirect field to explicit type definition
 
