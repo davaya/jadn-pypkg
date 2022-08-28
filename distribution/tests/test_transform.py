@@ -430,7 +430,7 @@ class UnfoldExtensions(TestCase):
                 [1, 'open', ''],
                 [2, 'close', '']
             ]],
-            ['Pixel2$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
+            ['Pixel3$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
                 [1, 'yellow', ''],
                 [2, 'orange', ''],
                 [3, 'purple', '']

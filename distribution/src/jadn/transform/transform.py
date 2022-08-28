@@ -127,6 +127,8 @@ def unfold_derived_enum(schema: dict, sys: str) -> NoReturn:
 
     def enum_items(rtype: str) -> list:
         tdef = schema['types'][typex[rtype]]
+        if tdef.BaseType == 'Enumerated':
+            return [[f.ItemID, f.ItemValue, f.ItemDesc] for f in tdef.Fields]
         fields = tdef.Fields if has_fields(tdef.BaseType) else []
         return [[f.FieldID, f.FieldName, f.FieldDesc] for f in fields]
 
