@@ -2,6 +2,7 @@ import numbers
 import re
 
 from dataclasses import dataclass
+from frozendict import frozendict
 from typing import Any, Callable, Dict, NoReturn, Optional, Union
 from ..utils import raise_error
 from ..definitions import FieldID, FieldName, BasicDataclass, TypeDefinition, GenFieldDefinition
@@ -51,6 +52,15 @@ class CodecTableField(BasicDataclass):
     Enc: Callable[[SymbolTableField, Any, 'Codec'], Any] = None
     # 2: Encoded type
     eType: type = None
+
+
+def fset(x):
+    if isinstance(x, dict):
+        return frozendict({k: fset(v) for k, v in x.items()})
+    try:
+        return frozenset(x) if isinstance(x, (tuple, list, set)) else x
+    except TypeError as e:
+        return frozenset((fset(v) for v in x))
 
 
 def _bad_index(ts: SymbolTableField, k: int, val: list) -> NoReturn:
@@ -391,7 +401,7 @@ def _encode_array_of(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, list)
     _check_size(ts, val)
     if 'set' in ts.TypeOpts or 'unique' in ts.TypeOpts:
-        if len(val) != len(set(val)):
+        if len(val) != len(fset(val)):
             _bad_value(ts, val)
     return [codec.encode(ts.TypeOpts['vtype'], v) for v in val]
 
@@ -400,7 +410,7 @@ def _decode_array_of(ts: SymbolTableField, val, codec: 'Codec'):
     _check_type(ts, val, list)
     _check_size(ts, val)
     if 'set' in ts.TypeOpts or 'unique' in ts.TypeOpts:
-        if len(val) != len(set(val)):
+        if len(val) != len(fset(val)):
             _bad_value(ts, val)
     return [codec.decode(ts.TypeOpts['vtype'], v) for v in val]
 
