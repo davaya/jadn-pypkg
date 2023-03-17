@@ -102,29 +102,29 @@ def a2s_ipv4_net(aval: [str, int]) -> str:
     if aval[1] < 0 or aval[1] > 32:  # Verify prefix length is valid
         raise ValueError
     sa = b2s_ipv4_addr(aval[0])      # Convert Binary bytes to type-specific string
-    return f'{sa}/{aval[1]}'
+    return f'{sa}/{aval[1]}' if aval[1] != 32 else sa
 
 
 def a2s_ipv6_net(aval: [str, int]) -> str:
     if aval[1] < 0 or aval[1] > 128:  # Verify prefix length is valid
         raise ValueError
     sa = b2s_ipv6_addr(aval[0])       # Convert Binary bytes to type-specific string
-    return f'{sa}/{aval[1]}'
+    return f'{sa}/{aval[1]}' if aval[1] != 128 else sa
 
 
 def s2a_ipv4_net(sval: str) -> [str, int]:
-    sa, spl = sval.split('/', 1)
-    sa = s2b_ipv4_addr(sa)                  # Convert type-specific string to Binary bytes
-    prefix_len = int(spl)
+    sv = sval.split('/', 1)
+    sa = s2b_ipv4_addr(sv[0])                  # Convert type-specific string to Binary bytes
+    prefix_len = int(sv[1]) if len(sv) > 1 else 32
     if prefix_len < 0 or prefix_len > 32:
         raise ValueError
     return [sa, prefix_len]
 
 
 def s2a_ipv6_net(sval: str) -> [str, int]:
-    sa, spl = sval.split('/', 1)
-    sa = s2b_ipv6_addr(sa)                  # Convert type-specific string to Binary bytes
-    prefix_len = int(spl)
+    sv = sval.split('/', 1)
+    sa = s2b_ipv6_addr(sv[0])                  # Convert type-specific string to Binary bytes
+    prefix_len = int(sv[1]) if len(sv) > 1 else 128
     if prefix_len < 0 or prefix_len > 128:
         raise ValueError
     return [sa, prefix_len]

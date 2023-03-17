@@ -27,6 +27,9 @@ def unfold_link(schema: dict, sys: str) -> NoReturn:
     keys = {}       # Key names for types that have keys
     typex = {t[TypeName]: n for n, t in enumerate(schema['types'])}       # Build type index
     for tdef in list(schema['types']):
+        if tdef.BaseType == 'MapOf':
+            to = topts_s2d(tdef.TypeOptions)
+            keys.update({tdef.TypeName: to['ktype']})
         if has_fields(tdef.BaseType):
             for fdef in tdef.Fields:
                 fo, fto = ftopts_s2d(fdef.FieldOptions)
@@ -102,7 +105,7 @@ def unfold_anonymous_types(schema: dict, sys: str) -> NoReturn:
                     newname = name if name else f'{tdef.TypeName}{sys}{fdef.FieldName}'
                     if newname not in [t.TypeName for t in schema['types']]:
                         newtype = 'Enumerated' if epx(newopts) is not None else fdef.FieldType
-                        assert is_builtin(newtype)      # Don't create a bad type definition
+                        assert is_builtin(newtype), f'{newname} ({newtype})'   # Don't create a bad type definition
                         schema['types'].append(TypeDefinition(newname, newtype, newopts, fdef.FieldDesc))
                     fdef.FieldType = newname           # Redirect field to explicit type definition
 
@@ -124,6 +127,8 @@ def unfold_derived_enum(schema: dict, sys: str) -> NoReturn:
 
     def enum_items(rtype: str) -> list:
         tdef = schema['types'][typex[rtype]]
+        if tdef.BaseType == 'Enumerated':
+            return [[f.ItemID, f.ItemValue, f.ItemDesc] for f in tdef.Fields]
         fields = tdef.Fields if has_fields(tdef.BaseType) else []
         return [[f.FieldID, f.FieldName, f.FieldDesc] for f in fields]
 
@@ -133,7 +138,8 @@ def unfold_derived_enum(schema: dict, sys: str) -> NoReturn:
             if has_fields(tdef.BaseType):
                 for f in tdef.Fields:
                     if OPTION_ID['dir'] in f.FieldOptions:
-                        yield from pathnames(f.FieldType, f'{f.FieldName}/')
+                        if f.FieldType in typex:
+                            yield from pathnames(f.FieldType, f'{f.FieldName}/')
                     else:
                         yield [base + f.FieldName, f.FieldDesc]
         return [[n+1] + f for n, f in enumerate(pathnames(rtype))]

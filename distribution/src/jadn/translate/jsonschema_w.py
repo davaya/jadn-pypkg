@@ -145,7 +145,7 @@ def w_ref(tname: str, ctx: dict) -> dict:
     nsid, tn = tname.split(':', maxsplit=1) if ':' in tname else [None, tname]
     assert not is_builtin(tn)
     if nsid:
-        imp = {'$ref': f"{ctx['info_imps'][nsid]}/definitions/{tn}"} if ctx['import_style'] == 'ref' else {}
+        imp = {'$ref': f"{ctx['info_imps'][nsid]}/definitions/{tn}"} if ctx['import_style'] == 'ref' and ctx['info_imps'] is not None else {}
         ctx['imported_types'][nsid].update({tn: imp})
         return {'$ref': f'#/imports/{nsid}/{tn}'}
     return {'$ref': f'#/definitions/{tn}'}
