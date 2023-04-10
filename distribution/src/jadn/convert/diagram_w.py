@@ -1,8 +1,8 @@
 """
 Translate a JADN schema into an Entity Relationship Diagram source file
 style[format] =
-    dot: GraphViz format
-    puml: PlantUml format
+    graphviz: GraphViz (dot) format
+    plantuml: PlantUml format
 """
 
 import re
@@ -31,8 +31,8 @@ def diagram_style() -> dict:
                 'hide circle'
             ],
             'graphviz': [
-                'graph [fontname=Times, fontsize=12];',
-                'node [fontname=Arial, fontsize=8, shape=box, style=filled, fillcolor=lightskyblue1];',
+                'graph [fontname=Arial, fontsize=12];',
+                'node [fontname=Arial, fontsize=8, shape=record, style=filled, fillcolor=lightskyblue1];',
                 'edge [fontname=Arial, fontsize=7, arrowsize=0.5, labelangle=45.0, labeldistance=0.9];',
                 'bgcolor="transparent";'
             ]
@@ -44,6 +44,35 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     """
     Convert JADN schema to Entity Relationship Diagram source file
     """
+    def wtd(tn, bt) -> str:
+        # nodes and s are available in caller scope
+        return {
+            'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n',
+            'graphviz': f'n{nodes[tn]}[label=<{{<b>{tn}{bt}</b>|\n'
+        }[s['format']]
+
+    def wtde() -> str:
+        # nodes and s are available in caller scope
+        return {
+            'plantuml': '\n',
+            'graphviz': '}>]\n\n'
+        }[s['format']]
+
+    def wfd(td, fd) -> str:
+        # nodes and s are available in caller scope
+        if s['detail'] == 'conceptual':
+            return
+        if s['detail'] == 'logical':
+            fval = fd[FieldName]
+        elif s['detail'] == 'information':
+            fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
+            fdef += '' if fmult == '1' else ' [' + fmult + ']'
+            fdef = fdef.translate(str.maketrans({'(': '{', ')': '}'}))  # PlantUML parses parens as methods
+            fval = f'{fd[FieldID]} {fname} : {fdef}'
+        return {
+            'plantuml': f'  n{nodes[tn]} : {fval}\n',
+            'graphviz': f'  n{nodes[tn]} : {fval}<br align="left"/>\n'
+        }[s['format']]
 
     s = diagram_style()
     s.update(style)
@@ -75,10 +104,12 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     edges = ''
     for td in schema['types']:
         if (tn := td[TypeName]) in nodes:
-            text += f'class "{tn}" as n{nodes[tn]} <<{td[BaseType]}>>\n'
+            bt = f' : {td[BaseType]}' if s['detail'] == 'information' else ''
+            text += wtd(tn, bt)
             for fd in td[Fields]:
+                text += wfd(td, fd)
                 fopts, ftopts = ftopts_s2d(fd[FieldOptions])
-                fieldtype = ftopts['vtype'] if fd[FieldType] == 'MapOf' else fd[FieldType]
+                fieldtype = ftopts['vtype'] if fd[FieldType] in {'ArrayOf', 'MapOf'} else fd[FieldType]
                 if fieldtype in nodes:
                     rel = ('.' if 'link_horizontal' in s else '..') if 'link' in fopts else '--'
                     elabel = ' : ' + fd[FieldName] if s['edge_label'] else ''
@@ -86,14 +117,8 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
                     if s['multiplicity']:
                         mult_f = ' "' + multiplicity_str(fopts) + '"'
                         mult_r = '"1 "'
-                    if s['detail'] == 'logical':
-                        text += f'  n{nodes[tn]} : {fd[FieldName]}\n'
                     edges += f'  n{nodes[tn]} {mult_r}{rel}>{mult_f} n{nodes[fieldtype]}{elabel}\n'
-                if s['detail'] == 'information':
-                    fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
-                    fdef += '' if fmult == '1' else ' [' + fmult + ']'
-                    fdef = fdef.translate(str.maketrans({'(': '{', ')': '}'}))  # PlantUML parses parens as methods
-                    text += f'  n{nodes[tn]} : {fd[FieldID]} {fname} : {fdef}\n'
+            text += wtde()
     return text + edges + fmt['end']
 
 
