@@ -44,6 +44,11 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     """
     Convert JADN schema to Entity Relationship Diagram source file
     """
+
+    s = diagram_style()
+    s.update(style)
+    assert s['format'] in {'plantuml', 'graphviz'}
+    assert s['detail'] in {'conceptual', 'logical', 'information'}
     fmt = {
         'plantuml': {
             'comment': "'",
@@ -58,11 +63,6 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
             'header': s['header']['graphviz']
         }
     }[s['format']]
-
-    s = diagram_style()
-    s.update(style)
-    assert s['format'] in {'plantuml', 'graphviz'}
-    assert s['detail'] in {'conceptual', 'logical', 'information'}
 
     text = ''
     for k, v in schema.get('info', {}).items():
@@ -97,7 +97,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     return text + edges + fmt['end']
 
 
-def diagram_dump(schema: dict, fname: str, source: str = '', style: dict = {}) -> NoReturn:
+def diagram_dump(schema: dict, fname: str, source: str = '', style: dict = {}) -> None:
     with open(fname, 'w') as f:
         if source:
             f.write(f'\' Generated from {source}, {datetime.ctime(datetime.now())}"\n\n')
