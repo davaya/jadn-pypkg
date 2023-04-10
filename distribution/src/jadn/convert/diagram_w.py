@@ -7,10 +7,10 @@ style[format] =
 
 import re
 from datetime import datetime
-from typing import NoReturn
 from ..definitions import (TypeName, BaseType, TypeDesc, PRIMITIVE_TYPES,
                            Fields, FieldID, FieldName, FieldType, FieldOptions, FieldDesc)
 from ..utils import ftopts_s2d, multiplicity_str, jadn2fielddef
+
 
 def diagram_style() -> dict:
     # Return default generation options and style attributes
@@ -31,10 +31,10 @@ def diagram_style() -> dict:
                 'hide circle'
             ],
             'graphviz': [
-                'graph[fontname = Times, fontsize = 12];',
-                'node[fontname = Arial, fontsize = 8, shape = box, style = filled, fillcolor = lightskyblue1];',
-                'edge[fontname = Arial, fontsize = 7, arrowsize = 0.5, labelangle = 45.0, labeldistance = 0.9];',
-                'bgcolor = "transparent";'
+                'graph [fontname=Times, fontsize=12];',
+                'node [fontname=Arial, fontsize=8, shape=box, style=filled, fillcolor=lightskyblue1];',
+                'edge [fontname=Arial, fontsize=7, arrowsize=0.5, labelangle=45.0, labeldistance=0.9];',
+                'bgcolor="transparent";'
             ]
         }
     }
@@ -44,22 +44,34 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     """
     Convert JADN schema to Entity Relationship Diagram source file
     """
+    fmt = {
+        'plantuml': {
+            'comment': "'",
+            'start': '@startuml',
+            'end': '@enduml',
+            'header': s['header']['plantuml']
+        },
+        'graphviz': {
+            'comment': '#',
+            'start': 'digraph G {',
+            'end': '}',
+            'header': s['header']['graphviz']
+        }
+    }[s['format']]
+
     s = diagram_style()
     s.update(style)
-
     assert s['format'] in {'plantuml', 'graphviz'}
     assert s['detail'] in {'conceptual', 'logical', 'information'}
-    comment = {'plantuml': "'", 'graphviz': '#'}[s['format']]
-    start = {'plantuml': '@startuml', 'graphviz': 'digraph G {'}[s['format']]
-    header = s['header'][s['format']]
-    end = {'plantuml': '', 'graphviz': '}'}[s['format']]
+
     text = ''
     for k, v in schema.get('info', {}).items():
-        text += f"{comment} {k}: {v}\n"
-    text += f'\n{start}\n  ' + '\n  '.join(header) + '\n\n'
+        text += f"{fmt['comment']} {k}: {v}\n"
+    text += f"\n{fmt['start']}\n  " + '\n  '.join(fmt['header']) + '\n\n'
 
-    atypes = (*PRIMITIVE_TYPES, 'Enumerated')
-    nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[BaseType] not in atypes}
+    leaf_types = (*PRIMITIVE_TYPES, 'Enumerated')
+    hide_types = [] if s['attributes'] else leaf_types
+    nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[BaseType] not in hide_types}
     edges = ''
     for td in schema['types']:
         if (tn := td[TypeName]) in nodes:
@@ -82,7 +94,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
                     fdef += '' if fmult == '1' else ' [' + fmult + ']'
                     fdef = fdef.translate(str.maketrans({'(': '{', ')': '}'}))  # PlantUML parses parens as methods
                     text += f'  n{nodes[tn]} : {fd[FieldID]} {fname} : {fdef}\n'
-    return text + edges + '@enduml'
+    return text + edges + fmt['end']
 
 
 def diagram_dump(schema: dict, fname: str, source: str = '', style: dict = {}) -> NoReturn:
