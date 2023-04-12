@@ -57,30 +57,33 @@ def plant_dumps(schema: dict, style: dict = None) -> str:
         text += f"' {k}: {v}\n"
     text += '\n' + '\n'.join(s.get('header', [])) + '\n\n'
 
-    atypes = (*PRIMITIVE_TYPES, 'Enumerated')
+    atypes = (*PRIMITIVE_TYPES, 'Enumerated') if not s['attributes'] else ()
     nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[BaseType] not in atypes}
     edges = ''
     for td in schema['types']:
         if (tn := td[TypeName]) in nodes:
             text += f'class "{tn}" as n{nodes[tn]} <<{td[BaseType]}>>\n'
             for fd in td[Fields]:
-                fopts, ftopts = ftopts_s2d(fd[FieldOptions])
-                fieldtype = ftopts['vtype'] if fd[FieldType] == 'MapOf' else fd[FieldType]
-                if fieldtype in nodes:
-                    rel = ('.' if 'link_horizontal' in s else '..') if 'link' in fopts else '--'
-                    elabel = ' : ' + fd[FieldName] if s['edge_label'] else ''
-                    mult_f, mult_r = '', ''
-                    if s['multiplicity']:
-                        mult_f = ' "' + multiplicity_str(fopts) + '"'
-                        mult_r = '"1 "'
-                    if s['detail'] == 'logical':
-                        text += f'  n{nodes[tn]} : {fd[FieldName]}\n'
-                    edges += f'  n{nodes[tn]} {mult_r}{rel}>{mult_f} n{nodes[fieldtype]}{elabel}\n'
-                if s['detail'] == 'information':
-                    fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
-                    fdef += '' if fmult == '1' else ' [' + fmult + ']'
-                    fdef = fdef.translate(str.maketrans({'(': '{', ')': '}'}))  # PlantUML parses parens as methods
-                    text += f'  n{nodes[tn]} : {fd[FieldID]} {fname} : {fdef}\n'
+                if len(fd) > FieldOptions:
+                    fopts, ftopts = ftopts_s2d(fd[FieldOptions])
+                    fieldtype = ftopts['vtype'] if fd[FieldType] == 'MapOf' else fd[FieldType]
+                    if fieldtype in nodes:
+                        rel = ('.' if 'link_horizontal' in s else '..') if 'link' in fopts else '--'
+                        elabel = ' : ' + fd[FieldName] if s['edge_label'] else ''
+                        mult_f, mult_r = '', ''
+                        if s['multiplicity']:
+                            mult_f = ' "' + multiplicity_str(fopts) + '"'
+                            mult_r = '"1 "'
+                        if s['detail'] == 'logical':
+                            text += f'  n{nodes[tn]} : {fd[FieldName]}\n'
+                        edges += f'  n{nodes[tn]} {mult_r}{rel}>{mult_f} n{nodes[fieldtype]}{elabel}\n'
+                    if s['detail'] == 'information':
+                        fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
+                        fdef += '' if fmult == '1' else ' [' + fmult + ']'
+                        fdef = fdef.translate(str.maketrans({'(': '{', ')': '}'}))  # PlantUML parses parens as methods
+                        text += f'  n{nodes[tn]} : {fd[FieldID]} {fname} : {fdef}\n'
+                else:
+                    print(fd)
     return text + edges + '@enduml'
 
 

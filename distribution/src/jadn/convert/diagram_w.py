@@ -44,14 +44,34 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     """
     Convert JADN schema to Entity Relationship Diagram source file
     """
-    def wtd(tn, bt) -> str:
+    def wtd(td, bt) -> str:
+        """
+        Return Leaf Type Definition in selected diagram format
+        """
         # nodes and s are available in caller scope
+        attr_node = f''
+        tn = td[TypeName]
+        return {
+            'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n',
+            'graphviz': f'n{nodes[tn]} [label=<<b>{tn}{bt}</b>>, '
+                        f'shape=ellipse, style=filled, fillcolor={s["attr_color"]}]\n\n'
+        }[s['format']]
+
+    def wtds(td, bt) -> str:
+        """
+        Return Compound Type Definition in selected diagram format
+        """
+        # nodes and s are available in caller scope
+        tn = td[TypeName]
         return {
             'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n',
             'graphviz': f'n{nodes[tn]}[label=<{{<b>{tn}{bt}</b>|\n'
         }[s['format']]
 
     def wtde() -> str:
+        """
+        Return end of Type Definition
+        """
         # nodes and s are available in caller scope
         return {
             'plantuml': '\n',
@@ -59,10 +79,13 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         }[s['format']]
 
     def wfd(td, fd) -> str:
+        """
+        Return Field Definition in selected diagram format
+        """
         # nodes and s are available in caller scope
         if s['detail'] == 'conceptual':
-            return
-        if s['detail'] == 'logical':
+            return ''
+        elif s['detail'] == 'logical':
             fval = fd[FieldName]
         elif s['detail'] == 'information':
             fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
@@ -70,9 +93,30 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
             fdef = fdef.translate(str.maketrans({'(': '{', ')': '}'}))  # PlantUML parses parens as methods
             fval = f'{fd[FieldID]} {fname} : {fdef}'
         return {
-            'plantuml': f'  n{nodes[tn]} : {fval}\n',
-            'graphviz': f'  n{nodes[tn]} : {fval}<br align="left"/>\n'
+            'plantuml': f'  n{nodes[td[TypeName]]} : {fval}\n',
+            'graphviz': f'  {fval}<br align="left"/>\n'
         }[s['format']]
+
+    def wfe(td, fd) -> str:
+        """
+        Return graph edges in selected diagram format
+        """
+        # nodes and s are available in caller scope
+        fopts, ftopts = ftopts_s2d(fd[FieldOptions])
+        fieldtype = ftopts['vtype'] if fd[FieldType] in {'ArrayOf', 'MapOf'} else fd[FieldType]
+        if fieldtype in nodes:
+            rel = ('.' if 'link_horizontal' in s else '..') if 'link' in fopts else '--'
+            mult_f, mult_r = '', ''
+            if s['multiplicity']:
+                mult_f = ' "' + multiplicity_str(fopts) + '"'
+                mult_r = '"1 "'
+            if s['format'] == 'plantuml':
+                elabel = ' : ' + fd[FieldName] if s['edge_label'] else ''
+                return f'  n{nodes[td[TypeName]]} {mult_r}{rel}>{mult_f} n{nodes[fieldtype]}{elabel}\n'
+            elif s['format'] == 'graphviz':
+                elabel = f'label={fd[FieldName]}' if s['edge_label'] else ''
+                return f'  n{nodes[td[TypeName]]} -> n{nodes[fieldtype]} [{elabel}]\n'
+        return ''
 
     s = diagram_style()
     s.update(style)
@@ -103,22 +147,16 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[BaseType] not in hide_types}
     edges = ''
     for td in schema['types']:
-        if (tn := td[TypeName]) in nodes:
+        if (td[TypeName]) in nodes:
             bt = f' : {td[BaseType]}' if s['detail'] == 'information' else ''
-            text += wtd(tn, bt)
-            for fd in td[Fields]:
-                text += wfd(td, fd)
-                fopts, ftopts = ftopts_s2d(fd[FieldOptions])
-                fieldtype = ftopts['vtype'] if fd[FieldType] in {'ArrayOf', 'MapOf'} else fd[FieldType]
-                if fieldtype in nodes:
-                    rel = ('.' if 'link_horizontal' in s else '..') if 'link' in fopts else '--'
-                    elabel = ' : ' + fd[FieldName] if s['edge_label'] else ''
-                    mult_f, mult_r = '', ''
-                    if s['multiplicity']:
-                        mult_f = ' "' + multiplicity_str(fopts) + '"'
-                        mult_r = '"1 "'
-                    edges += f'  n{nodes[tn]} {mult_r}{rel}>{mult_f} n{nodes[fieldtype]}{elabel}\n'
-            text += wtde()
+            if td[BaseType] in leaf_types:
+                text += wtd(td, bt)
+            else:
+                text += wtds(td, bt)
+                for fd in td[Fields]:
+                    text += wfd(td, fd)
+                    edges += wfe(td, fd)
+                text += wtde()
     return text + edges + fmt['end']
 
 
