@@ -7,9 +7,9 @@ style[format] =
 
 import re
 from datetime import datetime
-from ..definitions import (TypeName, BaseType, TypeDesc, PRIMITIVE_TYPES,
+from ..definitions import (TypeName, BaseType, TypeOptions, TypeDesc, PRIMITIVE_TYPES,
                            Fields, FieldID, FieldName, FieldType, FieldOptions, FieldDesc)
-from ..utils import ftopts_s2d, multiplicity_str, jadn2fielddef
+from ..utils import ftopts_s2d, multiplicity_str, jadn2typestr, jadn2fielddef
 
 
 def diagram_style() -> dict:
@@ -59,18 +59,20 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
 
     def wtds(td, bt) -> str:
         """
-        Return Compound Type Definition in selected diagram format
+        Return start of Compound Type Definition in selected diagram format
         """
         # nodes and s are available in caller scope
         tn = td[TypeName]
+        if s['format'] == 'graphviz':
+            bt = bt.replace('{', '\{').replace('}', '\}')
         return {
             'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n',
-            'graphviz': f'n{nodes[tn]}[label=<{{<b>{tn}{bt}</b>|\n'
+            'graphviz': f'n{nodes[tn]} [label=<{{<b>{tn}{bt}</b>|\n'
         }[s['format']]
 
     def wtde() -> str:
         """
-        Return end of Type Definition
+        Return end of Compound Type Definition
         """
         # nodes and s are available in caller scope
         return {
@@ -90,7 +92,9 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         elif s['detail'] == 'information':
             fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
             fdef += '' if fmult == '1' else ' [' + fmult + ']'
-            fdef = fdef.translate(str.maketrans({'(': '{', ')': '}'}))  # PlantUML parses parens as methods
+            # fdef = fdef.translate(str.maketrans({'(': '{', ')': '}'}))  # PlantUML parses parens as methods
+            if s['format'] == 'graphviz':
+                fdef = fdef.replace('{', '\{').replace('}', '\}')
             fval = f'{fd[FieldID]} {fname} : {fdef}'
         return {
             'plantuml': f'  n{nodes[td[TypeName]]} : {fval}\n',
@@ -148,7 +152,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     edges = ''
     for td in schema['types']:
         if (td[TypeName]) in nodes:
-            bt = f' : {td[BaseType]}' if s['detail'] == 'information' else ''
+            bt = f' : {jadn2typestr(td[BaseType], td[TypeOptions])}' if s['detail'] == 'information' else ''
             if td[BaseType] in leaf_types:
                 text += wtd(td, bt)
             else:
