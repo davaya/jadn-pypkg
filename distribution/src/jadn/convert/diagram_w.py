@@ -51,10 +51,20 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         # nodes and s are available in caller scope
         attr_node = f''
         tn = td[TypeName]
+        enums = ''
+        shape = 'ellipse'
+        if td[BaseType] == 'Enumerated' and s['detail'] == 'information' and s['enums'] != 0:
+            enums = '|\n'
+            shape = 'record'
+            for n, fd in enumerate(td[Fields]):
+                if n >= s['enums']:
+                    enums += ' ...<br align="left"/>\n' if s['format'] == 'graphviz'
+                    break
+                enums += f'{fd[FieldID]} {fd[FieldName]}<br align="left"/>\n'
         return {
-            'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n',
-            'graphviz': f'n{nodes[tn]} [label=<<b>{tn}{bt}</b>>, '
-                        f'shape=ellipse, style=filled, fillcolor={s["attr_color"]}]\n\n'
+            'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n{enums}',
+            'graphviz': f'n{nodes[tn]} [label=<{{<b>{tn}{bt}</b>{enums}}}>, '
+                        f'shape={shape}, style=filled, fillcolor={s["attr_color"]}]\n\n'
         }[s['format']]
 
     def node_start(td, bt) -> str:
@@ -106,11 +116,10 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         """
         Return graph edges from type options in selected diagram format
         """
-        if td[BaseType] not in {'ArrayOf', 'MapOf'}:
-            return ''
         topts = topts_s2d(td[TypeOptions])
-        edge = edge_field(td, [0, 'key', topts['ktype'], [], '']) if td[BaseType] == 'MapOf' else ''
-        edge += edge_field(td, [0, 'value', topts['vtype'], [], ''])
+        k, v = topts.get('ktype', None), topts.get('vtype', None)
+        edge = edge_field(td, [0, 'key', k, [], '']) if k else ''
+        edge += edge_field(td, [0, 'value', v, [], '']) if v else ''
         return edge
 
     def edge_field(td, fd) -> str:
@@ -121,18 +130,19 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         fopts, ftopts = ftopts_s2d(fd[FieldOptions])
         fieldtype = ftopts['vtype'] if fd[FieldType] in {'ArrayOf', 'MapOf'} else fd[FieldType]
         if fieldtype in nodes:
-            mult_f, mult_r = '', ''
-            if s['multiplicity']:
-                mult_f = ' "' + multiplicity_str(fopts) + '"'
-                mult_r = '"1 "'
+            mult_f = multiplicity_str(fopts)
+            mult_r = '1'
             if s['format'] == 'plantuml':
                 rel = ('.' if 'link_horizontal' in s else '..') if 'link' in fopts else '--'
                 elabel = ' : ' + fd[FieldName] if s['edge_label'] else ''
-                return f'  n{nodes[td[TypeName]]} {mult_r}{rel}>{mult_f} n{nodes[fieldtype]}{elabel}\n'
+                mult = f'"{mult_r}" {rel}> "{mult_f}"' if s['multiplicity'] else f'{rel}>'
+                return f'  n{nodes[td[TypeName]]} {mult} n{nodes[fieldtype]}{elabel}\n'
             elif s['format'] == 'graphviz':
-                elabel = f'label={fd[FieldName]}' if s['edge_label'] else ''
-                link = ', style="dashed"' if 'link' in fopts else ''
-                return f'  n{nodes[td[TypeName]]} -> n{nodes[fieldtype]} [{elabel}{link}]\n'
+                edge = [f'label={fd[FieldName]}'] if s['edge_label'] else []
+                edge += ['style="dashed"'] if 'link' in fopts else []
+                edge += [f'headlabel="{mult_f}", taillabel="{mult_r}"'] if s['multiplicity'] else []
+                edge_label = f' [{", ".join(edge)}]' if edge else ''
+                return f'  n{nodes[td[TypeName]]} -> n{nodes[fieldtype]}{edge_label}\n'
         return ''
 
     s = diagram_style()
