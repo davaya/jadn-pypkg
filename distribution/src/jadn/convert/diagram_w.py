@@ -20,10 +20,10 @@ def diagram_style() -> dict:
         'links': True,              # Show link edges (dashed)
         'link_horizontal': True,    # Use e-w links vs. n-s containers
         'edge_label': True,         # Show field name on edges
-        'multiplicity': True,       # Show multiplicity on edges
+        'edge_mult': True,          # Show multiplicity on edges
         'attributes': False,        # Show node attributes connected to entities (ellipse)
         'attr_color': 'palegreen',  # Attribute ellipse fill color
-        'enums': 10,                # Show Enumerated values with max length (0: none, <0: unlimited)
+        'enums': 10,                # Show Enumerated items with max count (0: none)
         'header': {
             'plantuml': [
                 '\' !theme spacelab',
@@ -32,7 +32,7 @@ def diagram_style() -> dict:
             ],
             'graphviz': [
                 'graph [fontname=Arial, fontsize=12];',
-                'node [fontname=Arial, fontsize=8, shape=record, style=filled, fillcolor=lightskyblue1];',
+                'node [fontname=Arial, fontsize=8, shape=plain, style=filled, fillcolor=lightskyblue1];',
                 'edge [fontname=Arial, fontsize=7, arrowsize=0.5, labelangle=45.0, labeldistance=0.9];',
                 'bgcolor="transparent";'
             ]
@@ -49,22 +49,11 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         Return Leaf Type Definition in selected diagram format
         """
         # nodes and s are available in caller scope
-        attr_node = f''
         tn = td[TypeName]
-        enums = ''
-        shape = 'ellipse'
-        if td[BaseType] == 'Enumerated' and s['detail'] == 'information' and s['enums'] != 0:
-            enums = '|\n'
-            shape = 'record'
-            for n, fd in enumerate(td[Fields]):
-                if n >= s['enums']:
-                    enums += ' ...<br align="left"/>\n' if s['format'] == 'graphviz'
-                    break
-                enums += f'{fd[FieldID]} {fd[FieldName]}<br align="left"/>\n'
         return {
-            'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n{enums}',
-            'graphviz': f'n{nodes[tn]} [label=<{{<b>{tn}{bt}</b>{enums}}}>, '
-                        f'shape={shape}, style=filled, fillcolor={s["attr_color"]}]\n\n'
+            'graphviz': f'n{nodes[tn]} [label=<<b>{tn}{bt}</b>>, '
+                        f'shape=ellipse, style=filled, fillcolor={s["attr_color"]}]\n\n',
+            'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n'
         }[s['format']]
 
     def node_start(td, bt) -> str:
@@ -73,22 +62,14 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         """
         # nodes and s are available in caller scope
         tn = td[TypeName]
-        bar = '' if s['detail'] == 'conceptual' or td[BaseType] in ('ArrayOf', 'MapOf') else '|'
+        color = f'fillcolor={s["attr_color"]}, ' if td[BaseType] == 'Enumerated' else ''
+        hr = '<hr/>' if s['detail'] in {'logical', 'information'} and td[Fields] else ''
         if s['format'] == 'graphviz':
             bt = bt.replace('{', '\{').replace('}', '\}')
         return {
             'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n',
-            'graphviz': f'n{nodes[tn]} [label=<{{<b>{tn}{bt}</b>{bar}\n'
-        }[s['format']]
-
-    def node_end() -> str:
-        """
-        Return end of Compound Type Definition
-        """
-        # nodes and s are available in caller scope
-        return {
-            'plantuml': '\n',
-            'graphviz': '}>]\n\n'
+            'graphviz': f'n{nodes[tn]} [{color}label=<<table cellborder="0" cellpadding="1" cellspacing="0">\n'
+                        f'<tr><td cellpadding="4"><b>  {tn}{bt}  </b></td></tr>{hr}\n'
         }[s['format']]
 
     def node_field(td, fd) -> str:
@@ -106,10 +87,20 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
             fdef += '' if fmult == '1' else ' [' + fmult + ']'
             if s['format'] == 'graphviz':
                 fdef = fdef.replace('{', '\{').replace('}', '\}')
-            fval = f'{fd[FieldID]} {fname} : {fl}{fdef}'
+            fval = f'{fd[FieldID]} {fname}' + ('' if td[BaseType] == 'Enumerated' else f' : {fl}{fdef}')
         return {
             'plantuml': f'  n{nodes[td[TypeName]]} : {fval}\n',
-            'graphviz': f'  {fval}<br align="left"/>\n'
+            'graphviz': f'  <tr><td align="left">  {fval}  </td></tr>\n'
+        }[s['format']]
+
+    def node_end() -> str:
+        """
+        Return end of Compound Type Definition
+        """
+        # nodes and s are available in caller scope
+        return {
+            'plantuml': '\n',
+            'graphviz': '</table>>]\n\n'
         }[s['format']]
 
     def edge_type(td) -> str:
@@ -127,6 +118,8 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         Return graph edges from fields in selected diagram format
         """
         # nodes and s are available in caller scope
+        if td[BaseType] == 'Enumerated':
+            return ''
         fopts, ftopts = ftopts_s2d(fd[FieldOptions])
         fieldtype = ftopts['vtype'] if fd[FieldType] in {'ArrayOf', 'MapOf'} else fd[FieldType]
         if fieldtype in nodes:
@@ -135,12 +128,12 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
             if s['format'] == 'plantuml':
                 rel = ('.' if 'link_horizontal' in s else '..') if 'link' in fopts else '--'
                 elabel = ' : ' + fd[FieldName] if s['edge_label'] else ''
-                mult = f'"{mult_r}" {rel}> "{mult_f}"' if s['multiplicity'] else f'{rel}>'
+                mult = f'"{mult_r}" {rel}> "{mult_f}"' if s['edge_mult'] else f'{rel}>'
                 return f'  n{nodes[td[TypeName]]} {mult} n{nodes[fieldtype]}{elabel}\n'
             elif s['format'] == 'graphviz':
                 edge = [f'label={fd[FieldName]}'] if s['edge_label'] else []
                 edge += ['style="dashed"'] if 'link' in fopts else []
-                edge += [f'headlabel="{mult_f}", taillabel="{mult_r}"'] if s['multiplicity'] else []
+                edge += [f'headlabel="{mult_f}", taillabel="{mult_r}"'] if s['edge_mult'] else []
                 edge_label = f' [{", ".join(edge)}]' if edge else ''
                 return f'  n{nodes[td[TypeName]]} -> n{nodes[fieldtype]}{edge_label}\n'
         return ''
@@ -169,14 +162,13 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         text += f"{fmt['comment']} {k}: {v}\n"
     text += f"\n{fmt['start']}\n  " + '\n  '.join(fmt['header']) + '\n\n'
 
-    leaf_types = (*PRIMITIVE_TYPES, 'Enumerated')
-    hide_types = [] if s['attributes'] else leaf_types
+    hide_types = [] if s['attributes'] else (*PRIMITIVE_TYPES, 'Enumerated')
     nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[BaseType] not in hide_types}
     edges = ''
     for td in schema['types']:
         if (td[TypeName]) in nodes:
             bt = f' : {jadn2typestr(td[BaseType], td[TypeOptions])}' if s['detail'] == 'information' else ''
-            if td[BaseType] in leaf_types:
+            if td[BaseType] in PRIMITIVE_TYPES:
                 text += node_leaf(td, bt)
             else:
                 text += node_start(td, bt)
