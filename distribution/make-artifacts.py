@@ -5,13 +5,12 @@ import fire
 import jadn
 import os
 import shutil
-from typing import NoReturn
 
 SCHEMA_DIR = 'Schemas'
 OUTPUT_DIR = 'Out'
 
 
-def translate(filename: str, sdir: str, odir: str) -> NoReturn:
+def translate(filename: str, sdir: str, odir: str) -> None:
     with open(os.path.join(sdir, filename)) as fp:
         schema = jadn.load_any(fp)
     print(f'{filename}:\n' + '\n'.join([f'{k:>15}: {v}' for k, v in jadn.analyze(jadn.check(schema)).items()]))

@@ -7,8 +7,8 @@ style[format] =
 
 import re
 from datetime import datetime
-from ..definitions import (TypeName, BaseType, TypeOptions, TypeDesc, PRIMITIVE_TYPES,
-                           Fields, FieldID, FieldName, FieldType, FieldOptions, FieldDesc)
+from ..definitions import (TypeName, BaseType, TypeOptions, PRIMITIVE_TYPES,
+                           Fields, FieldID, FieldName, FieldType, FieldOptions)
 from ..utils import topts_s2d, ftopts_s2d, multiplicity_str, jadn2typestr, jadn2fielddef
 
 
@@ -64,8 +64,6 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         tn = td[TypeName]
         color = f'fillcolor={s["attr_color"]}, ' if td[BaseType] == 'Enumerated' else ''
         hr = '<hr/>' if s['detail'] in {'logical', 'information'} and td[Fields] else ''
-        if s['format'] == 'graphviz':
-            bt = bt.replace('{', '\{').replace('}', '\}')
         return {
             'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n',
             'graphviz': f'n{nodes[tn]} [{color}label=<<table cellborder="0" cellpadding="1" cellspacing="0">\n'
@@ -85,8 +83,6 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
             fl = '{field} ' if s['format'] == 'plantuml' else ''    # override PlantUML parsing parens as methods
             fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
             fdef += '' if fmult == '1' else ' [' + fmult + ']'
-            if s['format'] == 'graphviz':
-                fdef = fdef.replace('{', '\{').replace('}', '\}')
             fval = f'{fd[FieldID]} {fname}' + ('' if td[BaseType] == 'Enumerated' else f' : {fl}{fdef}')
         return {
             'plantuml': f'  n{nodes[td[TypeName]]} : {fval}\n',
