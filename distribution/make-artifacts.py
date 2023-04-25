@@ -19,9 +19,11 @@ def translate(filename: str, sdir: str, odir: str) -> NoReturn:
     fn, ext = os.path.splitext(filename)
     jadn.dump(schema, os.path.join(odir, fn + '.jadn'))
     jadn.dump(jadn.transform.unfold_extensions(jadn.transform.strip_comments(schema)),
-              os.path.join(odir, fn + '-core.jadn'))
-    jadn.convert.dot_dump(schema, os.path.join(odir, fn + '.dot'), style={'links': True})
-    jadn.convert.plant_dump(schema, os.path.join(odir, fn + '.puml'), style={'links': True, 'detail': 'information'})
+          os.path.join(odir, fn + '-core.jadn'))
+    jadn.convert.diagram_dump(schema, os.path.join(odir, fn + '_ia.dot'),
+          style={'format': 'graphviz', 'detail': 'information', 'attributes': True, 'links': True})
+    jadn.convert.diagram_dump(schema, os.path.join(odir, fn + '_i.puml'),
+          style={'format': 'plantuml', 'detail': 'information', 'attributes': False, 'links': False})
     jadn.convert.jidl_dump(schema, os.path.join(odir, fn + '.jidl'), style={'desc': 50})
     jadn.convert.html_dump(schema, os.path.join(odir, fn + '.html'))
     jadn.convert.markdown_dump(schema, os.path.join(odir, fn + '.md'))
