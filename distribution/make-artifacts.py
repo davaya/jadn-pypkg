@@ -11,7 +11,9 @@ OUTPUT_DIR = 'Out'
 
 
 def translate(filename: str, sdir: str, odir: str) -> None:
-    with open(os.path.join(sdir, filename)) as fp:
+    if not os.path.isfile(p := os.path.join(sdir, filename)):
+        return
+    with open(p, encoding='utf8') as fp:
         schema = jadn.load_any(fp)
     print(f'{filename}:\n' + '\n'.join([f'{k:>15}: {v}' for k, v in jadn.analyze(jadn.check(schema)).items()]))
 

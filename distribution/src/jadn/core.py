@@ -186,7 +186,7 @@ def load_any(fp: TextIO) -> dict:
 
 def dumps_rec(val: Any, level: int = 0, indent: int = 1, strip: bool = False, nlevel: int = None) -> str:
     if isinstance(val, (numbers.Number, type(''))):
-        return json.dumps(val)
+        return json.dumps(val, ensure_ascii=False)
 
     sp2 = (level + 1) * indent * ' '
     sep2 = ',\n' if strip else ',\n\n'
@@ -211,7 +211,7 @@ def dumps(schema: dict, strip: bool = False) -> str:
 
 
 def dump(schema: dict, fname: Union[str, bytes, int], source: str = '', strip: bool = False) -> NoReturn:
-    with open(fname, 'w') as f:
+    with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write(f'"Generated from {source}, {datetime.ctime(datetime.now())}"\n\n')
         f.write(dumps(schema, strip=strip) + '\n')
