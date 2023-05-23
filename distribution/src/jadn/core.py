@@ -39,6 +39,8 @@ def check_typeopts(type_name: str, base_type: str, topts: dict) -> NoReturn:
         raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minv"]}..{topts["maxv"]}]')
     if 'maxf' in topts and 'minf' in topts and topts['maxf'] < topts['minf']:
         raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minf"]}..{topts["maxf"]}]')
+    if ('minv' in topts or 'maxv' in topts) and 'pattern' in topts:
+        raise_error(f'String cannot have both pattern and size constraints: {type_name}')  # disable for debugging
 
     # TODO: if format defines array, add minv/maxv (prevents adding default max)
     if fmt := topts.get('format'):
@@ -184,24 +186,25 @@ def load_any(fp: TextIO) -> dict:
     return loader(fp)
 
 
-def dumps_rec(val: Any, level: int = 0, indent: int = 1, strip: bool = False, nlevel: int = None) -> str:
+def dumps_rec(val: Any, level: int = 0, indent: int = 2, strip: bool = False) -> str:
     if isinstance(val, (numbers.Number, type(''))):
         return json.dumps(val, ensure_ascii=False)
 
+    sp = level * indent * ' '
     sp2 = (level + 1) * indent * ' '
     sep2 = ',\n' if strip else ',\n\n'
     if isinstance(val, dict):
-        sp = level * indent * ' '
         sep = ',\n' if level > 0 else sep2
         lines = sep.join(f'{sp2}"{k}": {dumps_rec(val[k], level + 1, indent, strip)}' for k in val)
         return f'{{\n{lines}\n{sp}}}'
     if isinstance(val, list):
         sep = ',\n' if level > 1 else sep2
         nest = val and isinstance(val[0], list)  # Not an empty list
-        vals = [f"{sp2 if nest else ''}{dumps_rec(v, level + 1, indent, strip, level)}" for v in val]
         if nest:
-            spn = (nlevel if nlevel else level) * indent * ' '
+            vals = [f"{sp2}{dumps_rec(v, level, indent, strip)}" for v in val]
+            spn = level * indent * ' '
             return f"[\n{sep.join(vals)}\n{spn}]"
+        vals = [f"{dumps_rec(v, level + 1, indent, strip)}" for v in val]
         return f"[{', '.join(vals)}]"
     return '???'
 

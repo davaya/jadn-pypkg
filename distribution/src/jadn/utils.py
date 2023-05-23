@@ -257,10 +257,10 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
     p_name = r'\s*=?\s*([-$:\w]+)'          # 1 type name
     p_id = r'(\.ID)?'                       # 2 'id'
     p_func = r'(?:\(([^)]+)\))?'            # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
-    p_rangepat = r'(?:\{(.*)\})?'           # 4 'minv', 'maxv', 'pattern'
-    p_format = r'(?:\s+\/(\w[-\w]*))?'      # 5 'format'
-    p_kw = r'(\s+(unique|set|unordered))?'  # 6 'unique', 'set', 'unordered'
-    pattern = fr'^{p_name}{p_id}{p_func}{p_rangepat}{p_format}{p_kw}\s*$'
+    p_rangepat = r'^\{(.*)\}$'              # 4 'minv', 'maxv', 'pattern'
+    p_format = r'\s+\/(\w[-\w]*)'           # 5 'format'
+    p_kw = r'\s+(unique|set|unordered)'     # 6 'unique', 'set', 'unordered'
+    pattern = fr'^{p_name}{p_id}{p_func}(.*?)\s*$'
     m = re.match(pattern, typestring)
     if m is None:
         raise_error(f'TypeString2JADN: "{typestring}" does not match pattern {pattern}')
@@ -277,20 +277,23 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
             assert len(opts) == 1
             topts.update(topts_s2d([opts[0]]) if ord(opts[0][0]) in TYPE_OPTIONS else {})
             fo += [opts[0]] if ord(opts[0][0]) in FIELD_OPTIONS else []         # TagId option
-    if m.group(4):
-        if m1 := re.match('^pattern="(.+)"$', m.group(4)):
-            topts.update({'pattern': m1.group(1)})
-        else:
-            a, b = m.group(4).split('..', maxsplit=1)
-            if tname == 'Number':
-                topts.update({} if a == '*' else {'minf': float(a)})
-                topts.update({} if b == '*' else {'maxf': float(b)})
+    if rest := m.group(4):
+        for opt in re.findall(p_rangepat, rest):
+            if m := re.match('pattern=\"(.+)\"', opt):
+                topts.update({'pattern': m.group(1)})
             else:
-                a = '*' if tname != 'Integer' and a != '*' and int(a) == 0 else a   # Default min size = 0
-                topts.update({} if a == '*' else {'minv': int(a)})
-                topts.update({} if b == '*' else {'maxv': int(b)})
-    topts.update({'format': m.group(5)} if m.group(5) else {})
-    topts.update({m.group(7): True} if m.group(7) else {})      # m.group(6) is space+keyword
+                a, b = opt.split('..', maxsplit=1)
+                if tname == 'Number':
+                    topts.update({} if a == '*' else {'minf': float(a)})
+                    topts.update({} if b == '*' else {'maxf': float(b)})
+                else:
+                    a = '*' if tname != 'Integer' and a != '*' and int(a) == 0 else a   # Default min size = 0
+                    topts.update({} if a == '*' else {'minv': int(a)})
+                    topts.update({} if b == '*' else {'maxv': int(b)})
+        for opt in re.findall(p_format, rest):
+            topts.update({'format': opt})
+        for opt in re.findall(p_kw, rest):
+            topts.update({opt: True})
     return tname, opts_d2s(topts), fo
 
 
