@@ -7,6 +7,7 @@ from lxml import html
 from .utils import DocHTML
 from ..definitions import Fields, ItemID, ItemDesc, FieldID, INFO_ORDER, TypeDefinition
 from ..utils import cleanup_tagid, fielddef2jadn, jadn2fielddef, jadn2typestr, typestr2jadn
+from ..core import check
 """
 Convert JADN schema to and from HTML format
 
@@ -170,7 +171,7 @@ def html_loads(hdoc: str) -> dict:
             elif t == 'T':
                 types.append(v)
                 fields = types[-1][Fields]
-    return {'info': meta, 'types': types} if meta else {'types': types}
+    return check({'info': meta, 'types': types} if meta else {'types': types})
 
 
 def html_load(fname: Union[bytes, str, int]) -> dict:
