@@ -309,9 +309,9 @@ DEFAULT_CONFIG = {          # Configuration values to use if not specified in sc
     '$MaxString': 255,          # Maximum number of characters for String types
     '$MaxElements': 100,        # Maximum number of items/properties for container types
     '$Sys': '$',                # System reserved character for TypeName
-    '$TypeName': '^[A-Z][-$A-Za-z0-9]{0,31}$',   # Type Name regex
-    '$FieldName': '^[a-z][_A-Za-z0-9]{0,31}$',   # Field Name regex
-    '$NSID': '^[A-Za-z][A-Za-z0-9]{0,7}$',       # Namespace ID regex
+    '$TypeName': '^[$A-Z][-$A-Za-z0-9]{0,63}$',     # Type Name regex
+    '$FieldName': '^[$a-z][_$A-Za-z0-9]{0,63}$',    # Field Name regex
+    '$NSID': '^[A-Za-z][A-Za-z0-9]{0,7}$',          # Namespace ID regex
     '$TypeRef': '^$'            # Placeholder.  Actual pattern is ($NSID ':')? $TypeName
 }
 
