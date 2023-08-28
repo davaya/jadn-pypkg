@@ -247,7 +247,7 @@ def cleanup_tagid(fields: List[list]) -> List[list]:
 
 def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
     def parseopt(optstr: str) -> str:
-        m1 = re.match(r'^\s*([-$\w]+)(?:\[([^]]+)\])?$', optstr)
+        m1 = re.match(r'^\s*([-$:\w]+)(?:\[([^]]+)\])?$', optstr)   # Typeref: nsid:Name$qualifier
         if m1 is None:
             raise_error(f'TypeString2JADN: unexpected function: {optstr}')
         return OPTION_ID[m1.group(1).lower()] + m1.group(2) if m1.group(2) else m1.group(1)
