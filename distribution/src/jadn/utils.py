@@ -257,7 +257,7 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
     p_name = r'\s*=?\s*([-$:\w]+)'          # 1 type name
     p_id = r'(\.ID)?'                       # 2 'id'
     p_func = r'(?:\(([^)]+)\))?'            # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
-    p_rangepat = r'^\{(.*)\}$'              # 4 'minv', 'maxv', 'pattern'
+    p_rangepat = r'\{(.*)\}'                # 4 'minv', 'maxv', 'pattern'
     p_format = r'\s+\/(\w[-\w]*)'           # 5 'format'
     p_kw = r'\s+(unique|set|unordered)'     # 6 'unique', 'set', 'unordered'
     pattern = fr'^{p_name}{p_id}{p_func}(.*?)\s*$'
