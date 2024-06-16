@@ -93,7 +93,7 @@ def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
         q = re.search(r'"(?:[^"\\]|\\.)+"', line)  # Find quoted string (String pattern option)
         s = q.end() if q else 0
         desc = ''
-        if d := re.search(r'//', line[s:]):
+        if d := re.search(r' //', line[s:]):
             desc = line[s + d.end():].strip()
             line = line[:s + d.start()].strip()
 
