@@ -26,7 +26,7 @@
     [9, "exports", "Exports", ["[0"], "Type defs exported by this package"],
     [10, "config", "Config", ["[0"], "Configuration variables"]
   ]],
-   ["Namespaces", "Choice", [], "anyOf v1.0 or v1.1", [
+   ["Namespaces", "Choice", ["CO"], "anyOf v1.0 or v1.1", [
      [1, "ns1", "Ns1", [], "prefix:Namespace syntax - v1.0"],
      [2, "ns2", "Ns2", [], "Namespace:prefix syntax - v1.1 - allow duplicate prefixes"]
    ]],

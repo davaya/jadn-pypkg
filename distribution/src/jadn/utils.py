@@ -90,7 +90,7 @@ def build_deps(schema: dict) -> Dict[str, Set[str]]:
     Build a Dependency dict: {TypeName: {Dep1, Dep2, ...}}
     """
     # Options whose value is/has a type name: strip option id
-    oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and'], OPTION_ID['or']]
+    oids = [OPTION_ID['ktype'], OPTION_ID['vtype']]
     # Options that enumerate fields: keep option id
     oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]
 
