@@ -26,18 +26,25 @@ class BasicConvert:
     def test_0_quickstart(self):
         self._convert(jadn.check(quickstart_schema))
 
-    def test_1_types(self):
+    def test_1_info(self):
+        with open(os.path.join(dir_path, 'convert_info.jadn')) as fp:
+            self._convert(jadn.load(fp))
+
+    def test_2_types(self):
         with open(os.path.join(dir_path, 'convert_types.jadn')) as fp:
             self._convert(jadn.load(fp))
 
-    def test_2_jadn(self):
+    def test_3_jadn(self):
         with open(os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')) as fp:
             self._convert(jadn.load(fp))
 
-    def test_3_examples(self):
+    def test_4_examples(self):
         with open(os.path.join(dir_path, 'jadn-v1.0-examples.jadn')) as fp:
             self._convert(jadn.load(fp))
 
+    def test_5_examples_uni(self):
+        with open(os.path.join(dir_path, 'jadn-v1.0-examples-uni.jadn')) as fp:
+            self._convert(jadn.load(fp))
 
 class HtmlConvert(BasicConvert, unittest.TestCase):
     def _convert(self, schema):

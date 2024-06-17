@@ -1,6 +1,6 @@
 {
-  "$schema": "https://json-schema.org/draft/2019-09/schema",
-  "$id": "https://oasis-open.org/openc2/jadn/v1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oasis-open.org/openc2/jadn/v1.1",
   "description": "Validates structure of a JADN schema, does not check values",
   "type": "object",
   "required": ["types"],
@@ -44,10 +44,7 @@
       "type": "object",
       "propertyNames": {"$ref": "#/definitions/NSID"},
       "patternProperties": {
-        "": {
-          "type": "string",
-          "format": "uri"
-        }
+        "": {"$ref": "#/definitions/Uri"}
       }
     },
     "Exports": {
@@ -99,6 +96,9 @@
       ]
     },
     "NSID": {
+      "type": "string"
+    },
+    "Uri": {
       "type": "string"
     },
     "TypeName": {
