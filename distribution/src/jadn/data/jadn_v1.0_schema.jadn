@@ -1,7 +1,7 @@
 {
   "info": {
     "title": "JADN Metaschema",
-    "package": "http://oasis-open.org/jadn/v1.1/schema",
+    "package": "http://oasis-open.org/jadn/v1.0/schema",
     "description": "Syntax of a JSON Abstract Data Notation (JADN) package.",
     "license": "CC0-1.0",
     "exports": ["Schema"],
@@ -29,19 +29,7 @@
       [10, "config", "Config", ["[0"], "Configuration variables"]
     ]],
 
-    ["Namespaces", "Choice", ["CO"], "anyOf v1.0 or v1.1", [
-      [1, "ns1", "Ns1", [], "[prefix, namespace] syntax - v1.1"],
-      [2, "ns0", "Ns0", [], "prefix:Namespace syntax - v1.0"]
-    ]],
-
-    ["Ns1", "ArrayOf", ["*NSPrefix"], "Packages with referenced type defs - v1.1", []],
-
-    ["NSPrefix", "Array", [], "Prefixes corresponding with namespace IRIs", [
-      [1, "prefix", "NSID", [], ""],
-      [2, "namespace", "Namespace", [], ""]
-    ]],
-
-    ["Ns0", "MapOf", ["*Namespace", "+NSID", "{1"], "Packages with referenced type defs -v1.0", []],
+    ["Namespaces", "MapOf", ["*Namespace", "+NSID", "{1"], "Packages with referenced type defs", []],
 
     ["Exports", "ArrayOf", ["*TypeName", "{1"], "Type defs intended to be referenced", []],
 

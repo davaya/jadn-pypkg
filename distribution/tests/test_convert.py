@@ -35,7 +35,7 @@ class BasicConvert:
             self._convert(jadn.load(fp))
 
     def test_3_jadn(self):
-        with open(os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')) as fp:
+        with open(os.path.join(jadn.data_dir(), 'jadn_v1.1_schema.jadn')) as fp:
             self._convert(jadn.load(fp))
 
     def test_4_examples(self):

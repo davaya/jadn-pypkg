@@ -155,7 +155,7 @@ def format_validators() -> FormatTable:  # Generate validation function table
                 jsonschema.validate(
                     instance=val,
                     schema={'type': 'string', 'format': format_kw},
-                    format_checker=jsonschema.draft7_format_checker
+                    format_checker=jsonschema.draft202012_format_checker    # Replace with cls=validator
                 )
             except jsonschema.exceptions.ValidationError as e:
                 raise ValueError(e.message)

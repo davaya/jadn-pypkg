@@ -229,7 +229,7 @@ REQUIRED_TYPE_OPTIONS = {
 
 ALLOWED_TYPE_OPTIONS = {
     'Binary': ['format', 'minv', 'maxv'],
-    'Boolean': ['and', 'or'],
+    'Boolean': [],
     'Integer': ['format', 'minv', 'maxv'],
     'Number': ['format', 'minf', 'maxf'],
     'String': ['format', 'pattern', 'minv', 'maxv'],

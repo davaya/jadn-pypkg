@@ -1,5 +1,6 @@
 import numbers
 import re
+# import regex as re    # install from PyPI
 
 from dataclasses import dataclass
 from frozendict import frozendict

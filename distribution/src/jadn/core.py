@@ -187,7 +187,7 @@ def load_any(fp: TextIO) -> dict:
             '.html': jadn.convert.html_load
         }[ext]
     except KeyError:
-        raise ValueError(f'Unsupported schema format: {name}')
+        raise KeyError(f'Unsupported schema format: {name}')
     return loader(fp)
 
 
