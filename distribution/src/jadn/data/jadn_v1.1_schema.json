@@ -41,6 +41,23 @@
   },
   "definitions": {
     "Namespaces": {
+      "anyOf": [
+        {"$ref": "#/definitions/NsArr"},
+        {"$ref": "#/definitions/NsObj"}
+      ]
+    },
+    "NsArr": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/PrefixNs"}
+    },
+    "PrefixNs": {
+      "type": "array",
+      "items": [
+        {"$ref": "#/definitions/NSID"},
+        {"$ref": "#/definitions/Uri"}
+      ]
+    },
+    "NsObj": {
       "type": "object",
       "propertyNames": {"$ref": "#/definitions/NSID"},
       "patternProperties": {

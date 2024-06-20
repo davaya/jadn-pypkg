@@ -1786,15 +1786,15 @@ class Union(unittest.TestCase):
                 [3, 'cell', '']
             ]],
             ['Namespaces', 'Choice', ['CO'], 'anyOf v1.1 or v1.0, in priority order', [
-                [1, 'ns1', 'Ns1', [], '[prefix, namespace] syntax - v1.1'],
-                [2, 'ns0', 'Ns0', [], '{prefix: Namespace} syntax - v1.0']
+                [1, 'ns_arr', 'NsArr', [], '[prefix, namespace] syntax - v1.1'],
+                [2, 'ns_obj', 'NsObj', [], '{prefix: Namespace} syntax - v1.0']
             ]],
-            ['Ns1', 'ArrayOf', ['*PrefixNS', '{1'], 'Type references to other packages - v1.1', []],
+            ['NsArr', 'ArrayOf', ['*PrefixNS', '{1'], 'Type references to other packages - v1.1', []],
             ['PrefixNS', 'Array', [], 'Prefix corresponding to a namespace IRI', [
                 [1, 'prefix', 'NSID', [], ''],
                 [2, 'namespace', 'URI', [], '']
             ]],
-            ['Ns0', 'MapOf', ['*URI', '+NSID', '{1'], 'Type references to other packages - v1.0', []],
+            ['NsObj', 'MapOf', ['*URI', '+NSID', '{1'], 'Type references to other packages - v1.0', []],
             ['NSID', 'String', ['}8'], '', []],
             ['URI', 'String', ['/uri'], '', []],
         ]
@@ -1825,14 +1825,14 @@ class Union(unittest.TestCase):
         self.assertEqual(self.tc.encode('PhoneOne', self.phone2), self.phone2)
         self.assertEqual(self.tc.decode('PhoneOne', self.phone2), self.phone2)
 
-    namespaces_map = {    # Map syntax - duplicate keys are invalid
+    ns_map = {    # Map syntax - duplicate keys are invalid
         '': 'https://shop.bookstore.com/books/metadata/',
         'bm': 'https://shop.bookstore.com/books/back_matter/',
         'cat': 'https://shop.bookstore.com/books/catalog/',
         'prof': 'https://shop.bookstore.com/books/profile/',
         'comp': 'https://shop.bookstore.com/books/component/'
     }
-    namespaces_array = [    # Array syntax - duplicates are valid
+    ns_array = [    # Array syntax - duplicates are valid
         ['', 'https://shop.bookstore.com/books/metadata/'],
         ['', 'https://shop.bookstore.com/books/back_matter/'],
         ['cat', 'https://shop.bookstore.com/books/catalog/'],
@@ -1841,10 +1841,10 @@ class Union(unittest.TestCase):
     ]
 
     def test_union_namespaces(self):
-        self.assertEqual(self.tc.encode('Namespaces', self.namespaces_map), self.namespaces_map)
-        self.assertEqual(self.tc.decode('Namespaces', self.namespaces_map), self.namespaces_map)
-        self.assertEqual(self.tc.encode('Namespaces', self.namespaces_array), self.namespaces_array)
-        self.assertEqual(self.tc.decode('Namespaces', self.namespaces_array), self.namespaces_array)
+        self.assertEqual(self.tc.encode('Namespaces', self.ns_map), self.ns_map)
+        self.assertEqual(self.tc.decode('Namespaces', self.ns_map), self.ns_map)
+        self.assertEqual(self.tc.encode('Namespaces', self.ns_array), self.ns_array)
+        self.assertEqual(self.tc.decode('Namespaces', self.ns_array), self.ns_array)
 
 
 if __name__ == '__main__':

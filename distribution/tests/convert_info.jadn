@@ -15,11 +15,11 @@
 
   "types": [
     ["Storefront", "Record", [], "", [
-      [1, "Title", "String", [], ""]
+      [1, "title", "String", [], ""]
     ]],
 
     ["Catalog", "Record", [], "", [
-      [1, "Title", "String", [], ""]
+      [1, "title", "String", [], ""]
     ]]
   ]
 }
