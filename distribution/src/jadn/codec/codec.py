@@ -4,7 +4,7 @@ import re
 
 from dataclasses import dataclass
 from frozendict import frozendict
-from typing import Any, Callable, Dict, NoReturn, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 from ..utils import raise_error
 from ..definitions import FieldID, FieldName, BasicDataclass, TypeDefinition, GenFieldDefinition
 # TODO: add DEFAULT to dataclasses
@@ -64,17 +64,17 @@ def fset(x):
         return frozenset((fset(v) for v in x))
 
 
-def _bad_index(ts: SymbolTableField, k: int, val: list) -> NoReturn:
+def _bad_index(ts: SymbolTableField, k: int, val: list) -> None:
     td = ts.TypeDef
     raise_error(f'{td.TypeName}({td.BaseType}): array index {k} out of bounds ({len(ts.Fld)}, {len(val)})')
 
 
-def _bad_choice(ts: SymbolTableField, val: Any) -> NoReturn:
+def _bad_choice(ts: SymbolTableField, val: Any) -> None:
     td = ts.TypeDef
     raise_error(f'{td.TypeName}: choice must have one value: {val}')
 
 
-def _bad_value(ts: SymbolTableField, val: Any, fld: GenFieldDefinition = None) -> NoReturn:
+def _bad_value(ts: SymbolTableField, val: Any, fld: GenFieldDefinition = None) -> None:
     td = ts.TypeDef
     if fld is not None:
         raise_error(f'{td.TypeName}({td.BaseType}): missing required field "{fld.FieldName}": {val}')
@@ -84,7 +84,7 @@ def _bad_value(ts: SymbolTableField, val: Any, fld: GenFieldDefinition = None) -
 
 
 # fail forces rejection of boolean vals for number types
-def _check_type(ts: SymbolTableField, val: Any, vtype: type, fail=False) -> NoReturn:
+def _check_type(ts: SymbolTableField, val: Any, vtype: type, fail=False) -> None:
     if vtype is not None:
         if fail or not isinstance(val, vtype):
             td = ts.TypeDef
@@ -248,7 +248,29 @@ def _decode_enumerated(ts: SymbolTableField, sval, codec: 'Codec'):  # pylint: d
 
 
 def _encode_choice(ts: SymbolTableField, val, codec: 'Codec'):
-    _check_type(ts, val, dict)
+
+    if combine := ts.TypeOpts.get('combine'):   # Untagged Union - returns valid FieldType from fields
+        ct, cf = 0, 0   # true and false field counts
+        field, v = None, None
+        for field in ts.TypeDef.Fields:
+            try:
+                v = codec.encode(field.FieldType, val)
+                ct += 1
+                if combine == 'O':              # oneOf - done on success
+                    break
+            except ValueError:
+                cf += 1
+                continue
+        td = ts.TypeDef
+        n = len(td.Fields)
+        # print(f'Choice {td.TypeName}/{field.FieldType} = {v}, n={n}, t={ct}, f={cf}')
+        if combine == 'A' and cf > 0:
+            raise_error(f'{td.TypeName}(allOf): {cf}/{n} invalid')
+        if combine == 'X' and ct != 1:
+            raise_error(f'{td.TypeName}(oneOf): {ct}/{n} valid')
+        return v
+
+    _check_type(ts, val, dict)  # Tagged Union - returns dict {tag: value}
     if len(val) != 1:
         _bad_choice(ts, val)
     k, v = next(iter(val.items()))
@@ -260,6 +282,27 @@ def _encode_choice(ts: SymbolTableField, val, codec: 'Codec'):
 
 
 def _decode_choice(ts: SymbolTableField, val, codec: 'Codec'):  # Map Choice:  val == {key: value}
+
+    if combine := ts.TypeOpts.get('combine'):   # Untagged Union - returns valid FieldType from fields
+        ct, cf = 0, 0  # true and false field counts
+        field, v = None, None
+        for field in ts.TypeDef.Fields:
+            try:
+                v = codec.decode(field.FieldType, val)
+                ct += 1
+                if combine == 'O':  # oneOf - done on success
+                    break
+            except ValueError:
+                cf += 1
+                continue
+        td = ts.TypeDef
+        n = len(td.Fields)
+        if combine == 'A' and cf > 0:
+            raise_error(f'{td.TypeName}(allOf): {cf}/{n} invalid')
+        if combine == 'X' and ct != 1:
+            raise_error(f'{td.TypeName}(oneOf): {ct}/{n} valid')
+        return v
+
     _check_type(ts, val, dict)
     if len(val) != 1:
         _bad_choice(ts, val)

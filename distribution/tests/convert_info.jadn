@@ -3,13 +3,13 @@
     "package": "https://shop.bookstore.com/books/",
     "title": "Bookstore.com",
     "description": "Best Deals on Paper",
-    "namespaces": {
-      "https://shop.bookstore.com/books/metadata/": "",
-      "https://shop.bookstore.com/books/back_matter/":  "",
-      "https://shop.bookstore.com/books/catalog/": "cat",
-      "https://shop.bookstore.com/books/profile/": "prof",
-      "https://shop.bookstore.com/books/component/": "cat"
-    },
+    "namespaces": [
+      ["", "https://shop.bookstore.com/books/metadata/"],
+      ["", "https://shop.bookstore.com/books/back_matter/"],
+      ["cat", "https://shop.bookstore.com/books/catalog/"],
+      ["prof", "https://shop.bookstore.com/books/profile/"],
+      ["cat", "https://shop.bookstore.com/books/component/"]
+    ],
     "exports": ["Storefront", "Catalog"]
   },
 

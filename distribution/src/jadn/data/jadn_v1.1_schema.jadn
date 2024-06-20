@@ -29,19 +29,19 @@
       [10, "config", "Config", ["[0"], "Configuration variables"]
     ]],
 
-    ["Namespaces", "Choice", ["CO"], "anyOf v1.0 or v1.1", [
+    ["Namespaces", "Choice", ["CO"], "anyOf v1.1 or v1.0, in priority order", [
       [1, "ns1", "Ns1", [], "[prefix, namespace] syntax - v1.1"],
-      [2, "ns0", "Ns0", [], "prefix:Namespace syntax - v1.0"]
+      [2, "ns0", "Ns0", [], "{prefix: Namespace} syntax - v1.0"]
     ]],
 
-    ["Ns1", "ArrayOf", ["*NSPrefix"], "Packages with referenced type defs - v1.1", []],
+    ["Ns1", "ArrayOf", ["*PrefixNS", "{1"], "Type references to other packages - v1.1", []],
 
-    ["NSPrefix", "Array", [], "Prefixes corresponding with namespace IRIs", [
+    ["PrefixNS", "Array", [], "Prefix corresponding to a namespace IRI", [
       [1, "prefix", "NSID", [], ""],
       [2, "namespace", "Namespace", [], ""]
     ]],
 
-    ["Ns0", "MapOf", ["*Namespace", "+NSID", "{1"], "Packages with referenced type defs -v1.0", []],
+    ["Ns0", "MapOf", ["*Namespace", "+NSID", "{1"], "Type references to other packages - v1.0", []],
 
     ["Exports", "ArrayOf", ["*TypeName", "{1"], "Type defs intended to be referenced", []],
 
