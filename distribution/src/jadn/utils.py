@@ -90,7 +90,7 @@ def build_deps(schema: dict) -> Dict[str, Set[str]]:
     Build a Dependency dict: {TypeName: {Dep1, Dep2, ...}}
     """
     # Options whose value is/has a type name: strip option id
-    oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['and'], OPTION_ID['or']]
+    oids = [OPTION_ID['ktype'], OPTION_ID['vtype']]
     # Options that enumerate fields: keep option id
     oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]
 
@@ -257,7 +257,7 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
     p_name = r'\s*=?\s*([-$:\w]+)'          # 1 type name
     p_id = r'(\.ID)?'                       # 2 'id'
     p_func = r'(?:\(([^)]+)\))?'            # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
-    p_rangepat = r'^\{(.*)\}$'              # 4 'minv', 'maxv', 'pattern'
+    p_rangepat = r'\{(.*)\}'                # 4 'minv', 'maxv', 'pattern'
     p_format = r'\s+\/(\w[-\w]*)'           # 5 'format'
     p_kw = r'\s+(unique|set|unordered)'     # 6 'unique', 'set', 'unordered'
     pattern = fr'^{p_name}{p_id}{p_func}(.*?)\s*$'
@@ -266,15 +266,16 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
         raise_error(f'TypeString2JADN: "{typestring}" does not match pattern {pattern}')
     tname = m.group(1)
     topts.update({'id': True} if m.group(2) else {})
-    if m.group(3):                      # (ktype, vtype), Enum(), Pointer() options
+    if m.group(3):                      # (ktype, vtype), Enum(), Pointer(), Choice() options
         opts = [parseopt(x) for x in m.group(3).split(',', maxsplit=1)]
+        assert len(opts) == (2 if tname == 'MapOf' else 1)  # TODO: raise proper error message
         if tname == 'MapOf':
             topts.update({'ktype': opts[0], 'vtype': opts[1]})
         elif tname == 'ArrayOf':
-            assert len(opts) == 1       # TODO: raise proper error message
             topts.update({'vtype': opts[0]})
+        elif tname == 'Choice':
+            topts.update({'combine': {'anyOf': 'O', 'allOf': 'A', 'oneOf': 'X'}[opts[0]]})
         else:
-            assert len(opts) == 1
             topts.update(topts_s2d([opts[0]]) if ord(opts[0][0]) in TYPE_OPTIONS else {})
             fo += [opts[0]] if ord(opts[0][0]) in FIELD_OPTIONS else []         # TagId option
     if rest := m.group(4):
@@ -334,6 +335,9 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
         extra += f"({_kvstr(opts.pop('ktype'))}, " if tname == 'MapOf' else '('
         extra += f"{_kvstr(opts.pop('vtype'))})"
 
+    if v := opts.pop('combine', None):
+        extra += f"({ {'O': 'anyOf', 'A': 'allOf', 'X': 'oneOf'}[v]})"
+
     if v := opts.pop('enum', None):
         extra += f'(Enum[{v}])'
 
@@ -358,12 +362,6 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
     if opts.pop('unordered', None):
         extra += ' unordered'
 
-    if v := opts.pop('and', None):  # hack set operations for now.  TODO: generalize to any number
-        extra += f' ∩ {v}'
-
-    if v := opts.pop('or', None):
-        extra += f' ∪ {v}'
-
     return f"{tname}{extra}{f' ?{str(map(str, opts))}?' if opts else ''}"  # Flag unrecognized options
 
 
@@ -374,8 +372,14 @@ def multiplicity_str(opts: dict) -> str:
     return f'{lo}..{hs}' if lo != 1 or hi != 1 else '1'
 
 
+def id_type(td: list) -> bool:    # True if FieldName is a label in description
+    return (td[BaseType] == 'Array'
+            or get_optx(td[TypeOptions], 'id') is not None
+            or get_optx(td[TypeOptions], 'combine') is not None)
+
+
 def jadn2fielddef(fdef: list, tdef: list) -> Tuple[str, str, str, str]:
-    idtype = tdef[BaseType] == 'Array' or get_optx(tdef[TypeOptions], 'id') is not None
+    idtype = id_type(tdef)
     fname = '' if idtype else fdef[FieldName]
     fdesc = f'{fdef[FieldName]}:: ' if idtype else ''
     is_enum = tdef[BaseType] == 'Enumerated'

@@ -1765,5 +1765,87 @@ class Format(unittest.TestCase):
             self.tc.decode('Int64', self.int64v4)
 
 
+class Union(unittest.TestCase):
+    schema = {
+        'types': [
+            ['PhoneAny', 'Choice', ['CO'], '', [
+                [1, 'f1', 'PhoneType', [], ''],
+                [2, 'f2', 'String', [], '']
+            ]],
+            ['PhoneAll', 'Choice', ['CA'], '', [
+                [1, 'f1', 'PhoneType', [], ''],
+                [2, 'f2', 'String', [], '']
+            ]],
+            ['PhoneOne', 'Choice', ['CX'], '', [
+                [1, 'f1', 'PhoneType', [], ''],
+                [2, 'f2', 'String', [], '']
+            ]],
+            ['PhoneType', 'Enumerated', [], '', [
+                [1, 'home', ''],
+                [2, 'work', ''],
+                [3, 'cell', '']
+            ]],
+            ['Namespaces', 'Choice', ['CO'], 'anyOf v1.1 or v1.0, in priority order', [
+                [1, 'ns_arr', 'NsArr', [], '[prefix, namespace] syntax - v1.1'],
+                [2, 'ns_obj', 'NsObj', [], '{prefix: Namespace} syntax - v1.0']
+            ]],
+            ['NsArr', 'ArrayOf', ['*PrefixNS', '{1'], 'Type references to other packages - v1.1', []],
+            ['PrefixNS', 'Array', [], 'Prefix corresponding to a namespace IRI', [
+                [1, 'prefix', 'NSID', [], ''],
+                [2, 'namespace', 'URI', [], '']
+            ]],
+            ['NsObj', 'MapOf', ['*URI', '+NSID', '{1'], 'Type references to other packages - v1.0', []],
+            ['NSID', 'String', ['}8'], '', []],
+            ['URI', 'String', ['/uri'], '', []],
+        ]
+    }
+
+    def setUp(self):
+        jadn.check(self.schema)
+        self.tc = jadn.codec.Codec(self.schema, verbose_rec=True, verbose_str=True)
+
+    phone1 = 'home'
+    phone2 = 'office'
+
+    def test_union_phone(self):
+        self.assertEqual(self.tc.encode('PhoneAny', self.phone1), self.phone1)
+        self.assertEqual(self.tc.decode('PhoneAny', self.phone1), self.phone1)
+        self.assertEqual(self.tc.encode('PhoneAny', self.phone2), self.phone2)
+        self.assertEqual(self.tc.decode('PhoneAny', self.phone2), self.phone2)
+        self.assertEqual(self.tc.encode('PhoneAll', self.phone1), self.phone1)
+        self.assertEqual(self.tc.decode('PhoneAll', self.phone1), self.phone1)
+        with self.assertRaises(ValueError):
+            self.tc.encode('PhoneAll', self.phone2)
+        with self.assertRaises(ValueError):
+            self.tc.decode('PhoneAll', self.phone2)
+        with self.assertRaises(ValueError):
+            self.tc.encode('PhoneOne', self.phone1)
+        with self.assertRaises(ValueError):
+            self.tc.decode('PhoneOne', self.phone1)
+        self.assertEqual(self.tc.encode('PhoneOne', self.phone2), self.phone2)
+        self.assertEqual(self.tc.decode('PhoneOne', self.phone2), self.phone2)
+
+    ns_map = {    # Map syntax - duplicate keys are invalid
+        '': 'https://shop.bookstore.com/books/metadata/',
+        'bm': 'https://shop.bookstore.com/books/back_matter/',
+        'cat': 'https://shop.bookstore.com/books/catalog/',
+        'prof': 'https://shop.bookstore.com/books/profile/',
+        'comp': 'https://shop.bookstore.com/books/component/'
+    }
+    ns_array = [    # Array syntax - duplicates are valid
+        ['', 'https://shop.bookstore.com/books/metadata/'],
+        ['', 'https://shop.bookstore.com/books/back_matter/'],
+        ['cat', 'https://shop.bookstore.com/books/catalog/'],
+        ['prof', 'https://shop.bookstore.com/books/profile/'],
+        ['cat', 'https://shop.bookstore.com/books/component/']
+    ]
+
+    def test_union_namespaces(self):
+        self.assertEqual(self.tc.encode('Namespaces', self.ns_map), self.ns_map)
+        self.assertEqual(self.tc.decode('Namespaces', self.ns_map), self.ns_map)
+        self.assertEqual(self.tc.encode('Namespaces', self.ns_array), self.ns_array)
+        self.assertEqual(self.tc.decode('Namespaces', self.ns_array), self.ns_array)
+
+
 if __name__ == '__main__':
     unittest.main()

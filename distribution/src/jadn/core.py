@@ -64,10 +64,10 @@ def check(schema: dict) -> dict:
     schema['types'] = [list(t) for t in schema_types]
 
     data_path = data_dir()
-    with open(os.path.join(data_path, 'jadn_v1.0_schema.json')) as f:     # Check using JSON Schema for JADN
+    with open(os.path.join(data_path, 'jadn_v1.1_schema.json')) as f:     # Check using JSON Schema for JADN
         jsonschema.Draft7Validator(json.load(f)).validate(schema)
 
-    with open(os.path.join(data_path, 'jadn_v1.0_schema.jadn')) as f:     # Optional: check using JADN meta-schema
+    with open(os.path.join(data_path, 'jadn_v1.1_schema.jadn')) as f:     # Optional: check using JADN meta-schema
         meta_schema = jadn.codec.Codec(json.load(f), verbose_rec=True, verbose_str=True, config=schema)
         assert meta_schema.encode('Schema', schema) == schema
 
@@ -187,7 +187,7 @@ def load_any(fp: TextIO) -> dict:
             '.html': jadn.convert.html_load
         }[ext]
     except KeyError:
-        raise ValueError(f'Unsupported schema format: {name}')
+        raise KeyError(f'Unsupported schema format: {name}')
     return loader(fp)
 
 

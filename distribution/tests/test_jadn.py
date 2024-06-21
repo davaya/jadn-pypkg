@@ -13,7 +13,7 @@ dir_path = os.path.abspath(os.path.dirname(__file__))
 
 class JADN(TestCase):
     def setUp(self):
-        with open(os.path.join(jadn.data_dir(), 'jadn_v1.0_schema.jadn')) as fp:
+        with open(os.path.join(jadn.data_dir(), 'jadn_v1.1_schema.jadn')) as fp:
             self.schema = jadn.load(fp)
         sa = jadn.analyze(self.schema)
         if sa['undefined']:
