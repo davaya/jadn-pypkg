@@ -266,15 +266,16 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
         raise_error(f'TypeString2JADN: "{typestring}" does not match pattern {pattern}')
     tname = m.group(1)
     topts.update({'id': True} if m.group(2) else {})
-    if m.group(3):                      # (ktype, vtype), Enum(), Pointer() options
+    if m.group(3):                      # (ktype, vtype), Enum(), Pointer(), Choice() options
         opts = [parseopt(x) for x in m.group(3).split(',', maxsplit=1)]
+        assert len(opts) == (2 if tname == 'MapOf' else 1)  # TODO: raise proper error message
         if tname == 'MapOf':
             topts.update({'ktype': opts[0], 'vtype': opts[1]})
         elif tname == 'ArrayOf':
-            assert len(opts) == 1       # TODO: raise proper error message
             topts.update({'vtype': opts[0]})
+        elif tname == 'Choice':
+            topts.update({'combine': {'anyOf': 'O', 'allOf': 'A', 'oneOf': 'X'}[opts[0]]})
         else:
-            assert len(opts) == 1
             topts.update(topts_s2d([opts[0]]) if ord(opts[0][0]) in TYPE_OPTIONS else {})
             fo += [opts[0]] if ord(opts[0][0]) in FIELD_OPTIONS else []         # TagId option
     if rest := m.group(4):
@@ -334,6 +335,9 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
         extra += f"({_kvstr(opts.pop('ktype'))}, " if tname == 'MapOf' else '('
         extra += f"{_kvstr(opts.pop('vtype'))})"
 
+    if v := opts.pop('combine', None):
+        extra += f"({ {'O': 'anyOf', 'A': 'allOf', 'X': 'oneOf'}[v]})"
+
     if v := opts.pop('enum', None):
         extra += f'(Enum[{v}])'
 
@@ -357,12 +361,6 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
 
     if opts.pop('unordered', None):
         extra += ' unordered'
-
-    if v := opts.pop('and', None):  # hack set operations for now.  TODO: generalize to any number
-        extra += f' ∩ {v}'
-
-    if v := opts.pop('or', None):
-        extra += f' ∪ {v}'
 
     return f"{tname}{extra}{f' ?{str(map(str, opts))}?' if opts else ''}"  # Flag unrecognized options
 
