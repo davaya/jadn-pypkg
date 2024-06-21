@@ -7,7 +7,8 @@ import re
 from datetime import datetime
 from typing import NoReturn, TextIO, Tuple, Union
 from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
-from ..utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error, typestr2jadn, etrunc
+from ..utils import (cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error,
+                     typestr2jadn, id_type, etrunc)
 from ..core import check
 
 # JIDL -> JADN Type regexes
@@ -58,7 +59,7 @@ def jidl_dumps(schema: dict, style: dict = None) -> str:
         tdef = f'{td[TypeName]} = {jadn2typestr(td[BaseType], td[TypeOptions])}'
         tdesc = ' // ' + td[TypeDesc] if td[TypeDesc] else ''
         text += f'\n{tdef:<{wt}}{tdesc}'[:w['page']].rstrip() + '\n'
-        idt = td[BaseType] == 'Array' or get_optx(td[TypeOptions], 'id') is not None
+        idt = id_type(td)
         for fd in td[Fields] if len(td) > Fields else []:       # TODO: constant-length types
             fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
             if td[BaseType] == 'Enumerated':
@@ -105,7 +106,7 @@ def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
             return 'T', newtype
 
         if tdef:        # looking for fields
-            pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[BaseType] == 'Array') else p_fname
+            pn = '()' if id_type(tdef) else p_fname
             if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
                 pattern = fr'^{p_id}{p_fstr}$'
                 if m := re.match(pattern, line):

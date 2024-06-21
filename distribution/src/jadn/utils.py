@@ -372,8 +372,14 @@ def multiplicity_str(opts: dict) -> str:
     return f'{lo}..{hs}' if lo != 1 or hi != 1 else '1'
 
 
+def id_type(td: list) -> bool:    # True if FieldName is a label in description
+    return (td[BaseType] == 'Array'
+            or get_optx(td[TypeOptions], 'id') is not None
+            or get_optx(td[TypeOptions], 'combine') is not None)
+
+
 def jadn2fielddef(fdef: list, tdef: list) -> Tuple[str, str, str, str]:
-    idtype = tdef[BaseType] == 'Array' or get_optx(tdef[TypeOptions], 'id') is not None
+    idtype = id_type(tdef)
     fname = '' if idtype else fdef[FieldName]
     fdesc = f'{fdef[FieldName]}:: ' if idtype else ''
     is_enum = tdef[BaseType] == 'Enumerated'

@@ -358,7 +358,10 @@ def json_schema_dumps(schema: dict, verbose=True, enum_style='enum', import_styl
     info = schema.get('info', {})
     td = {t[TypeName]: t for t in schema['types']}    # Build index of type definitions
     exports = [e for e in info.get('exports', []) if e in td]
-    imported_types = {k: {} for k in info.get('namespaces', {})}
+    if isinstance(ns := info.get('namespaces', {}), dict):
+        imported_types = {k: {} for k in ns}
+    elif isinstance(ns, list):
+        imported_types = {k[0]: {} for k in ns}
     ctx = {  # Translation context
         'config': get_config(info),
         'type_defs': td,
