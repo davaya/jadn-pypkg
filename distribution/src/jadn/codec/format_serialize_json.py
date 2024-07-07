@@ -8,6 +8,8 @@ from ipaddress import IPv4Address, IPv6Address
 from typing import Any, Callable, Dict, Tuple
 from ..definitions import FORMAT_SERIALIZE
 
+UUID = r'(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89AB][0-9a-f]{3}-[0-9a-f]{12}$'
+
 FormatFunction = Callable[[Any], Any]
 FormatTable = Dict[str, Dict[str, Tuple[FormatFunction, FormatFunction]]]
 # TODO: Convert a2s_ipvX_net and s2a_ipvX_net functions to use ipaddress.IPvXNetwork
@@ -87,6 +89,20 @@ def s2b_ipv6_addr(sval: str) -> bytes:    # Convert IPv6 address from string to 
     return IPv6Address(sval).packed
 
 
+def b2s_uuid(bval: bytes) -> str:   # Convert RFC 4122 UUID from 128 bit value to text representation
+    u = b2s_hex_lc(bval)
+    us = f'{u[:8]}-{u[8:12]}-{u[12:16]}-{u[16:20]}-{u[20:]}'
+    if m := re.match(UUID, us):
+        return us
+    raise ValueError
+
+
+def s2b_uuid(sval: str) -> bytes:   # Convert RFC 4122 UUID from text to 128 bit value
+    if m := re.match(UUID, sval):
+        return s2b_hex_lc(sval.replace('-', ''))
+    raise ValueError
+
+
 FORMAT_CONVERT_BINARY_FUNCTIONS = {
     'b': (b2s_base64url, s2b_base64url),            # Base64url
     'x': (b2s_hex_lc, s2b_hex_lc),                  # Hex lower case
@@ -94,6 +110,7 @@ FORMAT_CONVERT_BINARY_FUNCTIONS = {
     'ipv4-addr': (b2s_ipv4_addr, s2b_ipv4_addr),    # IPv4 Address
     'ipv6-addr': (b2s_ipv6_addr, s2b_ipv6_addr),    # IPv6 Address
     'eui': (b2s_hex, s2b_hex),                      # EUI - TODO: write colon-hex A0:32:F9:...
+    'uuid': (b2s_uuid, s2b_uuid),                   # 128 bit UUID with RFC 4122 text representation
 }
 
 
@@ -130,9 +147,19 @@ def s2a_ipv6_net(sval: str) -> [str, int]:
     return [sa, prefix_len]
 
 
+def a2s_tag_uuid(aval: [str, str]) -> str:
+    return aval[0] + '-' + aval[1]
+
+
+def s2a_tag_uuid(sval: str) -> [str, str]:
+    t, u = sval.split('-', maxsplit=1)
+    return [t, u]
+
+
 FORMAT_CONVERT_MULTIPART_FUNCTIONS = {
     'ipv4-net': (a2s_ipv4_net, s2a_ipv4_net),       # IPv4 Net Address with CIDR prefix length
     'ipv6-net': (a2s_ipv6_net, s2a_ipv6_net),       # IPv6 Net Address with CIDR prefix length
+    'tag-uuid': (a2s_tag_uuid, s2a_tag_uuid),       # UUID with tag prefix
 }
 
 

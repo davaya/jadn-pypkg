@@ -385,6 +385,7 @@ def _decode_maprec(ts: SymbolTableField, sval, codec: 'Codec'):
 
 
 def _encode_array(ts: SymbolTableField, aval, codec: 'Codec'):
+    ts.FormatValidate(aval)
     _check_type(ts, aval, list)
     _check_count(ts, aval)
     sval = list()
@@ -409,11 +410,11 @@ def _encode_array(ts: SymbolTableField, aval, codec: 'Codec'):
                 _bad_value(ts, aval, f)
     while sval and sval[-1] is None:            # Strip non-populated trailing optional values
         sval.pop()
-    return _format_encode(ts, sval)
+    return ts.FormatEncode(sval)
 
 
 def _decode_array(ts: SymbolTableField, sval, codec: 'Codec'):  # Ordered list of types, returned as a list
-    val = _format_decode(ts, sval)
+    val = ts.FormatDecode(sval)
     _check_type(ts, val, list)
     _check_count(ts, sval)
     aval = list()
@@ -438,7 +439,7 @@ def _decode_array(ts: SymbolTableField, sval, codec: 'Codec'):  # Ordered list o
                 _bad_value(ts, val, f)
     while aval and aval[-1] is None:  # Strip non-populated trailing optional values
         aval.pop()
-    return aval
+    return aval     # TODO: Check errors in ts.FormatValidate(aval)
 
 
 def _encode_array_of(ts: SymbolTableField, val, codec: 'Codec'):

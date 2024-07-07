@@ -1,8 +1,8 @@
 """
 Test JADN Codec
 """
-import json
 import binascii
+import json
 import unittest
 import jadn
 from collections import Counter
@@ -1486,6 +1486,11 @@ class Format(unittest.TestCase):
             ['Email-Addr', 'String', ['/email'], ''],
             ['Hostname', 'String', ['/hostname'], ''],
             ['URI', 'String', ['/uri'], ''],
+            ['UUID', 'Binary', ['/uuid'], ''],
+            ['Tag-UUID', 'Array', ['/tag-uuid'], '', [
+                [1, 'tag', 'String', [], ''],
+                [2, 'uuid', 'UUID', [], '']
+            ]],
             ['DateTime', 'Integer', ['/datetime-ms'], ''],
             ['Int8', 'Integer', ['/i8'], ''],
             ['Int16', 'Integer', ['/i16'], ''],
@@ -1587,6 +1592,43 @@ class Format(unittest.TestCase):
             self.tc.encode('MAC-Base64url', self.eui48b_bad)
         with self.assertRaises(ValueError):
             self.tc.decode('MAC-Base64url', self.eui48s_bad)
+
+    uuid_b = binascii.a2b_hex('c04d79b28d8b4a7683adfb4f3770cfbc')
+    uuid_b_bad1 = binascii.a2b_hex('c04d79b28d8b4a7683adfb4f3770cf')
+    uuid_b_bad2 = binascii.a2b_hex('c04d79b28d8b4a7683adfb4f3770cfbc6f')
+    uuid_h = 'c04d79b2-8d8b-4a76-83ad-fb4f3770cfbc'
+    uuid_hu = 'C04D79B2-8D8B-4A76-83AD-FB4F3770CFBC'
+    uuid_h_bad1 = 'c04d79b28d8b4a7683adfb4f3770cfbc'
+    uuid_h_bad2 = 'c04d-79b2-8d8b4a76-83ad-fb4f3770cfbc'
+    uuid_h_bad3 = 'c04d79b2:8d8b:4a76:83ad:fb4f3770cfbc'
+    uuid_h_bad4 = 'c04d79b2-8d8b-4a76-83ad-fb4f3770cf'
+    uuid_h_bad5 = 'c04d79b2-8d8b-4a76-83ad-fb4f3770cfbc6f'
+
+    def test_uuid(self):
+        self.assertEqual(self.tc.encode('UUID', self.uuid_b), self.uuid_h)
+        self.assertEqual(self.tc.decode('UUID', self.uuid_h), self.uuid_b)
+        self.assertEqual(self.tc.decode('UUID', self.uuid_hu), self.uuid_b)
+        with self.assertRaises(ValueError):
+            self.tc.encode('UUID', self.uuid_b_bad1)
+        with self.assertRaises(ValueError):
+            self.tc.encode('UUID', self.uuid_b_bad2)
+        with self.assertRaises(ValueError):
+            self.tc.decode('UUID', self.uuid_h_bad1)
+        with self.assertRaises(ValueError):
+            self.tc.decode('UUID', self.uuid_h_bad2)
+        with self.assertRaises(ValueError):
+            self.tc.decode('UUID', self.uuid_h_bad3)
+        with self.assertRaises(ValueError):
+            self.tc.decode('UUID', self.uuid_h_bad4)
+        with self.assertRaises(ValueError):
+            self.tc.decode('UUID', self.uuid_h_bad5)
+
+    tag_uuid_b = ['action', uuid_b]
+    tag_uuid_h = 'action-c04d79b2-8d8b-4a76-83ad-fb4f3770cfbc'
+
+    def test_tag_uuid(self):
+        self.assertEqual(self.tc.encode('Tag-UUID', self.tag_uuid_b), self.tag_uuid_h)
+        self.assertEqual(self.tc.decode('Tag-UUID', self.tag_uuid_h), self.tag_uuid_b)
 
     email1s = 'fred@foo.com'
     email2s_bad = 'https://www.foo.com/index.html'

@@ -68,6 +68,19 @@ def b_mac_addr(bval: bytes) -> bytes:       # Length of MAC addr must be 48 or 6
     return val_binary(bval, lambda x: len(x) == 6 or len(x) == 8)
 
 
+def b_uuid(bval: bytes) -> bytes:           # UUID is 128 bits
+    return val_binary(bval, lambda x: len(x) == 16)
+
+
+def a_tag_uuid(aval: [str, bytes]) -> [str, bytes]:
+    if (    len(aval) == 2 and
+            isinstance(aval[0], str) and
+            isinstance(aval[1], bytes) and
+            len(aval[1]) == 16):
+        return aval
+    raise TypeError
+
+
 def b_ipv4_addr(bval: bytes) -> bytes:      # IPv4 address
     return val_binary(bval, lambda x: len(x) == 4)
 
@@ -126,10 +139,12 @@ FORMAT_VALIDATE_FUNCTIONS = {
         'eui': b_mac_addr,
         'ipv4-addr': b_ipv4_addr,
         'ipv6-addr': b_ipv6_addr,
+        'uuid': b_uuid,
     },
     'Array': {
         'ipv4-net': a_ipv4_net,
         'ipv6-net': a_ipv6_net,
+        'tag-uuid': a_tag_uuid,
     },
     'Integer': {
         'i8': i_i8,
