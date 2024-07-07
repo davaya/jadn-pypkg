@@ -5,7 +5,7 @@ import json
 import re
 
 from datetime import datetime
-from typing import NoReturn, Tuple, Union
+from typing import Tuple, Union
 from jadn.definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
 from jadn.utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error, typestr2jadn
 
@@ -93,7 +93,7 @@ def format_table(rows: list) -> str:
     return '\n'.join([cf.format(*rows[0])] + [hbar] + [cf.format(*r) for r in rows[1:]])
 
 
-def markdown_dump(schema: dict, fname: Union[bytes, str, int], source='', style=None) -> NoReturn:
+def markdown_dump(schema: dict, fname: Union[bytes, str, int], source='', style=None) -> None:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write(f'<!--- Generated from {source}, {datetime.ctime(datetime.now())} --->\n\n')

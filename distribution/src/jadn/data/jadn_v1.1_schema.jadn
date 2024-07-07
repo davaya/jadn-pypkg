@@ -55,7 +55,7 @@
       [7, "$NSID", "String", ["{1", "}127", "[0"], "Namespace Identifier regex"]
     ]],
 
-    ["Types", "ArrayOf", ["*Type"], "", []],
+    ["Types", "ArrayOf", ["*Type", "}1000", "q"], "", []],
 
     ["Type", "Array", [], "", [
       [1, "type_name", "TypeName", [], ""],

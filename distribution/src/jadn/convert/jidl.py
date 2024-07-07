@@ -5,7 +5,7 @@ import json
 import re
 
 from datetime import datetime
-from typing import NoReturn, TextIO, Tuple, Union
+from typing import TextIO, Tuple, Union
 from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
 from ..utils import (cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error,
                      typestr2jadn, id_type, etrunc)
@@ -77,7 +77,7 @@ def jidl_dumps(schema: dict, style: dict = None) -> str:
     return text
 
 
-def jidl_dump(schema: dict, fname: Union[bytes, str, int], source='', style=None) -> NoReturn:
+def jidl_dump(schema: dict, fname: Union[bytes, str, int], source='', style=None) -> None:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write(f'/* Generated from {source}, {datetime.ctime(datetime.now())} */\n\n')

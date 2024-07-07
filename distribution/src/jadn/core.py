@@ -8,7 +8,7 @@ import os
 import jadn
 
 from datetime import datetime
-from typing import Any, NoReturn, TextIO, Union
+from typing import Any, TextIO, Union
 from urllib.parse import urlparse
 from .definitions import (
     TypeName, FieldID, FieldName, FieldType, FieldDesc, FIELD_LENGTH,
@@ -25,7 +25,7 @@ def data_dir() -> str:
 
 
 # Check schema is valid
-def check_typeopts(type_name: str, base_type: str, topts: dict) -> NoReturn:
+def check_typeopts(type_name: str, base_type: str, topts: dict) -> None:
     """
     Check for invalid type options and undefined formats
     """
@@ -72,11 +72,14 @@ def check(schema: dict) -> dict:
         assert meta_schema.encode('Schema', schema) == schema
 
     # Additional checks not included in schema
-    types = set()
+    types = {}
     for type_def in schema_types:
+        collisions = []
         if type_def.TypeName in types:
-            raise_error(f'Duplicate type definition {type_def.TypeName}')
-        types.add(type_def.TypeName)
+            collisions.append(type_def.TypeName)
+        if collisions:
+            raise_error(f'Colliding type definitions {collisions}')
+        types[type_def.TypeName] = type_def
         if is_builtin(type_def.TypeName):
             raise_error(f'Reserved type name {type_def.TypeName}')
         if not is_builtin(type_def.BaseType):
@@ -218,7 +221,7 @@ def dumps(schema: dict, strip: bool = False) -> str:
     return dumps_rec(schema, strip=strip)
 
 
-def dump(schema: dict, fname: Union[str, bytes, int], source: str = '', strip: bool = False) -> NoReturn:
+def dump(schema: dict, fname: Union[str, bytes, int], source: str = '', strip: bool = False) -> None:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write(f'"Generated from {source}, {datetime.ctime(datetime.now())}"\n\n')

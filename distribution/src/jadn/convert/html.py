@@ -2,7 +2,7 @@ import re
 import json
 
 from datetime import datetime
-from typing import Generator, NoReturn, Tuple, Union
+from typing import Generator, Tuple, Union
 from lxml import html
 from .utils import DocHTML
 from ..definitions import Fields, ItemID, ItemDesc, FieldID, INFO_ORDER, TypeDefinition
@@ -108,7 +108,7 @@ def html_dumps(schema: dict) -> str:
     return doc.getvalue(True)
 
 
-def html_dump(schema: dict, fname: Union[bytes, str, int], source='') -> NoReturn:
+def html_dump(schema: dict, fname: Union[bytes, str, int], source='') -> None:
     with open(fname, 'w', encoding='utf8') as f:
         if source:
             f.write(f'<! Generated from {source}, {datetime.ctime(datetime.now())}>\n\n')

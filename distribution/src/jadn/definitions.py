@@ -170,20 +170,21 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
     123: ('minv', int, 10),                 # '{', minimum byte or text string length, Integer value, element count
     125: ('maxv', int, 11),                 # '}', maximum byte or text string length, Integer value, element count
     113: ('unique', lambda x: True, 12),    # 'q', ArrayOf instance must not contain duplicates
-    115: ('set', lambda x: True, 13),       # 's', ArrayOf instance is unordered and unique
+    115: ('set', lambda x: True, 13),       # 's', ArrayOf instance is unordered and unique (set)
     98: ('unordered', lambda x: True, 14),  # 'b', ArrayOf instance is unordered and not unique (bag)
-    67: ('combine', lambda x: x, 15),       # 'C', Choice instance is a logical combination (anyOf, allOf, oneOf)
-    88: ('extend', lambda x: True, 16),     # 'X', Type has an extension point where fields may be appended
-    33: ('default', lambda x: x, 17),       # '!', Default or constant value of instances of this type
+    111: ('seq', lambda x: True, 15),       # 'o', Map, MapOr or Record instance is ordered and unique (ordered set)
+    67: ('combine', lambda x: x, 16),       # 'C', Choice instance is a logical combination (anyOf, allOf, oneOf)
+    88: ('extend', lambda x: True, 17),     # 'X', Type has an extension point where fields may be appended
+    33: ('default', lambda x: x, 18),       # '!', Default or constant value of instances of this type
 }
 
 FIELD_OPTIONS = {
-    91: ('minc', int, 18),                  # '[', minimum cardinality, default = 1, 0 = field is optional
-    93: ('maxc', int, 19),                  # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
-    38: ('tagid', int, 20),                 # '&', field that specifies the type of this field
-    60: ('dir', lambda x: True, 21),        # '<', pointer enumeration treats field as a collection
-    75: ('key', lambda x: True, 22),        # 'K', field is a primary key for this type
-    76: ('link', lambda x: True, 23),       # 'L', field is a link (foreign key) to an instance of FieldType
+    91: ('minc', int, 19),                  # '[', minimum cardinality, default = 1, 0 = field is optional
+    93: ('maxc', int, 20),                  # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
+    38: ('tagid', int, 21),                 # '&', field that specifies the type of this field
+    60: ('dir', lambda x: True, 22),        # '<', pointer enumeration treats field as a collection
+    75: ('key', lambda x: True, 23),        # 'K', field is a primary key for this type
+    76: ('link', lambda x: True, 24),       # 'L', field is a link (foreign key) to an instance of FieldType
 }
 
 OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD_OPTIONS
@@ -201,6 +202,7 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'unique':   chr(113),
     'set':      chr(115),
     'unordered': chr(98),
+    'seq':      chr(111),
     'combine':  chr(67),
     'extend':   chr(88),
     'default':  chr(33),
@@ -237,9 +239,9 @@ ALLOWED_TYPE_OPTIONS = {
     'Choice': ['id', 'extend', 'combine'],
     'Array': ['extend', 'format', 'minv', 'maxv'],
     'ArrayOf': ['vtype', 'minv', 'maxv', 'unique', 'set', 'unordered'],
-    'Map': ['id', 'extend', 'minv', 'maxv'],
-    'MapOf': ['ktype', 'vtype', 'minv', 'maxv'],
-    'Record': ['extend', 'minv', 'maxv'],
+    'Map': ['id', 'extend', 'minv', 'maxv', 'seq'],
+    'MapOf': ['ktype', 'vtype', 'minv', 'maxv', 'seq'],
+    'Record': ['extend', 'minv', 'maxv', 'seq'],
 }
 
 # Ensure jsonschema prerequisite packages are installed, e.g., rfc3987 for uri/iri validation

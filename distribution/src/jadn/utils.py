@@ -259,7 +259,7 @@ def typestr2jadn(typestring: str) -> Tuple[str, List[str], list]:
     p_func = r'(?:\(([^)]+)\))?'            # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
     p_rangepat = r'\{(.*)\}'                # 4 'minv', 'maxv', 'pattern'
     p_format = r'\s+\/(\w[-\w]*)'           # 5 'format'
-    p_kw = r'\s+(unique|set|unordered)'     # 6 'unique', 'set', 'unordered'
+    p_kw = r'\s+(unique|set|unordered|seq)' # 6 unique, set, unordered, seq
     pattern = fr'^{p_name}{p_id}{p_func}(.*?)\s*$'
     m = re.match(pattern, typestring)
     if m is None:
@@ -362,6 +362,8 @@ def jadn2typestr(tname: str, topts: List[OPTION_TYPES]) -> str:
     if opts.pop('unordered', None):
         extra += ' unordered'
 
+    if opts.pop('seq', None):
+        extra += ' seq'
     return f"{tname}{extra}{f' ?{str(map(str, opts))}?' if opts else ''}"  # Flag unrecognized options
 
 
