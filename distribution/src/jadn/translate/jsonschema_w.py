@@ -308,26 +308,41 @@ def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
     v_opt = opts[1]
     v_name = v_opt[1:]
     
-    items_new = {
-        "type" : "object",
-        k_name : ktype,
-        v_name : vtype
-    }
+    key_array = ctx.get('type_defs', {}).get(k_name)
+    key_type = key_array[1]
     
-    merged = dmerge(
-        # w_td('object', tdef[TypeDesc]),
-        w_td('object', tdef[TypeDesc]),
+    merged = {}
+    if key_type == 'String':
+        merged = dmerge(
+            w_td('object', tdef[TypeDesc]),
+            {'additionalProperties': False},
+            {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
+            {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
+            {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else {}
+        )
         
-        {'additionalProperties': False},
-        {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
-        {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
-        {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else {}
-        # {'items': w_kvtype(topts['vtype'], ctx)}
-        # {'items', k_dict, v_dict}
-        # {'properties': {f: vtype for f in items}} if items else {}
-    )
+        properties = {
+            k_name : ktype,
+            v_name : vtype
+        }        
+        
+        merged['properties'] = properties
+    else:
+        merged = dmerge(
+            w_td('array', tdef[TypeDesc]),
+            {'additionalItems': False},
+            {'uniqueItems': True},
+            {'minItems': topts['minv']} if topts.get('minv', 0) != 0 else {},
+            {'maxItems': topts['maxv']} if 'maxv' in topts else {},
+        )
+        
+        prefix_items = [
+            {k_name : ktype},
+            {v_name : vtype}
+        ]
+        
+        merged['items'] = prefix_items        
     
-    merged['items'] = items_new
     return merged
     
     # return dmerge(
