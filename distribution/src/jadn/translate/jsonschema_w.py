@@ -299,14 +299,49 @@ def t_map(tdef: list, topts: dict, ctx: dict) -> dict:
 def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
     items = get_items(topts['ktype'], ctx)
     vtype = w_kvtype(topts['vtype'], ctx)
-    return dmerge(
+    ktype = w_kvtype(topts['ktype'], ctx)
+    
+    opts = tdef[TypeOptions]
+    k_opt = opts[0]
+    k_name = k_opt[1:]
+    
+    v_opt = opts[1]
+    v_name = v_opt[1:]
+    
+    items_new = {
+        "type" : "object",
+        k_name : ktype,
+        v_name : vtype
+    }
+    
+    merged = dmerge(
+        # w_td('object', tdef[TypeDesc]),
         w_td('object', tdef[TypeDesc]),
+        
         {'additionalProperties': False},
         {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
         {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
-        {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else
-        {'properties': {f: vtype for f in items}} if items else {}
+        {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else {}
+        # {'items': w_kvtype(topts['vtype'], ctx)}
+        # {'items', k_dict, v_dict}
+        # {'properties': {f: vtype for f in items}} if items else {}
     )
+    
+    merged['items'] = items_new
+    return merged
+    
+    # return dmerge(
+    #     # w_td('object', tdef[TypeDesc]),
+    #     w_td('array', tdef[TypeDesc]),
+        
+    #     {'additionalProperties': False},
+    #     {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
+    #     {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
+    #     {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else
+    #     # {'items': w_kvtype(topts['vtype'], ctx)}
+    #     {'items', items_new}
+    #     # {'properties': {f: vtype for f in items}} if items else {}
+    # )
 
 
 # Type Map Util
