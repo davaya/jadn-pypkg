@@ -344,19 +344,6 @@ def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
         merged['items'] = prefix_items        
     
     return merged
-    
-    # return dmerge(
-    #     # w_td('object', tdef[TypeDesc]),
-    #     w_td('array', tdef[TypeDesc]),
-        
-    #     {'additionalProperties': False},
-    #     {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
-    #     {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
-    #     {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else
-    #     # {'items': w_kvtype(topts['vtype'], ctx)}
-    #     {'items', items_new}
-    #     # {'properties': {f: vtype for f in items}} if items else {}
-    # )
 
 
 # Type Map Util
