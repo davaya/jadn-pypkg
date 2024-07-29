@@ -252,22 +252,27 @@ def _encode_choice(ts: SymbolTableField, val, codec: 'Codec'):
     if combine := ts.TypeOpts.get('combine'):   # Untagged Union - returns valid FieldType from fields
         ct, cf = 0, 0   # true and false field counts
         field, v = None, None
+        err = []
         for field in ts.TypeDef.Fields:
             try:
                 v = codec.encode(field.FieldType, val)
                 ct += 1
-                if combine == 'O':              # oneOf - done on success
+                if combine == 'O':              # anyOf - done on success
                     break
-            except ValueError:
+            except ValueError as e:
                 cf += 1
+                err.append(e)
                 continue
         td = ts.TypeDef
         n = len(td.Fields)
         # print(f'Choice {td.TypeName}/{field.FieldType} = {v}, n={n}, t={ct}, f={cf}')
+        e = '\n'.join([str(k) for k in err])
         if combine == 'A' and cf > 0:
-            raise_error(f'{td.TypeName}(allOf): {cf}/{n} invalid')
+            raise_error(f'{td.TypeName}(allOf): {cf}/{n} invalid\n{e}')
         if combine == 'X' and ct != 1:
-            raise_error(f'{td.TypeName}(oneOf): {ct}/{n} valid')
+            raise_error(f'{td.TypeName}(oneOf): {ct}/{n} valid\n{e}')
+        if combine == 'O' and cf >= n:
+            raise_error(f'{td.TypeName}(anyOf): {ct}/{n} none valid\n{e}')
         return v
 
     _check_type(ts, val, dict)  # Tagged Union - returns dict {tag: value}

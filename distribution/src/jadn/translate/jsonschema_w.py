@@ -35,7 +35,8 @@ CONFIG_MAX = {
     'ArrayOf': '$MaxElements',
     'Map': '$MaxElements',
     'MapOf': '$MaxElements',
-    'Record': '$MaxElements'
+    'Record': '$MaxElements',
+    'Desc': '$MaxDescription',
 }
 
 
@@ -244,7 +245,7 @@ def t_enumerated(tdef: list, topts: dict, ctx: dict) -> dict:
 def t_choice(tdef: list, topts: dict, ctx: dict) -> dict:
     if combine := topts.get('combine'):
         c = {'O': 'anyOf', 'A': 'allOf', 'X': 'oneOf'}[combine]
-        return {c: [w_ref(f[FieldType], ctx) for f in tdef[Fields]]}
+        return {c: [TYPE_WRITERS[f[FieldType]](tdef, topts, ctx) if is_builtin(f[FieldType]) else w_ref(f[FieldType], ctx) for f in tdef[Fields]]}
 
     return dmerge(
         w_td('object', tdef[TypeDesc]),

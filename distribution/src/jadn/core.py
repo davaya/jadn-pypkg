@@ -150,24 +150,14 @@ def check(schema: dict) -> dict:
 
 
 def analyze(schema: dict) -> dict:
-    def ns(name: str, nsids: dict) -> str:  # Return namespace if name has a known namespace, otherwise return full name
-        nsp = name.split(':')[0]
-        return nsp if nsp in nsids else name
-
-    # TODO: Check for extension usages
-    items = jadn.build_deps(schema)
-    # out, roots = topo_sort(items)
+    items, dep_roots = jadn.build_deps(schema)
     info = schema.get('info', {})
-    imports = info.get('imports', {})
-    exports = info.get('exports', [])
-
-    defs = set(items) | set(imports)
-    refs = {ns(r, imports) for i in items for r in items[i]} | set(exports)
-    oids = (OPTION_ID['enum'], OPTION_ID['pointer'])
-    refs = {r[1:] if r[0] in oids else r for r in refs}         # Reference base type for derived enums/pointers
+    roots = info.get('roots', info.get('exports', []))      # Exports is deprecated
+    defs = set(items)
+    refs = set(dep_roots) | set(roots)
     return {
-        'unreferenced': list(map(str, defs - refs)),
-        'undefined': list(map(str, refs - defs)),
+        'unreferenced': list(defs - refs),
+        'undefined': list(refs - defs),
         'cycles': [],
     }
 

@@ -113,6 +113,10 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         """
         Return graph edges from fields in selected diagram format
         """
+        # Normalize edge label for diagram format
+        def ename(edge_label: str) -> str:
+            return edge_label.replace('-', '_')
+
         # nodes and s are available in caller scope
         if td[BaseType] == 'Enumerated':
             return ''
@@ -127,7 +131,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
                 mult = f'"{mult_r}" {rel}> "{mult_f}"' if s['edge_mult'] else f'{rel}>'
                 return f'  n{nodes[td[TypeName]]} {mult} n{nodes[fieldtype]}{elabel}\n'
             elif s['format'] == 'graphviz':
-                edge = [f'label={fd[FieldName]}'] if s['edge_label'] else []
+                edge = [f'label={ename(fd[FieldName])}'] if s['edge_label'] else []
                 edge += ['style="dashed"'] if 'link' in fopts else []
                 edge += [f'headlabel="{mult_f}", taillabel="{mult_r}"'] if s['edge_mult'] else []
                 edge_label = f' [{", ".join(edge)}]' if edge else ''

@@ -25,8 +25,9 @@
       [6, "copyright", "String", ["{1", "[0"], "Copyright notice"],
       [7, "license", "String", ["{1", "[0"], "SPDX licenseId (e.g., 'CC0-1.0')"],
       [8, "namespaces", "Namespaces", ["[0"], "Referenced packages"],
-      [9, "exports", "Exports", ["[0"], "Type defs exported by this package"],
-      [10, "config", "Config", ["[0"], "Configuration variables"]
+      [9, "exports", "Exports", ["[0"], "Type defs exported by this package (deprecated, use Roots)"],
+      [10, "config", "Config", ["[0"], "Configuration variables"],
+      [11, "roots", "Roots", ["[0"], "Roots of the type hierarchy defined by this package"]
     ]],
 
     ["Namespaces", "Choice", ["CO"], "anyOf v1.1 or v1.0, in priority order", [
@@ -43,7 +44,9 @@
 
     ["NsObj", "MapOf", ["*Namespace", "+NSID", "{1"], "Type references to other packages - v1.0", []],
 
-    ["Exports", "ArrayOf", ["*TypeName", "{1"], "Type defs intended to be referenced", []],
+    ["Exports", "ArrayOf", ["*TypeName", "{1"], "Type defs intended to be referenced (deprecated, use Roots)", []],
+
+    ["Roots", "ArrayOf", ["*TypeName", "{1"], "Type defs at the root of a type hierarchy", []],
 
     ["Config", "Map", ["{1"], "Config vars override JADN defaults", [
       [1, "$MaxBinary", "Integer", ["{1", "[0"], "Schema default max octets"],

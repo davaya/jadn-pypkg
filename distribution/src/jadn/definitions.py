@@ -172,7 +172,7 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
     113: ('unique', lambda x: True, 12),    # 'q', ArrayOf instance must not contain duplicates
     115: ('set', lambda x: True, 13),       # 's', ArrayOf instance is unordered and unique (set)
     98: ('unordered', lambda x: True, 14),  # 'b', ArrayOf instance is unordered and not unique (bag)
-    111: ('seq', lambda x: True, 15),       # 'o', Map, MapOr or Record instance is ordered and unique (ordered set)
+    111: ('sequence', lambda x: True, 15),  # 'o', Map, MapOr or Record instance is ordered and unique (ordered set)
     67: ('combine', lambda x: x, 16),       # 'C', Choice instance is a logical combination (anyOf, allOf, oneOf)
     88: ('extend', lambda x: True, 17),     # 'X', Type has an extension point where fields may be appended
     33: ('default', lambda x: x, 18),       # '!', Default or constant value of instances of this type
@@ -202,7 +202,7 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'unique':   chr(113),
     'set':      chr(115),
     'unordered': chr(98),
-    'seq':      chr(111),
+    'sequence': chr(111),
     'combine':  chr(67),
     'extend':   chr(88),
     'default':  chr(33),
@@ -239,9 +239,9 @@ ALLOWED_TYPE_OPTIONS = {
     'Choice': ['id', 'extend', 'combine'],
     'Array': ['extend', 'format', 'minv', 'maxv'],
     'ArrayOf': ['vtype', 'minv', 'maxv', 'unique', 'set', 'unordered'],
-    'Map': ['id', 'extend', 'minv', 'maxv', 'seq'],
-    'MapOf': ['ktype', 'vtype', 'minv', 'maxv', 'seq'],
-    'Record': ['extend', 'minv', 'maxv', 'seq'],
+    'Map': ['id', 'extend', 'minv', 'maxv', 'sequence'],
+    'MapOf': ['ktype', 'vtype', 'minv', 'maxv', 'sequence'],
+    'Record': ['extend', 'minv', 'maxv', 'sequence'],
 }
 
 # Ensure jsonschema prerequisite packages are installed, e.g., rfc3987 for uri/iri validation
