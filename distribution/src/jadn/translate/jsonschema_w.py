@@ -299,14 +299,51 @@ def t_map(tdef: list, topts: dict, ctx: dict) -> dict:
 def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
     items = get_items(topts['ktype'], ctx)
     vtype = w_kvtype(topts['vtype'], ctx)
-    return dmerge(
-        w_td('object', tdef[TypeDesc]),
-        {'additionalProperties': False},
-        {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
-        {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
-        {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else
-        {'properties': {f: vtype for f in items}} if items else {}
-    )
+    ktype = w_kvtype(topts['ktype'], ctx)
+    
+    opts = tdef[TypeOptions]
+    k_opt = opts[0]
+    k_name = k_opt[1:]
+    
+    v_opt = opts[1]
+    v_name = v_opt[1:]
+    
+    key_array = ctx.get('type_defs', {}).get(k_name)
+    key_type = key_array[1]
+    
+    merged = {}
+    if key_type == 'String':
+        merged = dmerge(
+            w_td('object', tdef[TypeDesc]),
+            {'additionalProperties': False},
+            {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
+            {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
+            {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else {}
+        )
+        
+        properties = {
+            k_name : ktype,
+            v_name : vtype
+        }        
+        
+        merged['properties'] = properties
+    else:
+        merged = dmerge(
+            w_td('array', tdef[TypeDesc]),
+            {'additionalItems': False},
+            {'uniqueItems': True},
+            {'minItems': topts['minv']} if topts.get('minv', 0) != 0 else {},
+            {'maxItems': topts['maxv']} if 'maxv' in topts else {},
+        )
+        
+        prefix_items = [
+            {k_name : ktype},
+            {v_name : vtype}
+        ]
+        
+        merged['items'] = prefix_items        
+    
+    return merged
 
 
 # Type Map Util
