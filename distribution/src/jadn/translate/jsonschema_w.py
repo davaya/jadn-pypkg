@@ -337,12 +337,15 @@ def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
             {'maxItems': topts['maxv']} if 'maxv' in topts else {},
         )
         
-        prefix_items = [
-            {k_name : ktype},
-            {v_name : vtype}
-        ]
+        _items = {
+            "type" : "object",
+            "properties": {
+                k_name : ktype,   
+                v_name : vtype
+            }
+        }
         
-        merged['items'] = prefix_items        
+        merged['items'] = _items   
     
     return merged
 
