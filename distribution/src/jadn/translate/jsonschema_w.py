@@ -158,7 +158,7 @@ def w_fdef(f: list, ctx: dict) -> dict:
     """
     fopts, topts = ftopts_s2d(f[FieldOptions])
     if is_builtin(f[FieldType]):
-        t = w_type(['', f[FieldType], [], f[FieldDesc]], topts, ctx)
+        t = w_type(['', f[FieldType], f[FieldOptions], f[FieldDesc]], topts, ctx)
     else:
         t = dmerge(w_ref(f[FieldType], ctx), {'description': f[FieldDesc]})
 
@@ -337,12 +337,15 @@ def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
             {'maxItems': topts['maxv']} if 'maxv' in topts else {},
         )
         
-        prefix_items = [
-            {k_name : ktype},
-            {v_name : vtype}
-        ]
+        _items = {
+            "type" : "object",
+            "properties": {
+                k_name : ktype,   
+                v_name : vtype
+            }
+        }
         
-        merged['items'] = prefix_items        
+        merged['items'] = _items   
     
     return merged
 
