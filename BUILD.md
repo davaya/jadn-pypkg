@@ -8,6 +8,5 @@ From the project's `distribution` folder (with Python venv active):
 * python -m pip install --upgrade pip build twine
 * python -m build
 * twine upload dist/*
-    * Enter your username: \_\_token__
-    * Enter your password:  (use Edit>Paste from cmdtool window header because Cntl-V doesn't work.
+    * Enter your password:  (use Edit>Paste from cmdtool window header if Cntl-V doesn't work.
       Right-click might or might not paste the `pypi-****` token correctly.)

@@ -4,7 +4,7 @@
     "package": "http://oasis-open.org/jadn/v1.1/schema",
     "description": "Syntax of a JSON Abstract Data Notation (JADN) package.",
     "license": "CC0-1.0",
-    "exports": ["Schema"],
+    "roots": ["Schema"],
     "config": {
       "$FieldName": "^[$A-Za-z][_A-Za-z0-9]{0,63}$"
     }

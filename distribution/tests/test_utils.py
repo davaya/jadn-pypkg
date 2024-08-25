@@ -16,8 +16,8 @@ class Order(unittest.TestCase):
         jadn.check(self.schema1)
         self.schema2 = copy.deepcopy(self.schema1)
         random.shuffle(self.schema2['types'])
-        self.deps1, self.roots1 = jadn.build_deps(self.schema1)
-        self.deps2, self.roots2 = jadn.build_deps(self.schema2)
+        self.deps1 = jadn.build_deps(self.schema1)
+        self.deps2 = jadn.build_deps(self.schema2)
 
     def test_adjacency(self):
         """
@@ -30,8 +30,10 @@ class Order(unittest.TestCase):
         """
         Sort returns fixed order with different inputs
         """
-        names1 = jadn.utils.topo_sort(self.deps1, self.roots1)
-        names2 = jadn.utils.topo_sort(self.deps2, self.roots2)
+        roots1 = (i := self.schema1['info']).get('roots', i.get('exports', ''))     # exports is deprecated
+        roots2 = (i := self.schema2['info']).get('roots', i.get('exports', ''))
+        names1 = jadn.utils.topo_sort(self.deps1, roots1)
+        names2 = jadn.utils.topo_sort(self.deps2, roots2)
         self.assertEqual(names1, names2)
 
 

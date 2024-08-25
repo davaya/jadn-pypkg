@@ -340,7 +340,7 @@ def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
         _items = {
             "type" : "object",
             "properties": {
-                k_name : ktype,   
+                k_name : ktype,
                 v_name : vtype
             }
         }

@@ -85,7 +85,7 @@ def dlist(src: dict) -> dict:
     return src
 
 
-def build_deps(schema: dict[str, list]) -> tuple[dict[str, list[str]], set[str]]:
+def build_deps(schema: dict[str, list]) -> dict[str, list[str]]:
     """
     Build a Dependency dict: {TypeName: [Dep1, Dep2, ...]}
     Returns dependencies for each type in order and a list of all referenced types.
@@ -99,7 +99,7 @@ def build_deps(schema: dict[str, list]) -> tuple[dict[str, list[str]], set[str]]
         # Options that enumerate fields: keep option id
         oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]
         refs = [to[1:] for to in tdef[TypeOptions] if to[0] in oids and not is_builtin(to[1:])]
-        refs += ([to for to in tdef[TypeOptions] if to[0] in oids2])
+        refs += ([to[1:] for to in tdef[TypeOptions] if to[0] in oids2])
         if has_fields(tdef[BaseType]):  # Ignore Enumerated
             for f in tdef[Fields]:
                 if not is_builtin(f[FieldType]):
@@ -110,8 +110,7 @@ def build_deps(schema: dict[str, list]) -> tuple[dict[str, list[str]], set[str]]
         return refs
 
     deps = {t[TypeName]: get_refs(t) for t in schema['types']}
-    refs = {v for d in deps for v in deps[d]}
-    return deps, refs
+    return deps
 
 
 def topo_sort(deps: dict[str, list[str]], roots: list[str]) -> list[str]:

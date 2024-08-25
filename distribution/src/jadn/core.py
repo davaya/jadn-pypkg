@@ -150,11 +150,12 @@ def check(schema: dict) -> dict:
 
 
 def analyze(schema: dict) -> dict:
-    items, dep_roots = jadn.build_deps(schema)
+    items = jadn.build_deps(schema)
     info = schema.get('info', {})
     roots = info.get('roots', info.get('exports', []))      # Exports is deprecated
     defs = set(items)
-    refs = set(dep_roots) | set(roots)
+    dep_refs = {v for d in items for v in items[d]}
+    refs = set(dep_refs) | set(roots)
     return {
         'unreferenced': list(defs - refs),
         'undefined': list(refs - defs),
