@@ -5,14 +5,14 @@ import json
 import re
 
 from datetime import datetime
-from typing import TextIO, Tuple, Union
+from typing import TextIO, Union
 from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
-from ..utils import (cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error,
-                     typestr2jadn, id_type, etrunc)
+from ..utils import (fielddef2jadn, jadn2fielddef, jadn2typestr, typestr2jadn,
+                     cleanup_tagid, raise_error, id_type, etrunc)
 from ..core import check
 
 # JIDL -> JADN Type regexes
-p_tname = r'\s*([-$\w]+)'               # Type Name
+p_tname = r'\s*(\S+)'                   # Type Name
 p_assign = r'\s*='                      # Type assignment operator
 p_tstr = r'\s*(.*?)\s*\{?'              # Type definition
 
@@ -85,7 +85,7 @@ def jidl_dump(schema: dict, fname: Union[bytes, str, int], source='', style=None
 
 
 # Convert JIDL to JADN
-def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
+def line2jadn(line: str, tdef: list) -> tuple[str, list]:
     if line.split('//', maxsplit=1)[0].strip():
         p_info = r'^\s*([-\w]+):\s*(.+?)\s*$'
         if m := re.match(p_info, line):
