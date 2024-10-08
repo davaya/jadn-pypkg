@@ -282,8 +282,8 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
         for opt in re.findall(p_rangepat, rest):
             if m := re.match('pattern=\"(.+)\"', opt):
                 topts.update({'pattern': m.group(1)})
-            else:
-                a, b = opt.split('..', maxsplit=1)
+            elif len(x := opt.split('..', maxsplit=1)) == 2:
+                a, b = x
                 if tname == 'Number':
                     topts.update({} if a == '*' else {'minf': float(a)})
                     topts.update({} if b == '*' else {'maxf': float(b)})
@@ -291,6 +291,8 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
                     a = '*' if tname != 'Integer' and a != '*' and int(a) == 0 else a   # Default min size = 0
                     topts.update({} if a == '*' else {'minv': int(a)})
                     topts.update({} if b == '*' else {'maxv': int(b)})
+            else:
+                raise_error(f'unrecognized arg "{opt}", expected pattern or range')
         for opt in re.findall(p_format, rest):
             topts.update({'format': opt})
         for opt in re.findall(p_kw, rest):
