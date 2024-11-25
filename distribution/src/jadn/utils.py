@@ -10,7 +10,8 @@ from functools import reduce
 from typing import Any, NoReturn, Union
 from .definitions import (
     TypeName, BaseType, TypeOptions, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
-    DEFAULT_CONFIG, TYPE_OPTIONS, FIELD_OPTIONS, OPTION_ID, OPTION_TYPES, is_builtin, has_fields, TypeDefinition,
+    DEFAULT_CONFIG, TYPE_OPTIONS, FIELD_OPTIONS, OPTION_ID, OPTION_TYPES, MAX_DEFAULT, MAX_UNLIMITED,
+    is_builtin, has_fields, TypeDefinition,
     EnumFieldDefinition, GenFieldDefinition
 )
 
@@ -284,11 +285,12 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
                 topts.update({'pattern': m.group(1)})
             elif len(x := opt.split('..', maxsplit=1)) == 2:
                 a, b = x
-                if tname == 'Number':
-                    topts.update({} if a == '*' else {'minf': float(a)})
-                    topts.update({} if b == '*' else {'maxf': float(b)})
-                else:
-                    a = '*' if tname != 'Integer' and a != '*' and int(a) == 0 else a   # Default min size = 0
+                if tname in ('Integer', 'Number'):  # TODO: switch to min/max Inclusive/Exclusive
+                    fn = {'Integer': int, 'Number': float}[tname]
+                    topts.update({} if a == '*' else {'minv': fn(a)})
+                    topts.update({} if b == '*' else {'maxv': fn(b)})
+                else:    # TODO: switch to min/max Length, apply vtype
+                    a = '*' if a != '*' and int(a) == 0 else a   # Default min size = 0
                     topts.update({} if a == '*' else {'minv': int(a)})
                     topts.update({} if b == '*' else {'maxv': int(b)})
             else:
@@ -315,8 +317,8 @@ def jadn2typestr(tname: str, topts: list[OPTION_TYPES]) -> str:
     # Size range (single-ended) - default is {0..*}
     def _srange(ops: dict) -> str:
         lo = ops.pop('minv', 0)
-        hi = ops.pop('maxv', -1)
-        hs = '*' if hi < 0 else str(hi)
+        hi = ops.pop('maxv', MAX_DEFAULT)
+        hs = '*' if hi == MAX_DEFAULT else '.' if hi == MAX_UNLIMITED else str(hi)
         return f'{lo}..{hs}' if lo != 0 or hs != '*' else ''
 
     # Value range (double-ended) - default is {*..*}
@@ -441,10 +443,12 @@ def fielddef2jadn(fid: int, fname: str, fstr: str, fmult: str, fdesc: str) -> li
     return [fid, fname, ftyperef, opts_d2s(fo), fdesc] if ftyperef else [fid, fname, fdesc]
 
 
-def get_config(meta: dict) -> dict:
+def get_config(schema: dict) -> dict:
     config = dict(DEFAULT_CONFIG)
-    if meta:
-        config.update(meta.get('config', {}))
+    config.update(schema.get('meta', {}).get('config', {}))
+    ns = config.get('$NSID', '').lstrip('^').rstrip('$')    # Derived $TypeRef pattern
+    tn = config.get('$TypeName', '').lstrip('^').rstrip('$')
+    config.update({'$TypeRef': fr'^({ns}(?<=.):)?{tn}$'})   # Non-empty prefix before ':'
     return config
 
 

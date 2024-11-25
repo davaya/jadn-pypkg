@@ -6,7 +6,7 @@ import re
 
 from datetime import datetime
 from typing import Tuple, Union
-from jadn.definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
+from jadn.definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, META_ORDER
 from jadn.utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error, typestr2jadn
 
 # MARKDOWN -> JADN Type regexes
@@ -45,7 +45,7 @@ def markdown_dumps(schema: dict, style: dict = None) -> str:
 
     text = ''
     info = schema['info'] if 'info' in schema else {}
-    mlist = [k for k in INFO_ORDER if k in info]
+    mlist = [k for k in META_ORDER if k in info]
     for k in mlist + list(set(info) - set(mlist)):      # Display info elements in fixed order
         text += f'{k:>14}: {json.dumps(info[k])}\n'     # TODO: wrap to width, continuation-line parser
 

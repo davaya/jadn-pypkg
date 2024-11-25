@@ -11,7 +11,7 @@ import jadn
 class Order(unittest.TestCase):
 
     def setUp(self):
-        with open(os.path.join(jadn.data_dir(), 'jadn_v1.1_schema.jadn')) as fp:
+        with open(os.path.join(jadn.data_dir(), 'jadn_v2.0_schema.jadn')) as fp:
             self.schema1 = jadn.load(fp)
         jadn.check(self.schema1)
         self.schema2 = copy.deepcopy(self.schema1)
@@ -30,8 +30,8 @@ class Order(unittest.TestCase):
         """
         Sort returns fixed order with different inputs
         """
-        roots1 = (i := self.schema1['info']).get('roots', i.get('exports', ''))     # exports is deprecated
-        roots2 = (i := self.schema2['info']).get('roots', i.get('exports', ''))
+        roots1 = (i := self.schema1['meta']).get('roots', '')     # exports is deprecated
+        roots2 = (i := self.schema2['meta']).get('roots', '')
         names1 = jadn.utils.topo_sort(self.deps1, roots1)
         names2 = jadn.utils.topo_sort(self.deps2, roots2)
         self.assertEqual(names1, names2)

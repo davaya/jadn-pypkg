@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Generator, Tuple, Union
 from lxml import html
 from .utils import DocHTML
-from ..definitions import Fields, ItemID, ItemDesc, FieldID, INFO_ORDER, TypeDefinition
+from ..definitions import Fields, ItemID, ItemDesc, FieldID, META_ORDER, TypeDefinition
 from ..utils import cleanup_tagid, fielddef2jadn, jadn2fielddef, jadn2typestr, typestr2jadn
 from ..core import check
 """
@@ -65,7 +65,7 @@ def html_dumps(schema: dict) -> str:
         # Add meta elements if present
         if info := schema.get('info', None):
             with tag('div', klass='tBody'):
-                mlist = [k for k in INFO_ORDER if k in info]
+                mlist = [k for k in META_ORDER if k in info]
                 for k in mlist + list({*info} - {*mlist}):
                     with tag('div', klass='tRow'):
                         tag('div', f'{k}:', klass='tCell jKey')

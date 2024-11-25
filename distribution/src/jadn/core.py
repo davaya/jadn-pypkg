@@ -12,7 +12,8 @@ from typing import Any, TextIO, Union
 from urllib.parse import urlparse
 from .definitions import (
     TypeName, FieldID, FieldName, FieldType, FieldDesc, FIELD_LENGTH,
-    OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, VALID_FORMATS, is_builtin, has_fields
+    OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS_ALL,
+    VALID_FORMATS, is_builtin, has_fields
 )
 from .utils import raise_error, list_get_default, TypeDefinition, GenFieldDefinition
 
@@ -33,7 +34,7 @@ def check_typeopts(type_name: str, base_type: str, topts: dict) -> None:
 
     if ro := set(REQUIRED_TYPE_OPTIONS[base_type]) - topts_set:
         raise_error(f'Missing type option {type_name}: {ro}')
-    if uo := topts_set - set(ALLOWED_TYPE_OPTIONS[base_type]):
+    if uo := topts_set - set(ALLOWED_TYPE_OPTIONS[base_type] + ALLOWED_TYPE_OPTIONS_ALL):
         raise_error(f'Unsupported type option {type_name} ({base_type}): {uo}')
     if 'maxv' in topts and 'minv' in topts and topts['maxv'] < topts['minv']:
         raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minv"]}..{topts["maxv"]}]')
@@ -48,8 +49,8 @@ def check_typeopts(type_name: str, base_type: str, topts: dict) -> None:
             raise_error(f'Unsupported format {fmt} in {type_name} {base_type}')
     if 'enum' in topts and 'pointer' in topts:
         raise_error(f'Type cannot be both Enum and Pointer {type_name} {base_type}')
-    if 'and' in topts and 'or' in topts:
-        raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
+    # if 'and' in topts and 'or' in topts:
+        # raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
 
 
 # TODO: finish convert to use dataclasses??
@@ -64,10 +65,10 @@ def check(schema: dict) -> dict:
     schema['types'] = [list(t) for t in schema_types]
 
     data_path = data_dir()
-    with open(os.path.join(data_path, 'jadn_v1.1_schema.json')) as f:     # Check using JSON Schema for JADN
+    with open(os.path.join(data_path, 'jadn_v2.0_schema.json')) as f:     # Check using JSON Schema for JADN
         jsonschema.Draft7Validator(json.load(f)).validate(schema)
 
-    with open(os.path.join(data_path, 'jadn_v1.1_schema.jadn')) as f:     # Optional: check using JADN meta-schema
+    with open(os.path.join(data_path, 'jadn_v2.0_schema.jadn')) as f:     # Check using JADN metaschema
         meta_schema = jadn.codec.Codec(json.load(f), verbose_rec=True, verbose_str=True, config=schema)
         assert meta_schema.encode('Schema', schema) == schema
 

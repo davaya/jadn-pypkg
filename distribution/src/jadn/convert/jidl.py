@@ -6,7 +6,7 @@ import re
 
 from datetime import datetime
 from typing import TextIO, Union
-from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, INFO_ORDER
+from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, META_ORDER
 from ..utils import (fielddef2jadn, jadn2fielddef, jadn2typestr, typestr2jadn,
                      cleanup_tagid, raise_error, id_type, etrunc)
 from ..core import check
@@ -26,7 +26,7 @@ p_range = r'\s*(?:\[([.*\w]+)\]|(optional))?'  # Multiplicity
 def jidl_style() -> dict:
     # Return default column positions
     return {
-        'info': 12,     # Width of info name column (e.g., module:)
+        'meta': 12,     # Width of meta name column (e.g., module:)
         'id': 4,        # Width of Field Id column
         'name': 16,     # Width of Field Name column
         'type': 35,     # Width of Field Type column
@@ -49,10 +49,10 @@ def jidl_dumps(schema: dict, style: dict = None) -> str:
         w.update(style)   # Override any specified column widths
 
     text = ''
-    info = schema['info'] if 'info' in schema else {}
-    mlist = [k for k in INFO_ORDER if k in info]
-    for k in mlist + list(set(info) - set(mlist)):              # Display info elements in fixed order
-        text += f'{k:>{w["info"]}}: {json.dumps(info[k])}\n'    # TODO: wrap to page width, continuation-line parser
+    meta = schema['meta'] if 'meta' in schema else {}
+    mlist = [k for k in META_ORDER if k in meta]
+    for k in mlist + list(set(meta) - set(mlist)):              # Display meta elements in fixed order
+        text += f'{k:>{w["meta"]}}: {json.dumps(meta[k])}\n'    # TODO: wrap to page width, continuation-line parser
 
     wt = w['desc'] if w['desc'] else w['id'] + w['name'] + w['type']
     for td in schema['types']:
@@ -87,8 +87,8 @@ def jidl_dump(schema: dict, fname: Union[bytes, str, int], source='', style=None
 # Convert JIDL to JADN
 def line2jadn(line: str, tdef: list) -> tuple[str, list]:
     if line.split('//', maxsplit=1)[0].strip():
-        p_info = r'^\s*([-\w]+):\s*(.+?)\s*$'
-        if m := re.match(p_info, line):
+        p_meta = r'^\s*([-\w]+):\s*(.+?)\s*$'
+        if m := re.match(p_meta, line):
             return 'I', [m.group(1), m.group(2)]
 
         q = re.search(r'"(?:[^"\\]|\\.)+"', line)  # Find quoted string (String pattern option)
@@ -123,7 +123,7 @@ def line2jadn(line: str, tdef: list) -> tuple[str, list]:
 
 
 def jidl_loads(doc: str) -> dict:
-    info = {}
+    meta = {}
     types = []
     fields = None
     for line in doc.splitlines():
@@ -135,11 +135,11 @@ def jidl_loads(doc: str) -> dict:
                 cleanup_tagid(fields)
                 fields = None
             if t == 'I':
-                info.update({v[0]: json.loads(v[1])})
+                meta.update({v[0]: json.loads(v[1])})
             elif t == 'T':
                 types.append(v)
                 fields = types[-1][Fields]
-    return check({'info': info, 'types': types} if info else {'types': types})
+    return check({'meta': meta, 'types': types} if meta else {'types': types})
 
 
 def jidl_load(fp: TextIO) -> dict:

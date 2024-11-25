@@ -1,5 +1,5 @@
 {
-  "info": {
+  "meta": {
     "package": "https://shop.bookstore.com/books/",
     "title": "Bookstore.com",
     "description": "Best Deals on Paper",
@@ -10,12 +10,13 @@
       ["prof", "https://shop.bookstore.com/books/profile/"],
       ["cat", "https://shop.bookstore.com/books/component/"]
     ],
-    "exports": ["Storefront", "Catalog"]
+    "roots": ["Storefront", "Catalog"]
   },
 
   "types": [
     ["Storefront", "Record", [], "", [
-      [1, "title", "String", [], ""]
+      [1, "title", "String", [], ""],
+      [2, "about", "prof:Profile", [], ""]
     ]],
 
     ["Catalog", "Record", [], "", [

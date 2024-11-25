@@ -2,8 +2,9 @@ import copy
 
 from typing import Generator, List, NoReturn, Set, Union
 from ..definitions import (
-    TypeName, BaseType, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldName, FieldOptions, FieldDesc, OPTION_ID,
-    EXTENSIONS, OPTION_TYPES, is_builtin, has_fields, TypeDefinition, EnumFieldDefinition, GenFieldDefinition)
+    TypeName, BaseType, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldName, FieldOptions, FieldDesc,
+    OPTION_ID, EXTENSIONS, OPTION_TYPES, DEFAULT_CONFIG,
+    is_builtin, has_fields, TypeDefinition, EnumFieldDefinition, GenFieldDefinition)
 from ..utils import (
     del_opt, ftopts_s2d, get_optx, list_type_schema, opts_d2s, object_type_schema, topts_s2d, etrunc, raise_error)
 
@@ -188,7 +189,9 @@ def unfold_extensions(schema: dict, extensions: Set[str] = None) -> dict:  # Rem
     """
     extensions = extensions or EXTENSIONS
     assert extensions - EXTENSIONS == set()
-    sys = '$'  # Character reserved for tool-generated TypeNames
+    config = dict(DEFAULT_CONFIG)
+    config.update(schema.get('meta', {}).get('config', {}))
+    sys = config['$Sys']  # Character reserved for tool-generated TypeNames
     sc = object_type_schema(copy.deepcopy(schema))  # Don't modify original schema
 
     if 'Link' in extensions:                    # Replace Key and Link options with explicit types

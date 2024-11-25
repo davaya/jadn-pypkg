@@ -112,12 +112,7 @@ PRIMITIVE_TYPES = (
     'String',
 )
 
-SELECTOR_TYPES = (
-    'Enumerated',       # enum option specifies fields derived from a defined type
-    'Choice',
-)
-
-STRUCTURED_TYPES = (
+COMPOUND_TYPES = (
     'Array',
     'ArrayOf',          # (value_type): instance is a container but definition has no fields
     'Map',
@@ -125,7 +120,12 @@ STRUCTURED_TYPES = (
     'Record',
 )
 
-CORE_TYPES = PRIMITIVE_TYPES + SELECTOR_TYPES + STRUCTURED_TYPES
+UNION_TYPES = (
+    'Enumerated',       # enum option specifies fields derived from a defined type
+    'Choice',
+)
+
+CORE_TYPES = PRIMITIVE_TYPES + COMPOUND_TYPES + UNION_TYPES
 
 FIELD_LENGTH = {
     'Binary': 0,
@@ -174,17 +174,19 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
     98: ('unordered', lambda x: True, 14),  # 'b', ArrayOf instance is unordered and not unique (bag)
     111: ('sequence', lambda x: True, 15),  # 'o', Map, MapOr or Record instance is ordered and unique (ordered set)
     67: ('combine', lambda x: x, 16),       # 'C', Choice instance is a logical combination (anyOf, allOf, oneOf)
-    88: ('extend', lambda x: True, 17),     # 'X', Type has an extension point where fields may be appended
-    33: ('default', lambda x: x, 18),       # '!', Default or constant value of instances of this type
+    97: ('abstract', lambda x: True, 17),   # 'a', Inheritance: abstract, non-instantiatable
+   114: ('restricts', lambda x: x, 18),     # 'r', Inheritance: restriction - subset of referenced type
+   120: ('extends', lambda x: True, 19),    # 'x', Inheritance: extension - superset of referenced type
+    33: ('default', lambda x: x, 20),       # '!', Default or constant value of instances of this type
 }
 
 FIELD_OPTIONS = {
-    91: ('minc', int, 19),                  # '[', minimum cardinality, default = 1, 0 = field is optional
-    93: ('maxc', int, 20),                  # ']', maximum cardinality, default = 1, 0 = inherited max, not 1 = array
-    38: ('tagid', int, 21),                 # '&', field that specifies the type of this field
-    60: ('dir', lambda x: True, 22),        # '<', pointer enumeration treats field as a collection
-    75: ('key', lambda x: True, 23),        # 'K', field is a primary key for this type
-    76: ('link', lambda x: True, 24),       # 'L', field is a link (foreign key) to an instance of FieldType
+    91: ('minc', int, 21),                  # '[', min cardinality, default = 1, 0 = field is optional
+    93: ('maxc', int, 22),                  # ']', max cardinality, default = 1, <0 = inherited or none, not 1 = array
+    38: ('tagid', int, 23),                 # '&', field that specifies the type of this field
+    60: ('dir', lambda x: True, 24),        # '<', pointer enumeration treats field as a collection
+    75: ('key', lambda x: True, 25),        # 'K', field is a primary key for this type
+    76: ('link', lambda x: True, 26),       # 'L', field is a link (foreign key) to an instance of FieldType
 }
 
 OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD_OPTIONS
@@ -204,7 +206,9 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'unordered': chr(98),
     'sequence': chr(111),
     'combine':  chr(67),
-    'extend':   chr(88),
+    'abstract': chr(97),
+    'restricts': chr(114),
+    'extends':  chr(120),
     'default':  chr(33),
     'minc':     chr(91),
     'maxc':     chr(93),
@@ -213,6 +217,9 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'key':      chr(75),
     'link':     chr(76),
 }
+
+MAX_DEFAULT = -1            # maxc sentinal value: Upper size limit defaults to JADN or package limit
+MAX_UNLIMITED = -2          # maxc sentinal value: Upper size limit does not exist
 
 REQUIRED_TYPE_OPTIONS = {
     'Binary': [],
@@ -229,19 +236,21 @@ REQUIRED_TYPE_OPTIONS = {
     'Record': [],
 }
 
+ALLOWED_TYPE_OPTIONS_ALL = ['abstract', 'restricts', 'extends']
+
 ALLOWED_TYPE_OPTIONS = {
     'Binary': ['format', 'minv', 'maxv'],
     'Boolean': [],
     'Integer': ['format', 'minv', 'maxv'],
     'Number': ['format', 'minf', 'maxf'],
     'String': ['format', 'pattern', 'minv', 'maxv'],
-    'Enumerated': ['id', 'enum', 'pointer', 'extend'],
-    'Choice': ['id', 'extend', 'combine'],
-    'Array': ['extend', 'format', 'minv', 'maxv'],
+    'Enumerated': ['id', 'enum', 'pointer'],
+    'Choice': ['id', 'combine'],
+    'Array': ['format', 'minv', 'maxv'],
     'ArrayOf': ['vtype', 'minv', 'maxv', 'unique', 'set', 'unordered'],
-    'Map': ['id', 'extend', 'minv', 'maxv', 'sequence'],
+    'Map': ['id', 'minv', 'maxv', 'sequence'],
     'MapOf': ['ktype', 'vtype', 'minv', 'maxv', 'sequence'],
-    'Record': ['extend', 'minv', 'maxv', 'sequence'],
+    'Record': ['minv', 'maxv', 'sequence'],
 }
 
 # Ensure jsonschema prerequisite packages are installed, e.g., rfc3987 for uri/iri validation
@@ -311,11 +320,11 @@ VALID_FORMATS = {**FORMAT_JS_VALIDATE, **FORMAT_VALIDATE, **FORMAT_SERIALIZE}
 DEFAULT_CONFIG = {          # Configuration values to use if not specified in schema
     '$MaxBinary': 255,          # Maximum number of octets for Binary types
     '$MaxString': 255,          # Maximum number of characters for String types
-    '$MaxElements': 100,        # Maximum number of items/properties for container types
-    '$Sys': '$',                # System reserved character for TypeName
-    '$TypeName': '^[$A-Z][-$A-Za-z0-9]{0,63}$',     # Type Name regex
-    '$FieldName': '^[$a-z][_$A-Za-z0-9]{0,63}$',    # Field Name regex
-    '$NSID': '^([A-Za-z][A-Za-z0-9]{0,7})?$',       # Namespace ID regex
+    '$MaxElements': 255,        # Maximum number of items/properties for container types
+    '$Sys': '.',                # System reserved character for TypeName
+    '$TypeName': '^[A-Z][-.A-Za-z0-9]{0,63}$',     # Type Name regex
+    '$FieldName': '^[a-z][_A-Za-z0-9]{0,63}$',     # Field Name regex
+    '$NSID': '^([A-Za-z][A-Za-z0-9]{0,7})?$',      # Namespace ID regex
     '$TypeRef': '^$'            # Placeholder.  Actual pattern is ($NSID ':')? $TypeName
 }
 
@@ -327,8 +336,8 @@ EXTENSIONS = {
     'Link',                     # key and link options
 }
 
-INFO_ORDER = ('title', 'package', 'version', 'description', 'comments',
-              'copyright', 'license', 'namespaces', 'exports', 'config')    # Display order
+META_ORDER = ('title', 'package', 'version', 'description', 'comments',
+              'copyright', 'license', 'namespaces', 'roots', 'config')    # Display order
 
 GRAPH_DETAIL = ('conceptual', 'logical', 'information')
 

@@ -110,25 +110,25 @@ class UnfoldExtensions(TestCase):
                 [2, 'bar', 'String', [], '']
             ]],
             ['T-anon', 'Record', [], '', [
-                [1, 'id', 'Color$Enum-Id', [], ''],
-                [2, 'enum', 'Color$Enum', ['[0'], ''],
-                [3, 'vtype', 'T-anon$vtype', [], ''],
-                [4, 'kvtype', 'T-anon$kvtype', [], ''],
-                [5, 'pointer', 'Dir$Pointer', [], ''],
-                [6, 'format', 'T-anon$format', ['[0'], ''],
-                [7, 'pattern', 'T-anon$pattern', [], ''],
-                [8, 'mult', 'T-anon$mult', [], ''],
-                [9, 'unique', 'T-anon$unique', [], '']
+                [1, 'id', 'Color.Enum-Id', [], ''],
+                [2, 'enum', 'Color.Enum', ['[0'], ''],
+                [3, 'vtype', 'T-anon.vtype', [], ''],
+                [4, 'kvtype', 'T-anon.kvtype', [], ''],
+                [5, 'pointer', 'Dir.Pointer', [], ''],
+                [6, 'format', 'T-anon.format', ['[0'], ''],
+                [7, 'pattern', 'T-anon.pattern', [], ''],
+                [8, 'mult', 'T-anon.mult', [], ''],
+                [9, 'unique', 'T-anon.unique', [], '']
             ]],
-            ['Color$Enum-Id', 'Enumerated', ['#Color', '='], ''],
-            ['Color$Enum', 'Enumerated', ['#Color'], ''],
-            ['T-anon$vtype', 'ArrayOf', ['*#Color'], ''],
-            ['T-anon$kvtype', 'MapOf', ['+#Color', '*String'], ''],
-            ['Dir$Pointer', 'Enumerated', ['>Dir'], ''],
-            ['T-anon$format', 'String', ['/idn-email'], ''],
-            ['T-anon$pattern', 'String', ['%\\d+'], ''],
-            ['T-anon$mult', 'ArrayOf', ['*Color', '{2', '}5'], ''],
-            ['T-anon$unique', 'ArrayOf', ['*String', 'q'], ''],
+            ['Color.Enum-Id', 'Enumerated', ['#Color', '='], ''],
+            ['Color.Enum', 'Enumerated', ['#Color'], ''],
+            ['T-anon.vtype', 'ArrayOf', ['*#Color'], ''],
+            ['T-anon.kvtype', 'MapOf', ['+#Color', '*String'], ''],
+            ['Dir.Pointer', 'Enumerated', ['>Dir'], ''],
+            ['T-anon.format', 'String', ['/idn-email'], ''],
+            ['T-anon.pattern', 'String', ['%\\d+'], ''],
+            ['T-anon.mult', 'ArrayOf', ['*Color', '{2', '}5'], ''],
+            ['T-anon.unique', 'ArrayOf', ['*String', 'q'], ''],
         ]
     }
     schema_anon_unfolded_all = {
@@ -147,41 +147,41 @@ class UnfoldExtensions(TestCase):
                 [2, 'bar', 'String', [], '']
             ]],
             ['T-anon', 'Record', [], '', [
-                [1, 'id', 'Color$Enum-Id', [], ''],
-                [2, 'enum', 'Color$Enum', ['[0'], ''],
-                [3, 'vtype', 'T-anon$vtype', [], ''],
-                [4, 'kvtype', 'T-anon$kvtype', [], ''],
-                [5, 'pointer', 'Dir$Pointer', [], ''],
-                [6, 'format', 'T-anon$format', ['[0'], ''],
-                [7, 'pattern', 'T-anon$pattern', [], ''],
-                [8, 'mult', 'T-anon$mult', [], ''],
-                [9, 'unique', 'T-anon$unique', [], '']
+                [1, 'id', 'Color.Enum-Id', [], ''],
+                [2, 'enum', 'Color.Enum', ['[0'], ''],
+                [3, 'vtype', 'T-anon.vtype', [], ''],
+                [4, 'kvtype', 'T-anon.kvtype', [], ''],
+                [5, 'pointer', 'Dir.Pointer', [], ''],
+                [6, 'format', 'T-anon.format', ['[0'], ''],
+                [7, 'pattern', 'T-anon.pattern', [], ''],
+                [8, 'mult', 'T-anon.mult', [], ''],
+                [9, 'unique', 'T-anon.unique', [], '']
             ]],
-            ['Color$Enum-Id', 'Enumerated', ['='], '', [
+            ['Color.Enum-Id', 'Enumerated', ['='], '', [
                 [1, 'red', ''],
                 [2, 'green', ''],
                 [3, 'blue', '']
             ]],
-            ['Color$Enum', 'Enumerated', [], '', [
+            ['Color.Enum', 'Enumerated', [], '', [
                 [1, 'red', ''],
                 [2, 'green', ''],
                 [3, 'blue', '']
             ]],
-            ['T-anon$vtype', 'ArrayOf', ['*Color$Enum'], ''],
-            ['T-anon$kvtype', 'Map', [], '', [
+            ['T-anon.vtype', 'ArrayOf', ['*Color.Enum'], ''],
+            ['T-anon.kvtype', 'Map', [], '', [
                 [1, 'red', 'String', [], ''],
                 [2, 'green', 'String', [], ''],
                 [3, 'blue', 'String', [], '']
             ]],
-            ['Dir$Pointer', 'Enumerated', [], '', [
+            ['Dir.Pointer', 'Enumerated', [], '', [
                 [1, 'a', ''],
                 [2, 'b/foo', ''],
                 [3, 'b/bar', '']
             ]],
-            ['T-anon$format', 'String', ['/idn-email'], ''],
-            ['T-anon$pattern', 'String', ['%\\d+'], ''],
-            ['T-anon$mult', 'ArrayOf', ['*Color', '{2', '}5'], ''],
-            ['T-anon$unique', 'ArrayOf', ['*String', 'q'], ''],
+            ['T-anon.format', 'String', ['/idn-email'], ''],
+            ['T-anon.pattern', 'String', ['%\\d+'], ''],
+            ['T-anon.mult', 'ArrayOf', ['*Color', '{2', '}5'], ''],
+            ['T-anon.unique', 'ArrayOf', ['*String', 'q'], ''],
         ]
     }
 
@@ -225,24 +225,24 @@ class UnfoldExtensions(TestCase):
             ]],
             ['T-list-1-2', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
-                [2, 'list', 'T-list-1-2$list', [], '']      # Min default = 1 required
+                [2, 'list', 'T-list-1-2.list', [], '']      # Min default = 1 required
             ]],
             ['T-list-0-2', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
-                [2, 'list', 'T-list-0-2$list', ['[0'], '']  # Min = 0 optional
+                [2, 'list', 'T-list-0-2.list', ['[0'], '']  # Min = 0 optional
             ]],
             ['T-list-2-3', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
-                [2, 'list', 'T-list-2-3$list', [], '']      # Min default = 1 required
+                [2, 'list', 'T-list-2-3.list', [], '']      # Min default = 1 required
             ]],
             ['T-list-1-n', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
-                [2, 'list', 'T-list-1-n$list', [], '']
+                [2, 'list', 'T-list-1-n.list', [], '']
             ]],
-            ['T-list-1-2$list', 'ArrayOf', ['*String', '{1', '}2'], ''],    # Min = 1, Max = 2 (options are unordered)
-            ['T-list-0-2$list', 'ArrayOf', ['*String', '{1', '}2'], ''],    # Min = 1, Max = 2
-            ['T-list-2-3$list', 'ArrayOf', ['*String', '{2', '}3'], ''],    # Min = 2, Max = 3
-            ['T-list-1-n$list', 'ArrayOf', ['*String', '{1'], '']           # Min = 1, Max default *
+            ['T-list-1-2.list', 'ArrayOf', ['*String', '{1', '}2'], ''],    # Min = 1, Max = 2 (options are unordered)
+            ['T-list-0-2.list', 'ArrayOf', ['*String', '{1', '}2'], ''],    # Min = 1, Max = 2
+            ['T-list-2-3.list', 'ArrayOf', ['*String', '{2', '}3'], ''],    # Min = 2, Max = 3
+            ['T-list-1-n.list', 'ArrayOf', ['*String', '{1'], '']           # Min = 1, Max default *
         ]}
 
     def test_multiplicity(self):
@@ -391,7 +391,7 @@ class UnfoldExtensions(TestCase):
                 [2, 'orange', 'Integer', [], ''],
                 [3, 'purple', 'Integer', [], '']
             ]],
-            ['ChannelMask3', 'ArrayOf', ['*Pixel3$Enum'], '', []],      # Array of items from generated derived enum
+            ['ChannelMask3', 'ArrayOf', ['*Pixel3.Enum'], '', []],      # Array of items from generated derived enum
 
             ['Foo', 'Array', [], '', [                                  # Derived enumeration in a field
                 [1, 'type', 'Enumerated', ['#Menu'], ''],
@@ -401,7 +401,7 @@ class UnfoldExtensions(TestCase):
                 [1, 'open', 'String', [], ''],
                 [2, 'close', 'String', [], '']
             ]],
-            ['Pixel3$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
+            ['Pixel3.Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
                 [1, 'yellow', ''],
                 [2, 'orange', ''],
                 [3, 'purple', '']
@@ -416,21 +416,21 @@ class UnfoldExtensions(TestCase):
                 [2, 'orange', 'Integer', [], ''],
                 [3, 'purple', 'Integer', [], '']
             ]],
-            ['ChannelMask3', 'ArrayOf', ['*Pixel3$Enum'], '', []],      # Array of items from generated derived enum
+            ['ChannelMask3', 'ArrayOf', ['*Pixel3.Enum'], '', []],      # Array of items from generated derived enum
 
             ['Foo', 'Array', [], '', [                                  # Derived enumeration in a field
-                [1, 'type', 'Menu$Enum', [], ''],
+                [1, 'type', 'Menu.Enum', [], ''],
                 [2, 'value', 'String', [], '']
             ]],
             ['Menu', 'Choice', [], '', [
                 [1, 'open', 'String', [], ''],
                 [2, 'close', 'String', [], '']
             ]],
-            ['Menu$Enum', 'Enumerated', [], '', [
+            ['Menu.Enum', 'Enumerated', [], '', [
                 [1, 'open', ''],
                 [2, 'close', '']
             ]],
-            ['Pixel3$Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
+            ['Pixel3.Enum', 'Enumerated', [], '', [                     # Generated derived enum - Id not propogated
                 [1, 'yellow', ''],
                 [2, 'orange', ''],
                 [3, 'purple', '']
@@ -564,41 +564,41 @@ class UnfoldExtensions(TestCase):
     schema_link_unfolded = {
         'types': [
             ['Person', 'Record', [], '', [
-                [1, 'id', 'Person$id', [], ''],
+                [1, 'id', 'Person.id', [], ''],
                 [2, 'name', 'String', [], ''],
-                [3, 'mother', 'Person$id', [], ''],
-                [4, 'father', 'Person$id', [], ''],
-                [5, 'siblings', 'Person$id', ['[0', ']0'], ''],
-                [6, 'friends', 'Person$id', ['[0', ']0'], ''],
-                [7, 'employer', 'Organization$ein', ['[0'], '']
+                [3, 'mother', 'Person.id', [], ''],
+                [4, 'father', 'Person.id', [], ''],
+                [5, 'siblings', 'Person.id', ['[0', ']0'], ''],
+                [6, 'friends', 'Person.id', ['[0', ']0'], ''],
+                [7, 'employer', 'Organization.ein', ['[0'], '']
             ]],
             ['Organization', 'Record', [], '', [
                 [1, 'name', 'String', [], ''],
-                [2, 'ein', 'Organization$ein', [], '']
+                [2, 'ein', 'Organization.ein', [], '']
             ]],
-            ['Person$id', 'Integer', [], '', []],
-            ['Organization$ein', 'String', ['}10', '{10'], '']
+            ['Person.id', 'Integer', [], '', []],
+            ['Organization.ein', 'String', ['}10', '{10'], '']
         ]
     }
     schema_link_unfolded_all = {
         'types': [
             ['Person', 'Record', [], '', [
-                [1, 'id', 'Person$id', [], ''],
+                [1, 'id', 'Person.id', [], ''],
                 [2, 'name', 'String', [], ''],
-                [3, 'mother', 'Person$id', [], ''],
-                [4, 'father', 'Person$id', [], ''],
-                [5, 'siblings', 'Person$siblings', ['[0'], ''],
-                [6, 'friends', 'Person$friends', ['[0'], ''],
-                [7, 'employer', 'Organization$ein', ['[0'], '']
+                [3, 'mother', 'Person.id', [], ''],
+                [4, 'father', 'Person.id', [], ''],
+                [5, 'siblings', 'Person.siblings', ['[0'], ''],
+                [6, 'friends', 'Person.friends', ['[0'], ''],
+                [7, 'employer', 'Organization.ein', ['[0'], '']
             ]],
             ['Organization', 'Record', [], '', [
                 [1, 'name', 'String', [], ''],
-                [2, 'ein', 'Organization$ein', [], '']
+                [2, 'ein', 'Organization.ein', [], '']
             ]],
-            ['Person$id', 'Integer', [], '', []],
-            ['Organization$ein', 'String', ['}10', '{10'], ''],
-            ['Person$siblings', 'ArrayOf', ['*Person$id', '{1'], '', []],
-            ['Person$friends', 'ArrayOf', ['*Person$id', '{1']]
+            ['Person.id', 'Integer', [], '', []],
+            ['Organization.ein', 'String', ['}10', '{10'], ''],
+            ['Person.siblings', 'ArrayOf', ['*Person.id', '{1'], '', []],
+            ['Person.friends', 'ArrayOf', ['*Person.id', '{1']]
         ]
     }
 

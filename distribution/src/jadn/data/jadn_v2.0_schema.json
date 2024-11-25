@@ -6,7 +6,7 @@
   "required": ["types"],
   "additionalProperties": false,
   "properties": {
-    "info": {
+    "meta": {
       "type": "object",
       "required": ["package"],
       "additionalProperties": false,
@@ -19,7 +19,6 @@
         "copyright": {"type": "string"},
         "license": {"type": "string"},
         "namespaces": {"$ref": "#/definitions/Namespaces"},
-        "exports": {"$ref": "#/definitions/Roots"},
         "roots": {"$ref": "#/definitions/Roots"},
         "config": {"$ref": "#/definitions/Config"}
       }

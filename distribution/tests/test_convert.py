@@ -27,7 +27,7 @@ class BasicConvert:
         self._convert(jadn.check(quickstart_schema))
 
     def test_1_info(self):
-        with open(os.path.join(dir_path, 'convert_info.jadn')) as fp:
+        with open(os.path.join(dir_path, 'convert_meta.jadn')) as fp:
             self._convert(jadn.load(fp))
 
     def test_2_types(self):
@@ -35,16 +35,21 @@ class BasicConvert:
             self._convert(jadn.load(fp))
 
     def test_3_jadn(self):
-        with open(os.path.join(jadn.data_dir(), 'jadn_v1.1_schema.jadn')) as fp:
+        with open(os.path.join(jadn.data_dir(), 'jadn_v2.0_schema.jadn')) as fp:
             self._convert(jadn.load(fp))
 
     def test_4_examples(self):
-        with open(os.path.join(dir_path, 'jadn-v1.0-examples.jadn')) as fp:
+        with open(os.path.join(dir_path, 'jadn-v2.0-examples.jadn')) as fp:
             self._convert(jadn.load(fp))
 
     def test_5_examples_uni(self):
-        with open(os.path.join(dir_path, 'jadn-v1.0-examples-uni.jadn')) as fp:
+        with open(os.path.join(dir_path, 'jadn-v2.0-examples-uni.jadn')) as fp:
             self._convert(jadn.load(fp))
+
+    # def test_6_examples_uni(self):
+    #    with open(os.path.join(dir_path, 'jadn-v2.0-features.jadn')) as fp:
+    #        self._convert(jadn.load(fp))
+
 
 class HtmlConvert(BasicConvert, unittest.TestCase):
     def _convert(self, schema):

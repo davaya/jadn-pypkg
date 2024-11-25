@@ -1,6 +1,6 @@
 {
- "info": {
-  "package": "https://oasis-open.org/jadn/v1.0/examples",
+ "meta": {
+  "package": "https://oasis-open.org/jadn/v2.0/examples",
   "description": "Example type definitions from JADN Specification"
  },
 
@@ -55,18 +55,18 @@
   ]],
   ["Member2", "Record", [], "", [
     [1, "name", "String", [], ""],
-    [2, "email", "Member2$email", [], ""]
+    [2, "email", "Member2.email", [], ""]
   ]],
-  ["Member2$email", "String", ["/email"], "Tool-generated type definition."],
+  ["Member2.email", "String", ["/email"], "Tool-generated type definition."],
   ["Roster", "Record", [], "", [
     [1, "org_name", "String", [], ""],
     [2, "members", "Member", ["[0", "]0"], "Optional and repeated: minc=0, maxc=0"]
   ]],
   ["Roster2", "Record", [], "", [
     [1, "org_name", "String", [], ""],
-    [2, "members", "Roster2$members", ["[0"], "Optional: minc=0, maxc=1"]
+    [2, "members", "Roster2.members", ["[0"], "Optional: minc=0, maxc=1"]
   ]],
-  ["Roster2$members", "ArrayOf", ["*Member", "{1"], "Tool-generated array: minv=1, maxv=0"],
+  ["Roster2.members", "ArrayOf", ["*Member", "{1"], "Tool-generated array: minv=1, maxv=0"],
   ["Roster3", "Record", [], "", [
     [1, "org_name", "String", [], ""],
     [2, "members", "Members", [], "members field is required: default minc = 1, maxc = 1"]

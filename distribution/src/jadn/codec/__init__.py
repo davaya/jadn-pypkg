@@ -19,7 +19,7 @@ from ..definitions import (
     # Field Indexes
     BaseType, FieldID, FieldName,
     # Const values
-    PRIMITIVE_TYPES, CORE_TYPES,
+    PRIMITIVE_TYPES, CORE_TYPES, MAX_DEFAULT, MAX_UNLIMITED,
     # Dataclass
     TypeDefinition, GenFieldDefinition
 )
@@ -46,8 +46,7 @@ class Codec:
     def __init__(self, schema: dict, verbose_rec=False, verbose_str=False, config: dict = None):
         assert set(enctab) == set(CORE_TYPES)
         self.schema = unfold_extensions(schema)         # Convert extensions to core definitions
-        conf = config if config else schema
-        self.config = get_config(conf['info'] if 'info' in conf else None)
+        self.config = get_config(config if config else schema)
         self.format_validate = format_validators()      # Initialize format validation functions
         self.format_codec = json_format_codecs()        # Initialize format serialization functions
         # pre-index types to allow symtab forward refs
@@ -86,12 +85,6 @@ class Codec:
                 ctag        # SF_CTAG: tagid option
             )
 
-        # Generate TypeRef pattern - concatenate NSID: and TypeName patterns
-        def make_typeref_pattern(nsid: str, typename: str) -> dict:
-            ns = nsid.lstrip('^').rstrip('$')
-            tn = typename.lstrip('^').rstrip('$')
-            return {'pattern': fr'^({ns}:)?{tn}$'}
-
         # Set configurable option values
         def config_opts(opts: List[str]) -> dict:
             op = [(v[0] + self.config[v[1:]]) if len(v) > 1 and v[1] == '$' else v for v in opts]
@@ -123,14 +116,16 @@ class Codec:
                     symval.Fld = {f[fx]: symf(f, fa, fnames) for f in t.Fields}
             if t.BaseType in ('Binary', 'String', 'Array', 'ArrayOf', 'Map', 'MapOf', 'Record'):
                 minv = symval.TypeOpts.get('minv', 0)
-                maxv = symval.TypeOpts.get('maxv', 0)
-                if minv < 0 or maxv < 0:
+                maxv = symval.TypeOpts.get('maxv', MAX_DEFAULT)
+                if minv < 0 or (maxv < 0 and maxv not in (MAX_DEFAULT, MAX_UNLIMITED)):
                     raise_error(f'Validation Error: {t.TypeName}: length cannot be negative: {minv}..{maxv}')
-                if maxv == 0:
+                if maxv == MAX_DEFAULT:
                     maxv = self.config['$MaxElements']
                     if t.BaseType in ('Binary', 'String'):
                         maxv = self.config[f'$Max{t.BaseType}']
                 symval.TypeOpts.update({'minv': minv, 'maxv': maxv})
+                if maxv == MAX_UNLIMITED:
+                    del symval.TypeOpts['maxv']
             fmt = symval.TypeOpts.get('format', '')
             symval.FormatValidate = get_format_validate_function(self.format_validate, t.BaseType, fmt)
             symval.FormatEncode = get_format_encode_function(self.format_codec, t.BaseType, fmt)
@@ -141,7 +136,7 @@ class Codec:
         self.verbose_str = verbose_str
         self.symtab = {t.TypeName: sym(t) for t in object_types(self.schema['types'])}
         if 'TypeRef' in self.types:
-            self.symtab['TypeRef'].TypeOpts = make_typeref_pattern(self.config['$NSID'], self.config['$TypeName'])
+            self.symtab['TypeRef'].TypeOpts.update({"pattern": self.config['$TypeRef']})
         for t in PRIMITIVE_TYPES:
             self.symtab[t] = SymbolTableField(
                 TypeDef=TypeDefinition('', t),

@@ -1,0 +1,23 @@
+{
+ "meta": {
+   "package": "http://example.com/jadn-2.0",
+   "description": "Test options and features added in JADN v2.0",
+   "roots": ["Base"]
+ },
+
+ "types": [
+  ["Base", "Record", ["a"], "", [
+    [1, "id", "Integer", ["K"], "Primary key"],
+    [2, "name", "String", ["[0"], ""]
+  ]],
+
+  ["Person", "Record", ["xBase"], "", [
+    [3, "email", "String", ["/email"], ""]
+  ]],
+
+   ["Building", "Record", ["rBase"], "", [
+     [2, "name", "String", ["]0"], "No name"],
+     [3, "building_id", "String", [], "Should fail - restrictions cannot add new fields"]
+   ]]
+ ]
+}

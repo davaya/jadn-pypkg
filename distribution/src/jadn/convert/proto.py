@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from typing import NoReturn, Tuple, Union
 from urllib.parse import urlparse
-from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, INFO_ORDER,\
+from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, META_ORDER,\
                           ItemID, FieldID, FieldName, FieldOptions, FieldDesc
 from ..utils import cleanup_tagid, get_optx, fielddef2jadn, raise_error, typestr2jadn, topts_s2d, ftopts_s2d
 
@@ -59,12 +59,12 @@ def proto_dumps(schema: dict, style: dict = None) -> str:
 
     text = 'syntax = "proto3";\n'
     info = schema['info'] if 'info' in schema else {}
-    mlist = [k for k in INFO_ORDER if k in info]
+    mlist = [k for k in META_ORDER if k in info]
     for k in mlist + list(set(info) - set(mlist)):              # Display info elements in fixed order
         if k == 'package':
             text += f'package {uri_to_revid(info[k])};\n'
         else:
-            text += f'// {k:>{w["info"]}}: {json.dumps(info[k])}\n'  # TODO: wrap to page width, parse continuation
+            text += f'// {k:>{w["meta"]}}: {json.dumps(info[k])}\n'  # TODO: wrap to page width, parse continuation
 
     for td in schema['types']:
         topts = topts_s2d(td[TypeOptions])

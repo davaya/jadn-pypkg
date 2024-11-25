@@ -13,7 +13,7 @@ dir_path = os.path.abspath(os.path.dirname(__file__))
 
 class JADN(TestCase):
     def setUp(self):
-        with open(os.path.join(jadn.data_dir(), 'jadn_v1.1_schema.jadn')) as fp:
+        with open(os.path.join(jadn.data_dir(), 'jadn_v2.0_schema.jadn')) as fp:
             self.schema = jadn.load(fp)
         sa = jadn.analyze(self.schema)
         if sa['undefined']:
@@ -47,6 +47,24 @@ class BadSchema(TestCase):
         ]
     }
 
+    schema_bad_typeref = {
+        'meta': {
+            'package': 'http://www.example.com/imports/v1/',
+            'namespaces': [
+                ['', 'http://www.example.com/imports/v1/subtypes1/'],
+                ['', 'http://www.example.com/imports/v1/subtypes2/'],
+                ['cat', 'http://www.example.com/imports/v1/catalog/']
+            ]
+        },
+        'types': [
+            ['Product', 'Record', ['{1'], '', [
+                [1, 'stone', 'Stone', ['[0'], 'Imported'],
+                [2, 'gravel', ':Gravel', ['[0'], 'Bad Reference'],
+                [3, 'extras', 'cat:Extras', ['[0'], 'Good Reference']
+            ]]
+        ]
+    }
+
     def test_bad_item_fields(self):
         with self.assertRaises(ValueError):
             jadn.check(self.schema_bad_item_fields)
@@ -55,6 +73,13 @@ class BadSchema(TestCase):
         with self.assertRaises(ValueError):
             jadn.check(self.schema_bad_ordinal_fields)
 
+    def test_bad_typeref(self):
+        with self.assertRaises(ValueError):
+            jadn.check(self.schema_bad_typeref)
+
+    # def test_typeref_error(self):     # Print detected error
+        # jadn.check(self.schema_bad_typeref)
+
 
 class SpecExamples(TestCase):
     """
@@ -62,7 +87,7 @@ class SpecExamples(TestCase):
     """
 
     def setUp(self):
-        with open(os.path.join(dir_path, 'jadn-v1.0-examples.jadn')) as fp:
+        with open(os.path.join(dir_path, 'jadn-v2.0-examples.jadn')) as fp:
             self.schema = jadn.load(fp)
         self.tc = Codec(self.schema, verbose_rec=True, verbose_str=True)
 
@@ -152,7 +177,7 @@ class SpecExamplesUniversity(TestCase):
     ]
 
     def test_university(self):
-        with open(os.path.join(dir_path, 'jadn-v1.0-examples-uni.jadn')) as fp:
+        with open(os.path.join(dir_path, 'jadn-v2.0-examples-uni.jadn')) as fp:
             self.schema = jadn.load(fp)
         self.tcv = Codec(self.schema, verbose_rec=True, verbose_str=True)
         self.tcc = Codec(self.schema, verbose_rec=False, verbose_str=True)

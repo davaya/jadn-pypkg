@@ -7,7 +7,7 @@ from textwrap import fill
 from typing import NoReturn, Union
 from ..definitions import (
     TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
-    CORE_TYPES, INFO_ORDER, TYPE_OPTIONS, FIELD_OPTIONS
+    CORE_TYPES, META_ORDER, TYPE_OPTIONS, FIELD_OPTIONS
 )
 from ..utils import ftopts_s2d, topts_s2d
 
@@ -47,7 +47,7 @@ def jas_dumps(schema: dict) -> str:
     # Convert Meta
     if info := schema.get('info'):
         jas += '/*\n'
-        mlist = [k for k in INFO_ORDER if k in info]
+        mlist = [k for k in META_ORDER if k in info]
         for h in mlist + list(set(info) - set(mlist)):
             if h == 'description':
                 jas += fill(info[h], width=80, initial_indent='{0:14} '.format(h+':'), subsequent_indent=15*' ') + '\n'

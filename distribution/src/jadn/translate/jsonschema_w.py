@@ -422,7 +422,7 @@ def json_schema_dumps(schema: dict, verbose=True, enum_style='enum', import_styl
     return json.dumps(dmerge(
         {'$schema': 'http://json-schema.org/draft-07/schema#'},
         {'$id': info['package']} if 'package' in info else {},
-        {'title': info['title']} if 'title' in info else {},    # TODO: use items from INFO_ORDER
+        {'title': info['title']} if 'title' in info else {},    # TODO: use items from META_ORDER
         {'version': info['version']} if 'version' in info else {},
         {'description': info['description']} if 'description' in info else {},
         {'comments': info['comments']} if 'comments' in info else {},

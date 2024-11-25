@@ -1,7 +1,7 @@
 {
- "info": {
+ "meta": {
   "package": "http://example.com/uni",
-  "exports": ["University"]
+  "roots": ["University"]
  },
 
  "types": [
