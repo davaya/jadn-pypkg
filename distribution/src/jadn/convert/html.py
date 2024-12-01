@@ -30,7 +30,7 @@ JADN schema elements (required for parsing, available for styling):
 jKey:     metadata key
 jVal:     metadata value
 jTname:   TypeName - name of a defined type
-jTstr:    String representation of BaseType and TypeOptions
+jTstr:    String representation of CoreType and TypeOptions
 jTdesc:   TypeDesc - description of a type
 jFid:     FieldId - integer tag of a field or enumerated item
 jFname:   FieldName/ItemValue - name of a field or string value of an enumerated item
@@ -56,22 +56,22 @@ def html_dumps(schema: dict) -> str:
 
     with tag('head'):
         tag('meta', charset='UTF-8')
-        tag('title', schema.get('info', {}).get('title', 'JADN Schema'))
+        tag('title', schema.get('meta', {}).get('title', 'JADN Schema'))
         tag('link', rel='stylesheet', href='css/dtheme.css', type='text/css')
 
     with tag('body'):
         tag('h2', 'Schema')
 
         # Add meta elements if present
-        if info := schema.get('info', None):
+        if meta := schema.get('meta', None):
             with tag('div', klass='tBody'):
-                mlist = [k for k in META_ORDER if k in info]
-                for k in mlist + list({*info} - {*mlist}):
+                mlist = [k for k in META_ORDER if k in meta]
+                for k in mlist + list({*meta} - {*mlist}):
                     with tag('div', klass='tRow'):
                         tag('div', f'{k}:', klass='tCell jKey')
-                        tag('div', json.dumps(info[k]), klass='tCell jVal')
+                        tag('div', json.dumps(meta[k]), klass='tCell jVal')
                 # top-level element of the metadata table
-                tag('div', klass='tTable jinfo')
+                tag('div', klass='tTable jmeta')
 
         # Add type definitions
         for tdef in schema['types']:
@@ -80,7 +80,7 @@ def html_dumps(schema: dict) -> str:
                 with tag('div', klass='tCaption'):
                     with tag('div', klass='jTdef'):  # container for type definition column
                         tag('div', tdef.TypeName, klass='jTname')
-                        tag('div', f' = {jadn2typestr(tdef.BaseType, tdef.TypeOptions)}', klass='jTstr')
+                        tag('div', f' = {jadn2typestr(tdef.CoreType, tdef.TypeOptions)}', klass='jTstr')
                     tag('div', tdef.TypeDesc or '', klass='jTdesc')
 
                 if len(tdef) > Fields:
@@ -171,7 +171,7 @@ def html_loads(hdoc: str) -> dict:
             elif t == 'T':
                 types.append(v)
                 fields = types[-1][Fields]
-    return check({'info': meta, 'types': types} if meta else {'types': types})
+    return check({'meta': meta, 'types': types} if meta else {'types': types})
 
 
 def html_load(fname: Union[bytes, str, int]) -> dict:

@@ -36,21 +36,17 @@ def check_typeopts(type_name: str, base_type: str, topts: dict) -> None:
         raise_error(f'Missing type option {type_name}: {ro}')
     if uo := topts_set - set(ALLOWED_TYPE_OPTIONS[base_type] + ALLOWED_TYPE_OPTIONS_ALL):
         raise_error(f'Unsupported type option {type_name} ({base_type}): {uo}')
-    if 'maxv' in topts and 'minv' in topts and topts['maxv'] < topts['minv']:
-        raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minv"]}..{topts["maxv"]}]')
-    if 'maxf' in topts and 'minf' in topts and topts['maxf'] < topts['minf']:
-        raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minf"]}..{topts["maxf"]}]')
-    if ('minv' in topts or 'maxv' in topts) and 'pattern' in topts:
+    if 'maxLength' in topts and 'minLength' in topts and topts['maxLength'] < topts['minLength']:
+        raise_error(f'Bad value range {type_name} ({base_type}): [{topts["minLength"]}..{topts["maxLength"]}]')
+    if ('minLength' in topts or 'maxLength' in topts) and 'pattern' in topts:
         raise_error(f'String cannot have both pattern and size constraints: {type_name}')  # disable for debugging
 
-    # TODO: if format defines array, add minv/maxv (prevents adding default max)
+    # TODO: if format defines array, add minLength/maxLength (prevents adding default max)
     if fmt := topts.get('format'):
         if fmt not in VALID_FORMATS or base_type != VALID_FORMATS[fmt]:
             raise_error(f'Unsupported format {fmt} in {type_name} {base_type}')
     if 'enum' in topts and 'pointer' in topts:
         raise_error(f'Type cannot be both Enum and Pointer {type_name} {base_type}')
-    # if 'and' in topts and 'or' in topts:
-        # raise_error(f'Unsupported union+intersection in {type_name} {base_type}')
 
 
 # TODO: finish convert to use dataclasses??
@@ -83,21 +79,20 @@ def check(schema: dict) -> dict:
         types[type_def.TypeName] = type_def
         if is_builtin(type_def.TypeName):
             raise_error(f'Reserved type name {type_def.TypeName}')
-        if not is_builtin(type_def.BaseType):
-            raise_error(f'Invalid base type {type_def.TypeName}: {type_def.BaseType}')
-        type_opts = jadn.topts_s2d(type_def.TypeOptions)
-        check_typeopts(type_def.TypeName, type_def.BaseType, type_opts)
+        if not is_builtin(type_def.CoreType):
+            raise_error(f'Invalid base type {type_def.TypeName}: {type_def.CoreType}')
+        type_opts = jadn.topts_s2d(type_def.TypeOptions, type_def.CoreType)
+        check_typeopts(type_def.TypeName, type_def.CoreType, type_opts)
 
         # Check fields
         fields = type_def.Fields
         # Defined fields if there shouldn't be any
         if ('enum' in type_opts or 'pointer' in type_opts) and fields:
-            raise_error(f'{type_def.TypeName}({type_def.BaseType}) should not have defined fields with the option enum/pointer')
+            raise_error(f'{type_def.TypeName}({type_def.CoreType}) should not have defined fields with the option enum/pointer')
         # Invalid anonymous field types
         for fd in fields:
             if has_fields(fd[FieldType]):
                 raise_error(f'{type_def[TypeName]}/{fd[FieldName]}({fd[FieldID]}): Invalid type "{fd[FieldType]}"')
-
 
         # Duplicates
         def duplicates(seq):
@@ -108,31 +103,27 @@ def check(schema: dict) -> dict:
             raise_error(f'Duplicate fieldID: {type_def.TypeName} {dd}')
         if dd := duplicates((f[FieldName] for f in fields)):
             raise_error(f'Duplicate field name {type_def.TypeName} {dd}')
-        # fids = {f[FieldID] for f in fields}  # Field IDs
-        # fnames = {f[FieldName] for f in fields}  # Field Names
-        # if len(fields) != len(fids) or len(fields) != len(fnames):
-        #    raise_error(f'Duplicate field {type_def.TypeName} {len(fields)} fields, {len(fids)} unique tags, {len(fnames)} unique names')
 
         # Invalid definitions of field
-        flen = FIELD_LENGTH[type_def.BaseType]  # Field item count
+        flen = FIELD_LENGTH[type_def.CoreType]  # Field item count
         if invalid := list_get_default([f for f in fields if len(f) != flen], 0):
             raise_error(f'Bad field id=`{invalid[FieldID]}` in {type_def.TypeName} length, {len(invalid)} should be {flen}')
 
         # Specific checks
         # Ordinal indexes
-        if type_def.BaseType in ('Array', 'Record'):
+        if type_def.CoreType in ('Array', 'Record'):
             if invalid := list_get_default([(f, n) for n, f in enumerate(fields, 1) if f[FieldID] != n], 0):
                 field, idx = invalid
-                raise_error(f'Item tag error: {type_def.TypeName}({type_def.BaseType}) [{field[FieldName]}] -- {field[FieldID]} should be {idx}')
+                raise_error(f'Item id error: {type_def.TypeName}({type_def.CoreType}) [{field[FieldName]}] -- {field[FieldID]} should be {idx}')
 
         # Full Fields -> Array, Choice, Map, Record
         if flen > FieldDesc:  # Full field, not an Enumerated item
             for field in [f if isinstance(f, GenFieldDefinition) else GenFieldDefinition(*f) for f in fields]:
-                fo, fto = jadn.ftopts_s2d(field.FieldOptions)
-                minc = fo.get('minc', 1)
-                maxc = fo.get('maxc', 1)
-                if minc < 0 or maxc < 0 or (0 < maxc < minc):
-                    raise_error(f'{type_def.TypeName}/{field.FieldName} bad multiplicity {minc} {maxc}')
+                fo, fto = jadn.ftopts_s2d(field.FieldOptions, field.FieldType)
+                minOccurs = fo.get('minOccurs', 1)
+                maxOccurs = fo.get('maxOccurs', 1)
+                if minOccurs < 0 or (maxOccurs >= 0 and maxOccurs < minOccurs):
+                    raise_error(f'{type_def.TypeName}.{field.FieldName} bad multiplicity {minOccurs} {maxOccurs}')
 
                 if tf := fo.get('tagid', None):
                     if tf not in {f[FieldID] for f in fields}:
@@ -141,7 +132,7 @@ def check(schema: dict) -> dict:
                     check_typeopts(f'{type_def.TypeName}/{field.FieldName}', field.FieldType, fto)
                 elif fto:
                     # unique option will be moved to generated ArrayOf
-                    allowed = {'unique', } if maxc != 1 else set()
+                    allowed = {'unique', } if maxOccurs != 1 else set()
                     if set(fto) - allowed:
                         raise_error(f'{type_def.TypeName}/{field.FieldName}({field.FieldType}) cannot have Type options {fto}')
                 if 'dir' in fo:

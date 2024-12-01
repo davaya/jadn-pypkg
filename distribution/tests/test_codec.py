@@ -837,9 +837,9 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
                 [6, 'color', 'Colors', [], ''],
                 [5, 'animal', 'Animals', [], ''],
                 [10, 'rattr', 'Rattrs', [], ''],
-                [11, 'rattrs', 'Rattrs', [']0'], ''],
+                [11, 'rattrs', 'Rattrs', [']-1'], ''],
                 [12, 'pair', 'Pair', [], ''],
-                [13, 'pairs', 'Pair', [']0'], '']
+                [13, 'pairs', 'Pair', [']-1'], '']
             ]],
             ['MenuId', 'Choice', ['='], '', [
                 [9, 'name', 'String', [], ''],
@@ -848,9 +848,9 @@ class Selectors(unittest.TestCase):         # TODO: bad schema - verify * field 
                 [6, 'color', 'Colors', [], ''],
                 [5, 'animal', 'Animals', [], ''],
                 [10, 'rattr', 'Rattrs', [], ''],
-                [11, 'rattrs', 'Rattrs', [']0'], ''],
+                [11, 'rattrs', 'Rattrs', [']-1'], ''],
                 [12, 'pair', 'Pair', [], ''],
-                [13, 'pairs', 'Pair', [']0'], '']
+                [13, 'pairs', 'Pair', [']-1'], '']
             ]],
             ['Primitive', 'Choice', [], '', [
                 [1, 'name', 'String', [], ''],
@@ -1105,7 +1105,7 @@ class ListCardinality(unittest.TestCase):      # TODO: arrayOf(rec,map,array,arr
             ]],
             ['T-list-1-n', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
-                [2, 'list', 'String', [']0'], '']  # Min default = 1, Max = 0 -> n
+                [2, 'list', 'String', [']-1'], '']  # Min default = 1, Max = 0 -> n
             ]]
         ]}
 
@@ -1316,7 +1316,7 @@ class Bounds(unittest.TestCase):        # TODO: check max and min string length,
         'types': [
             ['Int', 'Integer', [], ''],
             ['Num', 'Number', [], ''],
-            ['Int-3-6', 'Integer', ['{3', '}6'], ''],
+            ['Int-3-6', 'Integer', ['y3', 'z6'], ''],
             ['Num-3-6', 'Number', ['y3.0', 'z6.0'], ''],
             ['T-Map23', 'Map', ['{2', '}3'], '', [
                 [2, 'red', 'Integer', ['[0'], ''],

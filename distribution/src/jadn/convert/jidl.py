@@ -6,7 +6,7 @@ import re
 
 from datetime import datetime
 from typing import TextIO, Union
-from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, META_ORDER
+from ..definitions import TypeName, CoreType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, META_ORDER
 from ..utils import (fielddef2jadn, jadn2fielddef, jadn2typestr, typestr2jadn,
                      cleanup_tagid, raise_error, id_type, etrunc)
 from ..core import check
@@ -26,7 +26,7 @@ p_range = r'\s*(?:\[([.*\w]+)\]|(optional))?'  # Multiplicity
 def jidl_style() -> dict:
     # Return default column positions
     return {
-        'meta': 12,     # Width of meta name column (e.g., module:)
+        'meta': 12,     # Width of meta name column
         'id': 4,        # Width of Field Id column
         'name': 16,     # Width of Field Name column
         'type': 35,     # Width of Field Type column
@@ -56,13 +56,13 @@ def jidl_dumps(schema: dict, style: dict = None) -> str:
 
     wt = w['desc'] if w['desc'] else w['id'] + w['name'] + w['type']
     for td in schema['types']:
-        tdef = f'{td[TypeName]} = {jadn2typestr(td[BaseType], td[TypeOptions])}'
+        tdef = f'{td[TypeName]} = {jadn2typestr(td[CoreType], td[TypeOptions])}'
         tdesc = ' // ' + td[TypeDesc] if td[TypeDesc] else ''
         text += f'\n{tdef:<{wt}}{tdesc}'[:w['page']].rstrip() + '\n'
         idt = id_type(td)
         for fd in td[Fields] if len(td) > Fields else []:       # TODO: constant-length types
             fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
-            if td[BaseType] == 'Enumerated':
+            if td[CoreType] == 'Enumerated':
                 fdesc = ' // ' + fdesc if fdesc else ''
                 fs = f'{fd[ItemID]:>{w["id"]}} {fname}'
                 wf = w['id'] + w['name'] + 2
@@ -107,7 +107,7 @@ def line2jadn(line: str, tdef: list) -> tuple[str, list]:
 
         if tdef:        # looking for fields
             pn = '()' if id_type(tdef) else p_fname
-            if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
+            if tdef[CoreType] == 'Enumerated':      # Parse Enumerated Item
                 pattern = fr'^{p_id}{p_fstr}$'
                 if m := re.match(pattern, line):
                     return 'F', fielddef2jadn(int(m.group(1)), m.group(2), '', '', desc)

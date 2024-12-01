@@ -66,7 +66,7 @@ def fset(x):
 
 def _bad_index(ts: SymbolTableField, k: int, val: list) -> None:
     td = ts.TypeDef
-    raise_error(f'{td.TypeName}({td.BaseType}): array index {k} out of bounds ({len(ts.Fld)}, {len(val)})')
+    raise_error(f'{td.TypeName}({td.CoreType}): array index {k} out of bounds ({len(ts.Fld)}, {len(val)})')
 
 
 def _bad_choice(ts: SymbolTableField, val: Any) -> None:
@@ -77,10 +77,10 @@ def _bad_choice(ts: SymbolTableField, val: Any) -> None:
 def _bad_value(ts: SymbolTableField, val: Any, fld: GenFieldDefinition = None) -> None:
     td = ts.TypeDef
     if fld is not None:
-        raise_error(f'{td.TypeName}({td.BaseType}): missing required field "{fld.FieldName}": {val}')
+        raise_error(f'{td.TypeName}({td.CoreType}): missing required field "{fld.FieldName}": {val}')
     else:
         v = next(iter(val)) if isinstance(val, dict) else val
-        raise_error(f'{td.TypeName}({td.BaseType}): bad value: {v}')
+        raise_error(f'{td.TypeName}({td.CoreType}): bad value: {v}')
 
 
 # fail forces rejection of boolean vals for number types
@@ -88,7 +88,7 @@ def _check_type(ts: SymbolTableField, val: Any, vtype: type, fail=False) -> None
     if vtype is not None:
         if fail or not isinstance(val, vtype):
             td = ts.TypeDef
-            tn = f"{td.TypeName}({td.BaseType if td else 'Primitive'})"
+            tn = f"{td.TypeName}({td.CoreType if td else 'Primitive'})"
             raise_error(f'{tn}: {val} is not {vtype}')
 
 
@@ -127,10 +127,14 @@ def _check_pattern(ts: SymbolTableField, val):
 def _check_range(ts: SymbolTableField, val):
     op = ts.TypeOpts
     tn = ts.TypeDef.TypeName
-    if 'minv' in op and val < op['minv']:
-        raise_error(f'{tn}: {val} < minimum {op["minv"]}')
-    if 'maxv' in op and val > op['maxv']:
-        raise_error(f'{tn}: {val} < maximum {op["maxv"]}')
+    if 'minInclusive' in op and val < op['minInclusive']:
+        raise_error(f'{tn}: {val} < minimum {op["minInclusive"]}')
+    if 'maxInclusive' in op and val > op['maxInclusive']:
+        raise_error(f'{tn}: {val} < maximum {op["maxInclusive"]}')
+    if 'minExclusive' in op and val <= op['minExclusive']:
+        raise_error(f'{tn}: {val} <= minimum {op["minExclusive"]}')
+    if 'maxExclusive' in op and val >= op['maxExclusive']:
+        raise_error(f'{tn}: {val} >= maximum {op["maxExclusive"]}')
     return val
 
 
@@ -147,10 +151,10 @@ def _check_frange(ts: SymbolTableField, val):
 def _check_size(ts: SymbolTableField, val):
     op = ts.TypeOpts
     tn = ts.TypeDef.TypeName
-    if 'minv' in op and len(val) < op['minv']:
-        raise_error(f'{tn}: length {len(val)} < minimum {op["minv"]}')
-    if 'maxv' in op and len(val) > op['maxv']:
-        raise_error(f'{tn}: length {len(val)} > maximum {op["maxv"]}')
+    if 'minLength' in op and len(val) < op['minLength']:
+        raise_error(f'{tn}: length {len(val)} < minimum {op["minLength"]}')
+    if 'maxLength' in op and len(val) > op['maxLength']:
+        raise_error(f'{tn}: length {len(val)} > maximum {op["maxLength"]}')
     return val
 
 
@@ -158,16 +162,16 @@ def _check_count(ts: SymbolTableField, val):
     op = ts.TypeOpts
     tn = ts.TypeDef.TypeName
     cnt = len([k for k in val if k is not None])
-    if 'minv' in op and cnt < op['minv']:
-        raise_error(f'{tn}: length {cnt} < minimum {op["minv"]}')
-    if 'maxv' in op and cnt > op['maxv']:
-        raise_error(f'{tn}: length {len(val)} > maximum {op["maxv"]}')
+    if 'minLength' in op and cnt < op['minLength']:
+        raise_error(f'{tn}: length {cnt} < minimum {op["minLength"]}')
+    if 'maxLength' in op and cnt > op['maxLength']:
+        raise_error(f'{tn}: length {len(val)} > maximum {op["maxLength"]}')
     return val
 
 
 def _extra_value(ts: SymbolTableField, val, extra: set):
     td = ts.TypeDef
-    raise_error(f'{td.TypeName}({td.BaseType}): unexpected field: \"{", ".join(str(k) for k in extra)}\"')
+    raise_error(f'{td.TypeName}({td.CoreType}): unexpected field: \"{", ".join(str(k) for k in extra)}\"')
 
 
 def _encode_binary(ts: SymbolTableField, aval, codec: 'Codec'):    # Encode bytes to string
@@ -206,7 +210,7 @@ def _decode_integer(ts: SymbolTableField, sval, codec: 'Codec'):
 
 def _encode_number(ts: SymbolTableField, aval, codec: 'Codec'):
     _check_type(ts, aval, numbers.Real, isinstance(aval, bool))
-    _check_frange(ts, aval)
+    _check_range(ts, aval)
     return _format_encode(ts, aval)
 
 
@@ -236,7 +240,7 @@ def _encode_enumerated(ts: SymbolTableField, aval, codec: 'Codec'):  # pylint: d
     if aval in ts.eMap:
         return ts.eMap[aval]
     td = ts.TypeDef
-    raise_error(f'{td.BaseType}: {aval} is not a valid {td.TypeName}')
+    raise_error(f'{td.CoreType}: {aval} is not a valid {td.TypeName}')
 
 
 def _decode_enumerated(ts: SymbolTableField, sval, codec: 'Codec'):  # pylint: disable=R1710
@@ -244,7 +248,7 @@ def _decode_enumerated(ts: SymbolTableField, sval, codec: 'Codec'):  # pylint: d
     if sval in ts.dMap:
         return ts.dMap[sval]
     td = ts.TypeDef
-    raise_error(f'{td.BaseType}: {sval} is not a valid {td.TypeName}')
+    raise_error(f'{td.CoreType}: {sval} is not a valid {td.TypeName}')
 
 
 def _encode_choice(ts: SymbolTableField, val, codec: 'Codec'):
@@ -338,7 +342,7 @@ def _encode_maprec(ts: SymbolTableField, aval, codec: 'Codec'):
             sv = next(iter(e.values()))
         else:
             sv = codec.encode(fd.FieldType, aval[fname]) if fname in aval else None
-        if sv is None and ('minc' not in fopts or fopts['minc'] > 0):  # Missing required field
+        if sv is None and ('minOccurs' not in fopts or fopts['minOccurs'] > 0):  # Missing required field
             _bad_value(ts, aval, fd)
         if isinstance(sval, list):  # Concise Record
             sval.append(sv)
@@ -381,7 +385,7 @@ def _decode_maprec(ts: SymbolTableField, sval, codec: 'Codec'):
             else:
                 aval[fd[FieldName]] = codec.decode(fd.FieldType, sv)
         else:
-            if 'minc' not in fopts or fopts['minc'] > 0:
+            if 'minOccurs' not in fopts or fopts['minOccurs'] > 0:
                 _bad_value(ts, val, fd)
     extra = set(val) - set(fnames) if isinstance(val, dict) else set(val[len(ts.Fld):])
     if extra:
@@ -411,7 +415,7 @@ def _encode_array(ts: SymbolTableField, aval, codec: 'Codec'):
             sval.append(sv)
         else:
             sval.append(None)
-            if 'minc' in fopts and fopts['minc'] > 0:   # Value is required
+            if 'minOccurs' in fopts and fopts['minOccurs'] > 0:   # Value is required
                 _bad_value(ts, aval, f)
     while sval and sval[-1] is None:            # Strip non-populated trailing optional values
         sval.pop()
@@ -440,7 +444,7 @@ def _decode_array(ts: SymbolTableField, sval, codec: 'Codec'):  # Ordered list o
             aval.append(av)
         else:
             aval.append(None)
-            if 'minc' not in fopts or fopts['minc'] > 0:
+            if 'minOccurs' not in fopts or fopts['minOccurs'] > 0:
                 _bad_value(ts, val, f)
     while aval and aval[-1] is None:  # Strip non-populated trailing optional values
         aval.pop()

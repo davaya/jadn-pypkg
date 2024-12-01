@@ -7,15 +7,15 @@
  "types": [
   ["University", "Record", [], "", [
     [1, "name", "String", [], ""],
-    [2, "classes", "Class", ["]0"], ""],
-    [3, "people", "Person", ["]0"], ""]
+    [2, "classes", "Class", ["]-1"], ""],
+    [3, "people", "Person", ["]-1"], ""]
   ]],
 
   ["Class", "Record", [], "", [
     [1, "name", "String", [], ""],
     [2, "room", "String", [], ""],
-    [3, "teachers", "Person", ["L", "]0"], ""],
-    [4, "students", "Person", ["L", "]0"], ""]
+    [3, "teachers", "Person", ["L", "]-1"], ""],
+    [4, "students", "Person", ["L", "]-1"], ""]
   ]],
 
   ["Person", "Record", [], "", [

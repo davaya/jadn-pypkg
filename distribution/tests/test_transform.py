@@ -66,7 +66,7 @@ class UnfoldExtensions(TestCase):
     """
     Type Definition in Fields Extension
     """
-    schema_anon_folded = {       # id, vtype, ktype, enum, pointer, format, pattern, minv, maxv, unique
+    schema_anon_folded = {       # id, vtype, ktype, enum, pointer, format, pattern, minLength, maxLength, unique
         'types': [
             ['Color', 'Map', [], '', [
                 [1, 'red', 'Integer', [], ''],
@@ -214,7 +214,7 @@ class UnfoldExtensions(TestCase):
             ]],
             ['T-list-1-n', 'Record', [], '', [
                 [1, 'string', 'String', [], ''],
-                [2, 'list', 'String', [']0'], '']           # Min default = 1, Max = 0 -> n
+                [2, 'list', 'String', [']-1'], '']           # Min default = 1, Max = 0 -> n
             ]]
         ]}
     schema_mult_unfolded = {  # JADN schema for fields with cardinality > 1 (e.g., list of x)
@@ -551,8 +551,8 @@ class UnfoldExtensions(TestCase):
                 [2, 'name', 'String', [], ''],
                 [3, 'mother', 'Person', ['L'], ''],
                 [4, 'father', 'Person', ['L'], ''],
-                [5, 'siblings', 'Person', ['L', '[0', ']0'], ''],
-                [6, 'friends', 'Person', ['L', '[0', ']0'], ''],
+                [5, 'siblings', 'Person', ['L', '[0', ']-1'], ''],
+                [6, 'friends', 'Person', ['L', '[0', ']-1'], ''],
                 [7, 'employer', 'Organization', ['L', '[0'], '']
             ]],
             ['Organization', 'Record', [], '', [
@@ -568,8 +568,8 @@ class UnfoldExtensions(TestCase):
                 [2, 'name', 'String', [], ''],
                 [3, 'mother', 'Person.id', [], ''],
                 [4, 'father', 'Person.id', [], ''],
-                [5, 'siblings', 'Person.id', ['[0', ']0'], ''],
-                [6, 'friends', 'Person.id', ['[0', ']0'], ''],
+                [5, 'siblings', 'Person.id', ['[0', ']-1'], ''],
+                [6, 'friends', 'Person.id', ['[0', ']-1'], ''],
                 [7, 'employer', 'Organization.ein', ['[0'], '']
             ]],
             ['Organization', 'Record', [], '', [

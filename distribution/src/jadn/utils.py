@@ -9,7 +9,7 @@ import re
 from functools import reduce
 from typing import Any, NoReturn, Union
 from .definitions import (
-    TypeName, BaseType, TypeOptions, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
+    TypeName, CoreType, TypeOptions, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
     DEFAULT_CONFIG, TYPE_OPTIONS, FIELD_OPTIONS, OPTION_ID, OPTION_TYPES, MAX_DEFAULT, MAX_UNLIMITED,
     is_builtin, has_fields, TypeDefinition,
     EnumFieldDefinition, GenFieldDefinition
@@ -101,7 +101,7 @@ def build_deps(schema: dict[str, list]) -> dict[str, list[str]]:
         oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]
         refs = [to[1:] for to in tdef[TypeOptions] if to[0] in oids and not is_builtin(to[1:])]
         refs += ([to[1:] for to in tdef[TypeOptions] if to[0] in oids2])
-        if has_fields(tdef[BaseType]):  # Ignore Enumerated
+        if has_fields(tdef[CoreType]):  # Ignore Enumerated
             for f in tdef[Fields]:
                 if not is_builtin(f[FieldType]):
                     # Add reference to type name
@@ -146,10 +146,11 @@ def del_opt(opts: list[OPTION_TYPES], oname: str) -> None:
         del opts[n[0]]
 
 
-def topts_s2d(olist: Union[list[OPTION_TYPES], tuple[OPTION_TYPES, ...]], frange: bool = False) -> dict:
+def topts_s2d(olist: Union[list[OPTION_TYPES], tuple[OPTION_TYPES, ...]], typename: str = None) -> dict:
     """
     Convert list of type definition option strings to options dictionary
     """
+    ptype = {'Binary': bytes, 'Boolean': bool, 'Integer': int, 'Number': float, 'String': str}.get(typename, None)
     assert isinstance(olist, (list, tuple)), f'{olist} is not a list'
     topts = {o for o in olist if ord(o[0]) in TYPE_OPTIONS}
     if uopts := {*olist} - topts:
@@ -157,11 +158,12 @@ def topts_s2d(olist: Union[list[OPTION_TYPES], tuple[OPTION_TYPES, ...]], frange
     opts = {}
     for o in topts:
         k, v, _ = TYPE_OPTIONS[ord(o[0])]
-        opts[k] = v(o[1:])
+        t = v if v else ptype
+        opts[k] = t(o[1:])
     return opts
 
 
-def ftopts_s2d(olist: Union[list[OPTION_TYPES], tuple[OPTION_TYPES, ...]]) -> tuple[dict, dict]:
+def ftopts_s2d(olist: Union[list[OPTION_TYPES], tuple[OPTION_TYPES, ...]], typename: str = None) -> tuple[dict, dict]:
     """
     Convert list of field definition option strings to options dictionary
     returns - FieldOptions, TypeOptions
@@ -174,7 +176,7 @@ def ftopts_s2d(olist: Union[list[OPTION_TYPES], tuple[OPTION_TYPES, ...]]) -> tu
             k, v, _ = FIELD_OPTIONS[ord(o[0])]
             fopts[k] = v(o[1:])
         except KeyError:
-            topts.update(topts_s2d([o]))
+            topts.update(topts_s2d([o], typename))
     return fopts, topts
 
 
@@ -203,28 +205,30 @@ def opts_sort(olist: Union[list[OPTION_TYPES], tuple[OPTION_TYPES, ...]]) -> Non
 
 
 def canonicalize(schema: dict) -> dict:
-    def can_opts(olist: list[OPTION_TYPES], basetype: str):
+    def can_opts(olist: list[OPTION_TYPES], coretype: str):
         opts_sort(olist)                # Sort options into canonical order (for comparisons)
-        fo, to = ftopts_s2d(olist)      # Remove default size and multiplicity options
-        if 'minv' in to and to['minv'] == 0 and basetype != 'Integer':
-            del_opt(olist, 'minv')
-        if 'minc' in fo and fo['minc'] == 1:
-            del_opt(olist, 'minc')
-        if 'maxc' in fo and fo['maxc'] == 1:
-            del_opt(olist, 'maxc')
-        if basetype == 'Number':           # TODO: fix corner case input = 2.000
-            minf = get_optx(olist, 'minf')
-            if minf is not None and '.' not in olist[minf]:
-                olist[minf] += '.0'
-            maxf = get_optx(olist, 'maxf')
-            if maxf is not None and '.' not in olist[maxf]:
-                olist[maxf] += '.0'
+        fo, to = ftopts_s2d(olist, coretype)      # Remove default size and multiplicity options
+        if 'minLength' in to and to['minLength'] == 0:
+            del_opt(olist, 'minLength')
+        if 'maxLength' in to and to['maxLength'] == MAX_DEFAULT:
+            del_opt(olist, 'maxLength')
+        if 'minOccurs' in fo and fo['minOccurs'] == 1:
+            del_opt(olist, 'minOccurs')
+        if 'maxOccurs' in fo and fo['maxOccurs'] == 1:
+            del_opt(olist, 'maxOccurs')
+        # if coretype == 'Number':           # TODO: fix corner case input = 2.000
+        #     minf = get_optx(olist, 'minf')
+        #     if minf is not None and '.' not in olist[minf]:
+        #         olist[minf] += '.0'
+        #     maxf = get_optx(olist, 'maxf')
+        #     if maxf is not None and '.' not in olist[maxf]:
+        #         olist[maxf] += '.0'
 
     cschema = copy.deepcopy(schema)     # don't modify original
     for td in cschema['types']:
-        can_opts(td[TypeOptions], td[BaseType])
-        for fd in td[Fields]:
-            if td[BaseType] != 'Enumerated':
+        can_opts(td[TypeOptions], td[CoreType])
+        if td[CoreType] != 'Enumerated':
+            for fd in td[Fields]:
                 can_opts(fd[FieldOptions], fd[FieldType])
     return cschema
 
@@ -255,10 +259,10 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
 
     topts = {}
     fo = []
-    p_name = r'\s*=?\s*([-$:\w]+)'                  # 1 type name
-    p_id = r'(\.ID)?'                               # 2 'id'
+    p_name = r'\s*=?\s*([-.:\w]+)'                  # 1 type name TODO: Use $TypeRef
+    p_id = r'(#?)'                                  # 2 'id'
     p_func = r'(?:\(([^)]+)\))?'                    # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
-    p_rangepat = r'\{(.*)\}'                        # 4 'minv', 'maxv', 'pattern'
+    p_rangepat = r'\{(.*)\}'                        # 4 'minLength', 'maxLength', 'pattern'
     p_format = r'\s+\/(\w[-\w]*)'                   # 5 'format'
     p_kw = r'\s+(unique|set|unordered|sequence)'    # 6 multiplicity
     pattern = fr'^{p_name}{p_id}{p_func}(.*?)\s*$'
@@ -287,12 +291,12 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
                 a, b = x
                 if tname in ('Integer', 'Number'):  # TODO: switch to min/max Inclusive/Exclusive
                     fn = {'Integer': int, 'Number': float}[tname]
-                    topts.update({} if a == '*' else {'minv': fn(a)})
-                    topts.update({} if b == '*' else {'maxv': fn(b)})
+                    topts.update({} if a == '*' else {'minInclusive': fn(a)})
+                    topts.update({} if b == '*' else {'maxInclusive': fn(b)})
                 else:    # TODO: switch to min/max Length, apply vtype
                     a = '*' if a != '*' and int(a) == 0 else a   # Default min size = 0
-                    topts.update({} if a == '*' else {'minv': int(a)})
-                    topts.update({} if b == '*' else {'maxv': int(b)})
+                    topts.update({} if a == '*' else {'minLength': int(a)})
+                    topts.update({} if b == '*' else {'maxLength': int(b)})
             else:
                 raise_error(f'unrecognized arg "{opt}", expected pattern or range')
         for opt in re.findall(p_format, rest):
@@ -315,17 +319,19 @@ def jadn2typestr(tname: str, topts: list[OPTION_TYPES]) -> str:
         return optv
 
     # Size range (single-ended) - default is {0..*}
-    def _srange(ops: dict) -> str:
-        lo = ops.pop('minv', 0)
-        hi = ops.pop('maxv', MAX_DEFAULT)
+    def _lrange(ops: dict) -> str:
+        lo = ops.pop('minLength', 0)
+        hi = ops.pop('maxLength', MAX_DEFAULT)
         hs = '*' if hi == MAX_DEFAULT else '.' if hi == MAX_UNLIMITED else str(hi)
-        return f'{lo}..{hs}' if lo != 0 or hs != '*' else ''
+        return f'{{{lo}..{hs}}}' if lo != 0 or hs != '*' else ''
 
     # Value range (double-ended) - default is {*..*}
     def _vrange(ops: dict) -> str:
-        lo = ops.pop('minv', '*')
-        hi = ops.pop('maxv', '*')
-        return f'{lo}..{hi}' if lo != '*' or hi != '*' else ''
+        lo = ops.pop('minInclusive', '*')
+        hi = ops.pop('maxInclusive', '*')
+        lox = opts.pop('minExclusive', '*')
+        hix = opts.pop('maxExclusive', '*')
+        return f'{{{lo}..{hi}}}' if lo != '*' or hi != '*' else ''
 
     # Value range (double-ended) - default is {*..*}
     def _frange(ops: dict) -> str:
@@ -333,53 +339,56 @@ def jadn2typestr(tname: str, topts: list[OPTION_TYPES]) -> str:
         hi = ops.pop('maxf', '*')
         return f'{lo}..{hi}' if lo != '*' or hi != '*' else ''
 
-    opts = topts_s2d(topts)
-    extra = '.ID' if opts.pop('id', None) else ''   # SIDE EFFECT: remove known options from opts.
+    opts = topts_s2d(topts, tname)
+    txt = '#' if opts.pop('id', None) else ''   # SIDE EFFECT: remove known options from opts.
     if tname in ('ArrayOf', 'MapOf'):
-        extra += f"({_kvstr(opts.pop('ktype'))}, " if tname == 'MapOf' else '('
-        extra += f"{_kvstr(opts.pop('vtype'))})"
+        txt += f"({_kvstr(opts.pop('ktype'))}, " if tname == 'MapOf' else '('
+        txt += f"{_kvstr(opts.pop('vtype'))})"
 
     if v := opts.pop('combine', None):
-        extra += f"({ {'O': 'anyOf', 'A': 'allOf', 'X': 'oneOf'}[v]})"
+        txt += f"({ {'O': 'anyOf', 'A': 'allOf', 'X': 'oneOf'}[v]})"
 
     if v := opts.pop('enum', None):
-        extra += f'(Enum[{v}])'
+        txt += f'(Enum[{v}])'
 
     if v := opts.pop('pointer', None):
-        extra += f'(Pointer[{v}])'
+        txt += f'(Pointer[{v}])'
 
-    if v := opts.pop('pattern', None):  # String can have {range} or {pattern} or /format
-        extra += f'{{pattern="{v}"}}'
+    if v := opts.pop('pattern', None):
+        txt += f'{{pattern="{v}"}}'
 
-    if v := _vrange(opts) if tname == 'Integer' else (_frange(opts) if tname == 'Number' else _srange(opts)):
-        extra += f'{{{v}}}'
+    if v := _vrange(opts):
+        txt += v
+
+    if v := _lrange(opts):
+        txt += v
 
     if v := opts.pop('format', None):
-        extra += f' /{v}'
+        txt += f' /{v}'
 
     if opts.pop('unique', None):
-        extra += ' unique'
+        txt += ' unique'
 
     if opts.pop('set', None):
-        extra += ' set'
+        txt += ' set'
 
     if opts.pop('unordered', None):
-        extra += ' unordered'
+        txt += ' unordered'
 
     if opts.pop('sequence', None):
-        extra += ' sequence'
-    return f"{tname}{extra}{f' ?{str(map(str, opts))}?' if opts else ''}"  # Flag unrecognized options
+        txt += ' sequence'
+    return f"{tname}{txt}{f' ?{opts}?' if opts else ''}"  # Flag unrecognized options
 
 
 def multiplicity_str(opts: dict) -> str:
-    lo = opts.get('minc', 1)
-    hi = opts.get('maxc', 1)
+    lo = opts.get('minOccurs', 1)
+    hi = opts.get('maxOccurs', 1)
     hs = '*' if hi < 1 else str(hi)
     return f'{lo}..{hs}' if lo != 1 or hi != 1 else '1'
 
 
 def id_type(td: list) -> bool:    # True if FieldName is a label in description
-    return (td[BaseType] == 'Array'
+    return (td[CoreType] == 'Array'
             or get_optx(td[TypeOptions], 'id') is not None
             or get_optx(td[TypeOptions], 'combine') is not None)
 
@@ -388,13 +397,13 @@ def jadn2fielddef(fdef: list, tdef: list) -> tuple[str, str, str, str]:
     idtype = id_type(tdef)
     fname = '' if idtype else fdef[FieldName]
     fdesc = f'{fdef[FieldName]}:: ' if idtype else ''
-    is_enum = tdef[BaseType] == 'Enumerated'
+    is_enum = tdef[CoreType] == 'Enumerated'
     fdesc += fdef[ItemDesc if is_enum else FieldDesc]
     ftyperef = ''
     fmult = ''
 
     if not is_enum:
-        fo, fto = ftopts_s2d(fdef[FieldOptions])
+        fo, fto = ftopts_s2d(fdef[FieldOptions], fdef[FieldType])
         fname += '/' if 'dir' in fo else ''
         tf = ''
         if tagid := fo.get('tagid', None):
@@ -414,22 +423,22 @@ def fielddef2jadn(fid: int, fname: str, fstr: str, fmult: str, fdesc: str) -> li
             fo = {m.group(1).lower(): True}
             fstr = m.group(2)
         ftyperef, topts, fopts = typestr2jadn(fstr)
-        # Field is one of: enum.id, enum, field.id, field
-        fo.update(topts_s2d(topts))                   # Copy type options (if any) into field options (JADN extension)
+        # Field is one of: enum#, enum, field#, field
+        fo.update(topts_s2d(topts, ftyperef))                   # Copy type options (if any) into field options (JADN extension)
         if fname.endswith('/'):
             fo.update({'dir': True})
             fname = fname.rstrip('/')
         if m := re.match(r'^(\d+)(?:\.\.(\d+|\*))?$', fmult) if fmult else None:
             groups = m.groups()
-            if maxc := groups[1]:
-                minc = int(groups[0])
-                maxc = 0 if maxc == '*' else int(maxc)
+            if maxOccurs := groups[1]:
+                minOccurs = int(groups[0])
+                maxOccurs = -1 if maxOccurs == '*' else int(maxOccurs)
             else:
-                minc = maxc = int(groups[0])
-            fo.update({'minc': minc} if minc != 1 else {})
-            fo.update({'maxc': maxc} if maxc != 1 else {})
+                minOccurs = maxOccurs = int(groups[0])
+            fo.update({'minOccurs': minOccurs} if minOccurs != 1 else {})
+            fo.update({'maxOccurs': maxOccurs} if maxOccurs != 1 else {})
         elif fmult:
-            fo.update({'minc': -1, 'maxc': -1})
+            fo.update({'minOccurs': -1, 'maxOccurs': -1})
         if fopts:
             assert len(fopts) == 1 and fopts[0][0] == OPTION_ID['tagid']    # Update if additional field options defined
             fo.update({'tagid': fopts[0][1:]})      # if field name, MUST update to id after all fields have been read
@@ -457,7 +466,7 @@ def object_types(types: list[list]) -> list[TypeDefinition]:
     rtn_types: list[TypeDefinition] = []
     for t in types:
         t = TypeDefinition(*t)
-        if t.BaseType == 'Enumerated':
+        if t.CoreType == 'Enumerated':
             t.Fields = [EnumFieldDefinition(*f) for f in t.Fields]
         else:
             t.Fields = [GenFieldDefinition(*f) for f in t.Fields]

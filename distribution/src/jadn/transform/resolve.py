@@ -5,7 +5,7 @@ from collections import defaultdict
 from typing import TextIO, Union
 from ..core import check, load_any
 from ..definitions import (
-    TypeName, BaseType, TypeOptions, TypeDesc, Fields, FieldType, FieldOptions, OPTION_ID, is_builtin
+    TypeName, CoreType, TypeOptions, TypeDesc, Fields, FieldType, FieldOptions, OPTION_ID, is_builtin
 )
 from ..utils import build_deps, raise_error
 
@@ -85,13 +85,13 @@ def merge_typedef(tdef: list, package: str, namespaces: dict[str, str], nsids: d
 
     td = [
         merge_tname(tdef[TypeName], package, namespaces, nsids, sys),
-        tdef[BaseType],
+        tdef[CoreType],
         update_opts(tdef[TypeOptions]),
         tdef[TypeDesc]
     ]
     if len(tdef) > Fields:
         new_fields = copy.deepcopy(tdef[Fields])
-        if td[BaseType] != 'Enumerated':
+        if td[CoreType] != 'Enumerated':
             for f in new_fields:
                 f[FieldOptions] = update_opts(f[FieldOptions])
                 f[FieldType] = merge_tname(f[FieldType], package, namespaces, nsids, sys)

@@ -59,7 +59,7 @@ class BasicDataclass:
 
 # Datatype Definition columns
 TypeName = 0            # Name of the type being defined
-BaseType = 1            # Core type of the type being defined
+CoreType = 1            # Core type of the type being defined
 TypeOptions = 2         # An array of zero or more TYPE_OPTIONS
 TypeDesc = 3            # A non-normative description of the type
 Fields = 4              # List of one or more items or fields
@@ -97,7 +97,7 @@ class GenFieldDefinition(BasicDataclass):
 @dataclass
 class TypeDefinition(BasicDataclass):
     TypeName: str = 'DefinitionName'
-    BaseType: str = 'DefinitionType'
+    CoreType: str = 'DefinitionType'
     TypeOptions: List[str] = field(default_factory=lambda: [])
     TypeDesc: str = ''
     Fields: Optional[Union[List[GenFieldDefinition], List[EnumFieldDefinition]]] = field(default_factory=lambda: [])
@@ -158,35 +158,37 @@ def has_fields(t: str) -> bool:      # Is a type with fields listed in definitio
 #   The tables list the unicode codepoint of the ID and the corresponding Name and value type.
 
 TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII ID
-    61: ('id', lambda x: True, 1),          # '=', Enumerated type and Choice/Map/Record keys are ID not Name
-    42: ('vtype', lambda x: x, 2),          # '*', Value type for ArrayOf and MapOf
-    43: ('ktype', lambda x: x, 3),          # '+', Key type for MapOf
-    35: ('enum', lambda x: x, 4),           # '#', enumeration derived from Array/Choice/Map/Record type
-    62: ('pointer', lambda x: x, 5),        # '>', enumeration of pointers derived from Array/Choice/Map/Record type
-    47: ('format', lambda x: x, 6),         # '/', semantic validation keyword, may affect serialization
-    37: ('pattern', lambda x: x, 7),        # '%', regular expression that a string must match
-    121: ('minf', float, 8),                # 'y', minimum Number value
-    122: ('maxf', float, 9),                # 'z', maximum Number value
-    123: ('minv', int, 10),                 # '{', minimum byte or text string length, Integer value, element count
-    125: ('maxv', int, 11),                 # '}', maximum byte or text string length, Integer value, element count
-    113: ('unique', lambda x: True, 12),    # 'q', ArrayOf instance must not contain duplicates
-    115: ('set', lambda x: True, 13),       # 's', ArrayOf instance is unordered and unique (set)
-    98: ('unordered', lambda x: True, 14),  # 'b', ArrayOf instance is unordered and not unique (bag)
-    111: ('sequence', lambda x: True, 15),  # 'o', Map, MapOr or Record instance is ordered and unique (ordered set)
-    67: ('combine', lambda x: x, 16),       # 'C', Choice instance is a logical combination (anyOf, allOf, oneOf)
-    97: ('abstract', lambda x: True, 17),   # 'a', Inheritance: abstract, non-instantiatable
-   114: ('restricts', lambda x: x, 18),     # 'r', Inheritance: restriction - subset of referenced type
-   120: ('extends', lambda x: True, 19),    # 'x', Inheritance: extension - superset of referenced type
-    33: ('default', lambda x: x, 20),       # '!', Default or constant value of instances of this type
+    0x3d: ('id', lambda x: True, 1),          # '=', Enumerated type and Choice/Map/Record keys are ID not Name
+    0x2a: ('vtype', lambda x: x, 2),          # '*', Value type for ArrayOf and MapOf
+    0x2b: ('ktype', lambda x: x, 3),          # '+', Key type for MapOf
+    0x23: ('enum', lambda x: x, 4),           # '#', enumeration derived from Array/Choice/Map/Record type
+    0x3e: ('pointer', lambda x: x, 5),        # '>', enumeration of pointers derived from Array/Choice/Map/Record type
+    0x2f: ('format', lambda x: x, 6),         # '/', semantic validation keyword, may affect serialization
+    0x25: ('pattern', lambda x: x, 7),        # '%', regular expression that a string must match
+    0x77: ('minExclusive', None, 8),          # 'w', minimum numeric/string value, excluding bound
+    0x78: ('maxExclusive', None, 9),          # 'x', maximum numeric/string value, excluding bound
+    0x79: ('minInclusive', None, 10),         # 'y', minimum numeric/string value
+    0x7a: ('maxInclusive', None, 11),         # 'z', maximum numeric/string value
+    0x7b: ('minLength', int, 12),             # '{', minimum byte or text string length, collection item count
+    0x7d: ('maxLength', int, 13),             # '}', maximum byte or text string length, collection item count
+    0x71: ('unique', lambda x: True, 14),     # 'q', ArrayOf instance must not contain duplicates
+    0x73: ('set', lambda x: True, 15),        # 's', ArrayOf instance is unordered and unique (set)
+    0x62: ('unordered', lambda x: True, 16),  # 'b', ArrayOf instance is unordered and not unique (bag)
+    0x6f: ('sequence', lambda x: True, 17),   # 'o', Map, MapOr or Record instance is ordered and unique (ordered set)
+    0x43: ('combine', lambda x: x, 18),       # 'C', Choice instance is a logical combination (anyOf, allOf, oneOf)
+    0x61: ('abstract', lambda x: True, 19),   # 'a', Inheritance: abstract, non-instantiatable
+    0x72: ('restricts', lambda x: x, 20),     # 'r', Inheritance: restriction - subset of referenced type
+    0x65: ('extends', lambda x: True, 21),    # 'e', Inheritance: extension - superset of referenced type
+    0x21: ('default', lambda x: x, 22),       # '!', Default or constant value of instances of this type
 }
 
 FIELD_OPTIONS = {
-    91: ('minc', int, 21),                  # '[', min cardinality, default = 1, 0 = field is optional
-    93: ('maxc', int, 22),                  # ']', max cardinality, default = 1, <0 = inherited or none, not 1 = array
-    38: ('tagid', int, 23),                 # '&', field that specifies the type of this field
-    60: ('dir', lambda x: True, 24),        # '<', pointer enumeration treats field as a collection
-    75: ('key', lambda x: True, 25),        # 'K', field is a primary key for this type
-    76: ('link', lambda x: True, 26),       # 'L', field is a link (foreign key) to an instance of FieldType
+    0x5b: ('minOccurs', int, 23),             # '[', min cardinality, default = 1, 0 = field is optional
+    0x5d: ('maxOccurs', int, 24),             # ']', max cardinality, default = 1, <0 = inherited or none, not 1 = array
+    0x26: ('tagid', int, 25),                 # '&', field that specifies the type of this field
+    0x3c: ('dir', lambda x: True, 26),        # '<', pointer enumeration treats field as a collection
+    0x4b: ('key', lambda x: True, 27),        # 'K', field is a primary key for this type
+    0x4c: ('link', lambda x: True, 28),       # 'L', field is a link (foreign key) to an instance of FieldType
 }
 
 OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD_OPTIONS
@@ -197,10 +199,12 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'pointer':  chr(62),
     'format':   chr(47),
     'pattern':  chr(37),
-    'minf':     chr(121),
-    'maxf':     chr(122),
-    'minv':     chr(123),
-    'maxv':     chr(125),
+    'minExclusive': chr(119),
+    'maxExclusive': chr(120),
+    'minInclusive': chr(121),
+    'maxInclusive': chr(122),
+    'minLength':    chr(123),
+    'maxLength':    chr(125),
     'unique':   chr(113),
     'set':      chr(115),
     'unordered': chr(98),
@@ -210,16 +214,16 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'restricts': chr(114),
     'extends':  chr(120),
     'default':  chr(33),
-    'minc':     chr(91),
-    'maxc':     chr(93),
+    'minOccurs':    chr(91),
+    'maxOccurs':    chr(93),
     'tagid':    chr(38),
     'dir':      chr(60),
     'key':      chr(75),
     'link':     chr(76),
 }
 
-MAX_DEFAULT = -1            # maxc sentinal value: Upper size limit defaults to JADN or package limit
-MAX_UNLIMITED = -2          # maxc sentinal value: Upper size limit does not exist
+MAX_DEFAULT = -1            # maxOccurs sentinal value: Upper size limit defaults to JADN or package limit
+MAX_UNLIMITED = -2          # maxOccurs sentinal value: Upper size limit does not exist
 
 REQUIRED_TYPE_OPTIONS = {
     'Binary': [],
@@ -236,21 +240,21 @@ REQUIRED_TYPE_OPTIONS = {
     'Record': [],
 }
 
-ALLOWED_TYPE_OPTIONS_ALL = ['abstract', 'restricts', 'extends']
+ALLOWED_TYPE_OPTIONS_ALL = ['abstract', 'restricts', 'extends', 'default']
 
 ALLOWED_TYPE_OPTIONS = {
-    'Binary': ['format', 'minv', 'maxv'],
+    'Binary': ['format', 'minLength', 'maxLength'],
     'Boolean': [],
-    'Integer': ['format', 'minv', 'maxv'],
-    'Number': ['format', 'minf', 'maxf'],
-    'String': ['format', 'pattern', 'minv', 'maxv'],
+    'Integer': ['format', 'minInclusive', 'maxInclusive', 'minExclusive', 'maxExclusive'],
+    'Number': ['format', 'minInclusive', 'maxInclusive', 'minExclusive', 'maxExclusive'],
+    'String': ['format', 'pattern', 'minLength', 'maxLength'],
     'Enumerated': ['id', 'enum', 'pointer'],
     'Choice': ['id', 'combine'],
-    'Array': ['format', 'minv', 'maxv'],
-    'ArrayOf': ['vtype', 'minv', 'maxv', 'unique', 'set', 'unordered'],
-    'Map': ['id', 'minv', 'maxv', 'sequence'],
-    'MapOf': ['ktype', 'vtype', 'minv', 'maxv', 'sequence'],
-    'Record': ['minv', 'maxv', 'sequence'],
+    'Array': ['format', 'minLength', 'maxLength'],
+    'ArrayOf': ['vtype', 'minLength', 'maxLength', 'unique', 'set', 'unordered'],
+    'Map': ['id', 'minLength', 'maxLength', 'sequence'],
+    'MapOf': ['ktype', 'vtype', 'minLength', 'maxLength', 'sequence'],
+    'Record': ['minLength', 'maxLength', 'sequence'],
 }
 
 # Ensure jsonschema prerequisite packages are installed, e.g., rfc3987 for uri/iri validation
@@ -330,7 +334,7 @@ DEFAULT_CONFIG = {          # Configuration values to use if not specified in sc
 
 EXTENSIONS = {
     'AnonymousType',            # TYPE_OPTIONS included in FieldOptions
-    'Multiplicity',             # maxc other than 1, or minv other than 0 (optional) or 1 (required)
+    'Multiplicity',             # maxOccurs other than 1, or minLength other than 0 (optional) or 1 (required)
     'DerivedEnum',              # enum and pointer/dir options, create Enumerated type of fields or JSON Pointers
     'MapOfEnum',                # ktype option specifies an Enumerated type
     'Link',                     # key and link options

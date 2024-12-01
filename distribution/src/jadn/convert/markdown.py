@@ -6,7 +6,7 @@ import re
 
 from datetime import datetime
 from typing import Tuple, Union
-from jadn.definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, META_ORDER
+from jadn.definitions import TypeName, CoreType, TypeOptions, TypeDesc, Fields, ItemID, FieldID, META_ORDER
 from jadn.utils import cleanup_tagid, get_optx, fielddef2jadn, jadn2fielddef, jadn2typestr, raise_error, typestr2jadn
 
 # MARKDOWN -> JADN Type regexes
@@ -51,11 +51,11 @@ def markdown_dumps(schema: dict, style: dict = None) -> str:
 
     for td in schema['types']:
         if len(td) > Fields and td[Fields]:
-            tdef = f'{td[TypeName]} ({jadn2typestr(td[BaseType], td[TypeOptions])})'
+            tdef = f'{td[TypeName]} ({jadn2typestr(td[CoreType], td[TypeOptions])})'
             tdesc = f'\n{td[TypeDesc]}\n' if td[TypeDesc] else ''
             text += f'{tdesc}\n**Type: ' + tdef.replace("*", "\*") + '**\n'
-            idt = td[BaseType] == 'Array' or get_optx(td[TypeOptions], 'id') is not None
-            table_type = (0 if td[BaseType] == 'Enumerated' else 2) + (0 if idt else 1)
+            idt = td[CoreType] == 'Array' or get_optx(td[TypeOptions], 'id') is not None
+            table_type = (0 if td[CoreType] == 'Enumerated' else 2) + (0 if idt else 1)
             table = [
                 [['ID', 'Description']],
                 [['ID', 'Item', 'Description']],
@@ -78,7 +78,7 @@ def markdown_dumps(schema: dict, style: dict = None) -> str:
                     table.append([str(fd[FieldID]), f'**{fname}**', fdef, fmult, fdesc])
         else:
             table = [['Type Name', 'Type Definition', 'Description'],
-                     [f'**{td[TypeName]}**', jadn2typestr(td[BaseType], td[TypeOptions]), td[TypeDesc]]]
+                     [f'**{td[TypeName]}**', jadn2typestr(td[CoreType], td[TypeOptions]), td[TypeDesc]]]
         text += f'\n{format_table(table)}\n\n**********\n'
     return text
 
@@ -115,8 +115,8 @@ def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
             return 'T', newtype
 
         if tdef:        # looking for fields
-            pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[BaseType] == 'Array') else p_fname
-            if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
+            pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[CoreType] == 'Array') else p_fname
+            if tdef[CoreType] == 'Enumerated':      # Parse Enumerated Item
                 pattern = fr'^{p_id}{p_fstr}{p_desc}$'
                 if m := re.match(pattern, line):
                     return 'F', fielddef2jadn(int(m.group(1)), m.group(2), '', '', m.group(3) if m.group(3) else '')

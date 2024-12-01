@@ -6,7 +6,7 @@ from datetime import datetime
 from textwrap import fill
 from typing import NoReturn, Union
 from ..definitions import (
-    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
+    TypeName, CoreType, TypeOptions, TypeDesc, Fields, ItemDesc, FieldID, FieldName, FieldType, FieldOptions, FieldDesc,
     CORE_TYPES, META_ORDER, TYPE_OPTIONS, FIELD_OPTIONS
 )
 from ..utils import ftopts_s2d, topts_s2d
@@ -63,9 +63,9 @@ def jas_dumps(schema: dict) -> str:
         jas += '*/\n'
 
     assert set(stype_map) == set(CORE_TYPES)         # Ensure type list is up to date
-    tolist = {'id', 'vtype', 'ktype', 'enum', 'pointer', 'format', 'pattern', 'minv', 'maxv', 'minf', 'maxf', 'unique', 'and', 'or'}
+    tolist = {'id', 'vtype', 'ktype', 'enum', 'pointer', 'format', 'pattern', 'minLength', 'maxLength', 'minf', 'maxf', 'unique', 'and', 'or'}
     assert {x[0] for x in TYPE_OPTIONS.values()} == tolist                # Ensure type options list is up to date
-    folist = {'minc', 'maxc', 'tagid', 'dir', 'key', 'link', 'default'}
+    folist = {'minOccurs', 'maxOccurs', 'tagid', 'dir', 'key', 'link', 'default'}
     assert {x[0] for x in FIELD_OPTIONS.values()} == folist               # Ensure field options list is up to date
 
     # Convert Types
@@ -73,9 +73,9 @@ def jas_dumps(schema: dict) -> str:
         topts = topts_s2d(td[TypeOptions])
         tostr = ''
         v_range = ''
-        if 'minv' in topts or 'maxv' in topts:          # TODO: use jadn2typestr
-            lo = topts.get('minv', 0)
-            hi = topts.get('maxv', 0)
+        if 'minLength' in topts or 'maxLength' in topts:          # TODO: use jadn2typestr
+            lo = topts.get('minLength', 0)
+            hi = topts.get('maxLength', 0)
             if lo or hi:
                 v_range = f"({lo}..{hi if hi else 'MAX'})"
         for opt in tolist:
@@ -91,11 +91,11 @@ def jas_dumps(schema: dict) -> str:
                     tostr += f' (PATTERN ("{ov}"))'
                 elif opt == 'format':
                     tostr += f' (CONSTRAINED BY {{{ov}}})'
-                elif opt in ('minv', 'maxv'):     # TODO fix to handle both
+                elif opt in ('minLength', 'maxLength'):     # TODO fix to handle both
                     if v_range:
-                        if td[BaseType] in ('Integer', 'Number'):
+                        if td[CoreType] in ('Integer', 'Number'):
                             tostr += f' {v_range}'
-                        elif td[BaseType] in ('Binary', 'String', 'Array', 'ArrayOf', 'Map', 'MapOf', 'Record'):
+                        elif td[CoreType] in ('Binary', 'String', 'Array', 'ArrayOf', 'Map', 'MapOf', 'Record'):
                             tostr += f' (Size {v_range})'
                         else:
                             assert False        # Should never get here
@@ -103,7 +103,7 @@ def jas_dumps(schema: dict) -> str:
                 else:
                     tostr += f' %{opt}: {ov}%'
         tdesc = f'    -- {td[TypeDesc]}' if td[TypeDesc] else ''
-        jas += f'\n{td[TypeName]} ::= {stype(td[BaseType])}{tostr}'
+        jas += f'\n{td[TypeName]} ::= {stype(td[CoreType])}{tostr}'
         if len(td) > Fields:
             titems = deepcopy(td[Fields])
             for n, i in enumerate(titems):      # 0:tag, 1:enum item name, 2:enum item desc  (enumerated), or
@@ -116,12 +116,12 @@ def jas_dumps(schema: dict) -> str:
                 i.append(',' + desc if n < len(titems) - 1 else (' ' + desc if desc else ''))  # TODO: fix hacked desc for join
             flen = min(32, max(12, max([len(i[FieldName]) for i in titems]) + 1 if titems else 0))
             jas += ' {' + tdesc + '\n'
-            if td[BaseType].lower() == 'enumerated':
+            if td[CoreType].lower() == 'enumerated':
                 fmt = '    {1:' + str(flen) + '} ({0:d}){3}'
                 jas += '\n'.join([fmt.format(*i) for i in titems])
             else:
                 fmt = '    {1:' + str(flen) + '} [{0:d}] {2}{3}{4}'
-                if td[BaseType].lower() == 'record':
+                if td[CoreType].lower() == 'record':
                     fmt = '    {1:' + str(flen) + '} {2}{3}{4}'
                 items = []
                 for n, i in enumerate(titems):                          # TODO: Convert to use jadn2fielddef
@@ -133,10 +133,10 @@ def jas_dumps(schema: dict) -> str:
                     if 'vtype' in opts:
                         ostr += '.*'
                         del opts['vtype']
-                    if 'minc' in opts:
-                        if opts['minc'] == 0:         # TODO: handle array fields (max != 1)
+                    if 'minOccurs' in opts:
+                        if opts['minOccurs'] == 0:         # TODO: handle array fields (max != 1)
                             ostr += ' OPTIONAL'
-                        del opts['minc']
+                        del opts['minOccurs']
                     items += [fmt.format(i[FieldID], i[FieldName], i[FieldType], ostr, i[5]) + (f' %{opts}' if opts else '')]
                 jas += '\n'.join(items)
             jas += '\n}\n' if titems else '}\n'

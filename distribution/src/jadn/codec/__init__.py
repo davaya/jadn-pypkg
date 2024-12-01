@@ -17,7 +17,7 @@ from .format_validate import format_validators, get_format_validate_function
 from ..utils import ftopts_s2d, get_config, object_types, raise_error, topts_s2d
 from ..definitions import (
     # Field Indexes
-    BaseType, FieldID, FieldName,
+    CoreType, FieldID, FieldName,
     # Const values
     PRIMITIVE_TYPES, CORE_TYPES, MAX_DEFAULT, MAX_UNLIMITED,
     # Dataclass
@@ -74,8 +74,8 @@ class Codec:
             fo, to = ftopts_s2d(fld.FieldOptions)
             if to:
                 raise_error(f'Validation Error: {fld.FieldName}: internal error: unexpected type options: {to}')
-            fopts = {'minc': 1, 'maxc': 1, **fo}
-            assert fopts['minc'] in (0, 1) and fopts['maxc'] == 1     # Other cardinalities have been simplified
+            fopts = {'minOccurs': 1, 'maxOccurs': 1, **fo}
+            assert fopts['minOccurs'] in (0, 1) and fopts['maxOccurs'] == 1     # Other cardinalities have been simplified
             ctag: Optional[int] = None
             if 'tagid' in fopts:
                 ctag = fopts['tagid'] if fa == FieldID else fnames[fopts['tagid']]
@@ -86,25 +86,25 @@ class Codec:
             )
 
         # Set configurable option values
-        def config_opts(opts: List[str]) -> dict:
+        def config_opts(opts: List[str], typename: str) -> dict:
             op = [(v[0] + self.config[v[1:]]) if len(v) > 1 and v[1] == '$' else v for v in opts]
-            return topts_s2d(op)
+            return topts_s2d(op, typename)
 
         def sym(t: TypeDefinition) -> SymbolTableField:  # Build symbol table based on encoding modes
             symval = SymbolTableField(
                 t,                             # 0: S_TDEF:  JADN type definition
-                enctab[t.BaseType].Enc,        # 1: S_ENCODE: Encoder for this type
-                enctab[t.BaseType].Dec,        # 2: S_DECODE: Decoder for this type
-                enctab[t.BaseType].eType,      # 3: S_ENCTYPE: Encoded value type
-                config_opts(t.TypeOptions),    # 4: S_TOPTS:  Type Options (dict)
+                enctab[t.CoreType].Enc,        # 1: S_ENCODE: Encoder for this type
+                enctab[t.CoreType].Dec,        # 2: S_DECODE: Decoder for this type
+                enctab[t.CoreType].eType,      # 3: S_ENCTYPE: Encoded value type
+                config_opts(t.TypeOptions, t.CoreType),    # 4: S_TOPTS:  Type Options (dict)
             )
 
-            if t.BaseType == 'Record':
+            if t.CoreType == 'Record':
                 symval.Encode = _encode_maprec   # if self.verbose_rec else _encode_array
                 symval.Decode = _decode_maprec   # if self.verbose_rec else _decode_array
                 symval.EncType = dict if self.verbose_rec else list
-            if t.BaseType in ('Enumerated', 'Array', 'Choice', 'Map', 'Record'):
-                fx = FieldName if 'id' not in symval.TypeOpts and t.BaseType != 'Array' and verbose_str else FieldID
+            if t.CoreType in ('Enumerated', 'Array', 'Choice', 'Map', 'Record'):
+                fx = FieldName if 'id' not in symval.TypeOpts and t.CoreType != 'Array' and verbose_str else FieldID
                 fa = FieldName if 'id' not in symval.TypeOpts else FieldID
                 try:
                     symval.dMap = {f[fx]: f[fa] for f in t.Fields}
@@ -112,24 +112,24 @@ class Codec:
                     fnames = {f[FieldID]: f[FieldName] for f in t.Fields}
                 except IndexError as e:
                     raise IndexError(f'symval index error: {e}')
-                if t.BaseType != 'Enumerated':
+                if t.CoreType != 'Enumerated':
                     symval.Fld = {f[fx]: symf(f, fa, fnames) for f in t.Fields}
-            if t.BaseType in ('Binary', 'String', 'Array', 'ArrayOf', 'Map', 'MapOf', 'Record'):
-                minv = symval.TypeOpts.get('minv', 0)
-                maxv = symval.TypeOpts.get('maxv', MAX_DEFAULT)
-                if minv < 0 or (maxv < 0 and maxv not in (MAX_DEFAULT, MAX_UNLIMITED)):
-                    raise_error(f'Validation Error: {t.TypeName}: length cannot be negative: {minv}..{maxv}')
-                if maxv == MAX_DEFAULT:
-                    maxv = self.config['$MaxElements']
-                    if t.BaseType in ('Binary', 'String'):
-                        maxv = self.config[f'$Max{t.BaseType}']
-                symval.TypeOpts.update({'minv': minv, 'maxv': maxv})
-                if maxv == MAX_UNLIMITED:
-                    del symval.TypeOpts['maxv']
+            if t.CoreType in ('Binary', 'String', 'Array', 'ArrayOf', 'Map', 'MapOf', 'Record'):
+                minLength = symval.TypeOpts.get('minLength', 0)
+                maxLength = symval.TypeOpts.get('maxLength', MAX_DEFAULT)
+                if minLength < 0 or (maxLength < 0 and maxLength not in (MAX_DEFAULT, MAX_UNLIMITED)):
+                    raise_error(f'Validation Error: {t.TypeName}: length cannot be negative: {minLength}..{maxLength}')
+                if maxLength == MAX_DEFAULT:
+                    maxLength = self.config['$MaxElements']
+                    if t.CoreType in ('Binary', 'String'):
+                        maxLength = self.config[f'$Max{t.CoreType}']
+                symval.TypeOpts.update({'minLength': minLength, 'maxLength': maxLength})
+                if maxLength == MAX_UNLIMITED:
+                    del symval.TypeOpts['maxLength']
             fmt = symval.TypeOpts.get('format', '')
-            symval.FormatValidate = get_format_validate_function(self.format_validate, t.BaseType, fmt)
-            symval.FormatEncode = get_format_encode_function(self.format_codec, t.BaseType, fmt)
-            symval.FormatDecode = get_format_decode_function(self.format_codec, t.BaseType, fmt)
+            symval.FormatValidate = get_format_validate_function(self.format_validate, t.CoreType, fmt)
+            symval.FormatEncode = get_format_encode_function(self.format_codec, t.CoreType, fmt)
+            symval.FormatDecode = get_format_decode_function(self.format_codec, t.CoreType, fmt)
             return symval
 
         self.verbose_rec = verbose_rec
@@ -144,10 +144,10 @@ class Codec:
                 Decode=enctab[t].Dec,
                 EncType=enctab[t].eType,
                 TypeOpts={},
-                # TODO: check if t[BaseType] should just be t
-                FormatValidate=get_format_validate_function(self.format_validate, t[BaseType], ''),
-                FormatEncode=get_format_encode_function(self.format_codec, t[BaseType], ''),
-                FormatDecode=get_format_decode_function(self.format_codec, t[BaseType], '')
+                # TODO: check if t[CoreType] should just be t
+                FormatValidate=get_format_validate_function(self.format_validate, t[CoreType], ''),
+                FormatEncode=get_format_encode_function(self.format_codec, t[CoreType], ''),
+                FormatDecode=get_format_decode_function(self.format_codec, t[CoreType], '')
             )
 
 

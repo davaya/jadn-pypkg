@@ -60,18 +60,18 @@
   ["Member2$email", "String", ["/email"], "Tool-generated type definition."],
   ["Roster", "Record", [], "", [
     [1, "org_name", "String", [], ""],
-    [2, "members", "Member", ["[0", "]0"], "Optional and repeated: minc=0, maxc=0"]
+    [2, "members", "Member", ["[0", "]-1"], "Optional and repeated: minOccurs=0, maxOccurs=0"]
   ]],
   ["Roster2", "Record", [], "", [
     [1, "org_name", "String", [], ""],
-    [2, "members", "Roster2$members", ["[0"], "Optional: minc=0, maxc=1"]
+    [2, "members", "Roster2$members", ["[0"], "Optional: minOccurs=0, maxOccurs=1"]
   ]],
-  ["Roster2$members", "ArrayOf", ["*Member", "{1"], "Tool-generated array: minv=1, maxv=0"],
+  ["Roster2$members", "ArrayOf", ["*Member", "{1"], "Tool-generated array: minLength=1, maxLength=0"],
   ["Roster3", "Record", [], "", [
     [1, "org_name", "String", [], ""],
-    [2, "members", "Members", [], "members field is required: default minc = 1, maxc = 1"]
+    [2, "members", "Members", [], "members field is required: default minOccurs = 1, maxOccurs = 1"]
   ]],
-  ["Members", "ArrayOf", ["*Member"], "Explicitly-defined array: default minv = 0, maxv = 0"],
+  ["Members", "ArrayOf", ["*Member"], "Explicitly-defined array: default minLength = 0, maxLength = 0"],
 
   ["Pixel", "Map", [], "", [
     [1, "red", "Integer", [], ""],
@@ -117,8 +117,8 @@
     [2, "name", "String", [], ""],
     [3, "mother", "Person2", ["L"], "link"],
     [4, "father", "Person2", ["L"], "link"],
-    [5, "siblings", "Person2", ["[0", "]0", "L"], "link"],
-    [6, "friends", "Person2", ["[0", "]0", "L"], "link"],
+    [5, "siblings", "Person2", ["[0", "]-1", "L"], "link"],
+    [6, "friends", "Person2", ["[0", "]-1", "L"], "link"],
     [7, "employer", "Organization", ["[0", "L"], ""]
   ]],
   ["Organization", "Record", [], "", [

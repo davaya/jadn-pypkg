@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from typing import NoReturn, Tuple, Union
 from urllib.parse import urlparse
-from ..definitions import TypeName, BaseType, TypeOptions, TypeDesc, Fields, META_ORDER,\
+from ..definitions import TypeName, CoreType, TypeOptions, TypeDesc, Fields, META_ORDER,\
                           ItemID, FieldID, FieldName, FieldOptions, FieldDesc
 from ..utils import cleanup_tagid, get_optx, fielddef2jadn, raise_error, typestr2jadn, topts_s2d, ftopts_s2d
 
@@ -70,19 +70,19 @@ def proto_dumps(schema: dict, style: dict = None) -> str:
         topts = topts_s2d(td[TypeOptions])
         if td[TypeDesc]:
             text += f'// {td[TypeDesc]}\n'
-        if td[BaseType] in ('Record', 'Map', 'Array'):
-            text += f'message {td[TypeName]} {{  // ${td[BaseType]} {topts}\n'
-        elif td[BaseType] == 'Enumerated':
+        if td[CoreType] in ('Record', 'Map', 'Array'):
+            text += f'message {td[TypeName]} {{  // ${td[CoreType]} {topts}\n'
+        elif td[CoreType] == 'Enumerated':
             text += f'enum {td[TypeName]} {{  // ${topts}\n'
         else:
-            text += f'// ${td[TypeName]}({td[BaseType]}) {topts}\n'
+            text += f'// ${td[TypeName]}({td[CoreType]}) {topts}\n'
 
         for fd in td[Fields] if len(td) > Fields else []:       # TODO: constant-length types
             fopts, ftopts = ftopts_s2d(fd[FieldOptions])
             if fd[FieldDesc]:
                 text += f'// {fd[FieldDesc]}\n'
 
-        if td[BaseType] in ('Record', 'Map', 'Array', 'Enumerated', 'Choice'):
+        if td[CoreType] in ('Record', 'Map', 'Array', 'Enumerated', 'Choice'):
             text += '}\n\n'
     return text
 
@@ -109,8 +109,8 @@ def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
             return 'T', newtype
 
         if tdef:        # looking for fields
-            pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[BaseType] == 'Array') else p_fname
-            if tdef[BaseType] == 'Enumerated':      # Parse Enumerated Item
+            pn = '()' if (get_optx(tdef[TypeOptions], 'id') is not None or tdef[CoreType] == 'Array') else p_fname
+            if tdef[CoreType] == 'Enumerated':      # Parse Enumerated Item
                 pattern = fr'^{p_id}{p_fstr}{p_desc}$'
                 if m := re.match(pattern, line):
                     return 'F', fielddef2jadn(int(m.group(1)), m.group(2), '', '', m.group(3) if m.group(3) else '')

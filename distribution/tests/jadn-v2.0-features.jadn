@@ -16,7 +16,7 @@
   ]],
 
    ["Building", "Record", ["rBase"], "", [
-     [2, "name", "String", ["]0"], "No name"],
+     [2, "name", "String", ["]-1"], "No name"],
      [3, "building_id", "String", [], "Should fail - restrictions cannot add new fields"]
    ]]
  ]

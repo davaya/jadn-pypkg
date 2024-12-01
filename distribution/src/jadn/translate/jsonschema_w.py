@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from typing import Callable, Optional, Union
 from ..definitions import (
-    TypeName, BaseType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID, FieldName, FieldType,
+    TypeName, CoreType, TypeOptions, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldID, FieldName, FieldType,
     FieldOptions, FieldDesc, OPTION_ID, is_builtin
 )
 from ..transform.transform import get_enum_items
@@ -47,12 +47,12 @@ def get_items(stype: str, ctx: dict) -> Optional[list]:  # pylint: disable=R1710
     """
     td = ctx['type_defs']
     et = stype[1:] if stype[0] == OPTION_ID['enum'] else stype
-    if et in td and td[et][BaseType] == 'Enumerated':
+    if et in td and td[et][CoreType] == 'Enumerated':
         to = topts_s2d(td[et][TypeOptions])
         et = to['enum'] if 'enum' in to else et
 
     to = topts_s2d(td[et][TypeOptions])
-    if et in td and td[et][BaseType] in ('Enumerated', 'Array', 'Choice', 'Map', 'Record') and 'id' not in to:
+    if et in td and td[et][CoreType] in ('Enumerated', 'Array', 'Choice', 'Map', 'Record') and 'id' not in to:
         return [f[ItemValue] for f in td[et][Fields]]
 
 
@@ -156,20 +156,20 @@ def w_fdef(f: list, ctx: dict) -> dict:
     """
     Make field definition
     """
-    fopts, topts = ftopts_s2d(f[FieldOptions])
+    fopts, topts = ftopts_s2d(f[FieldOptions], f[FieldType])
     if is_builtin(f[FieldType]):
         t = w_type(['', f[FieldType], f[FieldOptions], f[FieldDesc]], topts, ctx)
     else:
         t = dmerge(w_ref(f[FieldType], ctx), {'description': f[FieldDesc]})
 
-    minv = max(fopts.get('minc', 1), 1)
-    maxv = fopts.get('maxc', 1)
-    return t if minv <= 1 and maxv == 1 else dmerge(
+    minLength = max(fopts.get('minOccurs', 1), 1)
+    maxLength = fopts.get('maxOccurs', 1)
+    return t if minLength <= 1 and maxLength == 1 else dmerge(
         {'type': 'array'},
         {'description': f[FieldDesc]},
         {'uniqueItems': True} if 'unique' in topts else {},
-        {'minItems': minv} if minv != 0 else {},
-        {'maxItems': maxv} if maxv != 0 else {},
+        {'minItems': minLength} if minLength != 0 else {},
+        {'maxItems': maxLength} if maxLength != 0 else {},
         {'items': t}
     )
 
@@ -193,8 +193,8 @@ def t_binary(tdef: list, topts: dict, ctx: dict) -> dict:
         # TODO: Fixme: JSON Schema cannot express length of content-encoded data
         # This would require adjusting string length by 2 for hex and 4/3 for base64
         # Impossible to calculate string length for other string formats
-        # {'minLength': topts['minv']} if 'minv' in topts and topts['minv'] > 0 else {},
-        # {'maxLength': topts['maxv']} if 'maxv' in topts else {}
+        # {'minLength': topts['minLength']} if 'minLength' in topts and topts['minLength'] > 0 else {},
+        # {'maxLength': topts['maxLength']} if 'maxLength' in topts else {}
     )
 
 
@@ -205,8 +205,8 @@ def t_boolean(tdef: list, topts: dict, ctx: dict) -> dict:
 def t_integer(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('integer', tdef[TypeDesc]),
-        {'minimum': topts['minv']} if 'minv' in topts else {},
-        {'maximum': topts['maxv']} if 'maxv' in topts else {}
+        {'minimum': topts['minLength']} if 'minLength' in topts else {},
+        {'maximum': topts['maxLength']} if 'maxLength' in topts else {}
     )
 
 
@@ -226,8 +226,8 @@ def t_string(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('string', tdef[TypeDesc]),
         w_format(topts['format']) if 'format' in topts else {},
-        {'minLength': topts['minv']} if 'minv' in topts and topts['minv'] != 0 else {},
-        {'maxLength': topts['maxv']} if 'maxv' in topts else {},
+        {'minLength': topts['minLength']} if 'minLength' in topts and topts['minLength'] != 0 else {},
+        {'maxLength': topts['maxLength']} if 'maxLength' in topts else {},
         {'pattern': topts['pattern']} if 'pattern' in topts else {}
     )
 
@@ -265,8 +265,8 @@ def t_array(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('array', tdef[TypeDesc]),
         {'additionalItems': False},
-        {'minItems': topts['minv']} if topts.get('minv', 0) != 0 else {},
-        {'maxItems': topts['maxv']} if 'maxv' in topts else {},
+        {'minItems': topts['minLength']} if topts.get('minLength', 0) != 0 else {},
+        {'maxItems': topts['maxLength']} if 'maxLength' in topts else {},
         {'items': [w_fdef(f, ctx) for f in tdef[Fields]]}
     )
 
@@ -275,24 +275,24 @@ def t_array_of(tdef: list, topts: dict, ctx: dict) -> dict:
     return dmerge(
         w_td('array', tdef[TypeDesc]),
         {'uniqueItems': True} if 'unique' in topts else {},
-        {'minItems': topts['minv']} if topts.get('minv', 0) != 0 else {},
-        {'maxItems': topts['maxv']} if 'maxv' in topts else {},
+        {'minItems': topts['minLength']} if topts.get('minLength', 0) != 0 else {},
+        {'maxItems': topts['maxLength']} if 'maxLength' in topts else {},
         {'items': w_kvtype(topts['vtype'], ctx)}
     )
 
 
 def t_map(tdef: list, topts: dict, ctx: dict) -> dict:
     def req(f: list) -> bool:
-        fo = ftopts_s2d(f[FieldOptions])[0]
-        return fo['minc'] >= 1 if 'minc' in fo else True
+        fo = ftopts_s2d(f[FieldOptions], f[FieldType])[0]
+        return fo['minOccurs'] >= 1 if 'minOccurs' in fo else True
 
     required = [f[FieldName] for f in tdef[Fields] if req(f)]
     return dmerge(
         w_td('object', tdef[TypeDesc]),
         {'additionalProperties': False},
         {'required': required} if required else {},
-        {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
-        {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
+        {'minProperties': topts['minLength']} if topts.get('minLength', 0) != 0 else {},
+        {'maxProperties': topts['maxLength']} if 'maxLength' in topts else {},
         {'properties': {f[FieldName]: w_fdef(f, ctx) for f in tdef[Fields]}}
     )
 
@@ -317,8 +317,8 @@ def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
         merged = dmerge(
             w_td('object', tdef[TypeDesc]),
             {'additionalProperties': False},
-            {'minProperties': topts['minv']} if topts.get('minv', 0) != 0 else {},
-            {'maxProperties': topts['maxv']} if 'maxv' in topts else {},
+            {'minProperties': topts['minLength']} if topts.get('minLength', 0) != 0 else {},
+            {'maxProperties': topts['maxLength']} if 'maxLength' in topts else {},
             {'patternProperties': {pattern(items): vtype}} if items and ctx['enum_style'] == 'regex' else {}
         )
         
@@ -333,8 +333,8 @@ def t_map_of(tdef: list, topts: dict, ctx: dict) -> dict:
             w_td('array', tdef[TypeDesc]),
             {'additionalItems': False},
             {'uniqueItems': True},
-            {'minItems': topts['minv']} if topts.get('minv', 0) != 0 else {},
-            {'maxItems': topts['maxv']} if 'maxv' in topts else {},
+            {'minItems': topts['minLength']} if topts.get('minLength', 0) != 0 else {},
+            {'maxItems': topts['maxLength']} if 'maxLength' in topts else {},
         )
         
         _items = {
@@ -378,9 +378,9 @@ def w_type(tdef: list, topts: dict, ctx: dict) -> dict:
     """
     Write a JADN type definition in JSON Schema format
     """
-    if 'maxv' not in topts and tdef[BaseType] in CONFIG_MAX:
-        topts['maxv'] = ctx['config'][CONFIG_MAX[tdef[BaseType]]]
-    sc = get_writer(tdef[BaseType], ctx['verbose'])(tdef, topts, ctx)
+    if 'maxLength' not in topts and tdef[CoreType] in CONFIG_MAX:
+        topts['maxLength'] = ctx['config'][CONFIG_MAX[tdef[CoreType]]]
+    sc = get_writer(tdef[CoreType], ctx['verbose'])(tdef, topts, ctx)
     return sc
 
 
@@ -416,7 +416,7 @@ def json_schema_dumps(schema: dict, verbose=True, enum_style='enum', import_styl
     def tt(tdef: list, ctx: dict):  # Return type definition with title
         return dmerge(
             {'title': spaces(tdef[TypeName])},
-            w_type(tdef, topts_s2d(tdef[TypeOptions]), ctx)
+            w_type(tdef, topts_s2d(tdef[TypeOptions], tdef[CoreType]), ctx)
         )
 
     return json.dumps(dmerge(

@@ -7,7 +7,7 @@ style[format] =
 
 import re
 from datetime import datetime
-from ..definitions import (TypeName, BaseType, TypeOptions, PRIMITIVE_TYPES,
+from ..definitions import (TypeName, CoreType, TypeOptions, PRIMITIVE_TYPES,
                            Fields, FieldID, FieldName, FieldType, FieldOptions)
 from ..utils import topts_s2d, ftopts_s2d, multiplicity_str, jadn2typestr, jadn2fielddef
 
@@ -62,7 +62,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         """
         # nodes and s are available in caller scope
         tn = td[TypeName]
-        color = f'fillcolor={s["attr_color"]}, ' if td[BaseType] == 'Enumerated' else ''
+        color = f'fillcolor={s["attr_color"]}, ' if td[CoreType] == 'Enumerated' else ''
         hr = '<hr/>' if s['detail'] in {'logical', 'information'} and td[Fields] else ''
         return {
             'plantuml': f'class "{tn}{bt}" as n{nodes[tn]}\n',
@@ -83,7 +83,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
             fl = '{field} ' if s['format'] == 'plantuml' else ''    # override PlantUML parsing parens as methods
             fname, fdef, fmult, fdesc = jadn2fielddef(fd, td)
             fdef += '' if fmult == '1' else ' [' + fmult + ']'
-            fval = f'{fd[FieldID]} {fname}' + ('' if td[BaseType] == 'Enumerated' else f' : {fl}{fdef}')
+            fval = f'{fd[FieldID]} {fname}' + ('' if td[CoreType] == 'Enumerated' else f' : {fl}{fdef}')
         return {
             'plantuml': f'  n{nodes[td[TypeName]]} : {fval}\n',
             'graphviz': f'  <tr><td align="left">  {fval}  </td></tr>\n'
@@ -118,7 +118,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
             return edge_label.replace('-', '_')
 
         # nodes and s are available in caller scope
-        if td[BaseType] == 'Enumerated':
+        if td[CoreType] == 'Enumerated':
             return ''
         fopts, ftopts = ftopts_s2d(fd[FieldOptions])
         fieldtype = ftopts['vtype'] if fd[FieldType] in {'ArrayOf', 'MapOf'} else fd[FieldType]
@@ -163,12 +163,12 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     text += f"\n{fmt['start']}\n  " + '\n  '.join(fmt['header']) + '\n\n'
 
     hide_types = [] if s['attributes'] else (*PRIMITIVE_TYPES, 'Enumerated')
-    nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[BaseType] not in hide_types}
+    nodes = {tdef[TypeName]: k for k, tdef in enumerate(schema['types']) if tdef[CoreType] not in hide_types}
     edges = ''
     for td in schema['types']:
         if (td[TypeName]) in nodes:
-            bt = f' : {jadn2typestr(td[BaseType], td[TypeOptions])}' if s['detail'] == 'information' else ''
-            if td[BaseType] in PRIMITIVE_TYPES:
+            bt = f' : {jadn2typestr(td[CoreType], td[TypeOptions])}' if s['detail'] == 'information' else ''
+            if td[CoreType] in PRIMITIVE_TYPES:
                 text += node_leaf(td, bt)
             else:
                 text += node_start(td, bt)

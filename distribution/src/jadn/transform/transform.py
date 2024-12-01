@@ -2,7 +2,7 @@ import copy
 
 from typing import Generator, List, NoReturn, Set, Union
 from ..definitions import (
-    TypeName, BaseType, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldName, FieldOptions, FieldDesc,
+    TypeName, CoreType, TypeDesc, Fields, ItemID, ItemValue, ItemDesc, FieldName, FieldOptions, FieldDesc,
     OPTION_ID, EXTENSIONS, OPTION_TYPES, DEFAULT_CONFIG,
     is_builtin, has_fields, TypeDefinition, EnumFieldDefinition, GenFieldDefinition)
 from ..utils import (
@@ -14,7 +14,7 @@ def strip_comments(schema: dict, width=0) -> dict:  # Strip or truncate comments
     for tdef in sc['types']:
         tdef[TypeDesc] = etrunc(tdef[TypeDesc], width)
         if len(tdef) > Fields:
-            fd = ItemDesc if tdef[BaseType] == 'Enumerated' else FieldDesc
+            fd = ItemDesc if tdef[CoreType] == 'Enumerated' else FieldDesc
             for fdef in tdef[Fields]:
                 fdef[fd] = etrunc(fdef[fd], width)
     return sc
@@ -28,12 +28,12 @@ def unfold_link(schema: dict, sys: str) -> NoReturn:
     keys = {}       # Key names for types that have keys
     typex = {t[TypeName]: n for n, t in enumerate(schema['types'])}       # Build type index
     for tdef in list(schema['types']):
-        if tdef.BaseType == 'MapOf':
+        if tdef.CoreType == 'MapOf':
             to = topts_s2d(tdef.TypeOptions)
             keys.update({tdef.TypeName: to['ktype']})
-        if has_fields(tdef.BaseType):
+        if has_fields(tdef.CoreType):
             for fdef in tdef.Fields:
-                fo, fto = ftopts_s2d(fdef.FieldOptions)
+                fo, fto = ftopts_s2d(fdef.FieldOptions, fdef.FieldType)
                 if 'key' in fo:
                     if (newname := fdef.FieldType) not in typex:
                         newname = f'{tdef.TypeName}{sys}{fdef.FieldName}'
@@ -46,7 +46,7 @@ def unfold_link(schema: dict, sys: str) -> NoReturn:
                     ltypes.append(tdef)
     for tdef in ltypes:
         for fdef in tdef.Fields:
-            fo, fto = ftopts_s2d(fdef.FieldOptions)
+            fo, fto = ftopts_s2d(fdef.FieldOptions, fdef.FieldType)
             if 'link' in fo:
                 del_opt(fdef.FieldOptions, 'link')
                 try:
@@ -72,34 +72,34 @@ def epname(topts: List[OPTION_TYPES], sys: str) -> Union[str, None]:
 # Replace field multiplicity with explicit ArrayOf type definitions
 def unfold_multiplicity(schema: dict, sys: str) -> NoReturn:
     for tdef in list(schema['types']):
-        if has_fields(tdef.BaseType):
+        if has_fields(tdef.CoreType):
             for fdef in tdef.Fields:
-                fo, fto = ftopts_s2d(fdef.FieldOptions)
-                if 'maxc' in fo and fo['maxc'] != 1:
-                    minc = fo.get('minc', 1)
+                fo, fto = ftopts_s2d(fdef.FieldOptions, fdef.FieldType)
+                if 'maxOccurs' in fo and fo['maxOccurs'] != 1:
+                    minOccurs = fo.get('minOccurs', 1)
                     newopts = {
                         'vtype': fdef.FieldType,
-                        'minv': max(minc, 1),  # Don't allow empty ArrayOf
-                        **({'maxv': fo['maxc']} if fo['maxc'] > 1 else {}),  # maxv defaults to 0
+                        'minLength': max(minOccurs, 1),  # Don't allow empty ArrayOf
+                        **({'maxLength': fo['maxOccurs']} if fo['maxOccurs'] > 1 else {}),  # maxLength defaults to 0
                         **({'unique': True} if 'unique' in fto else {})  # Move unique option to ArrayOf
                     }
                     # Point existing field to new ArrayOf
                     fdef.FieldType = f'{tdef.TypeName}{sys}{fdef.FieldName}'
                     schema['types'].append(TypeDefinition(fdef.FieldType, 'ArrayOf', opts_d2s(newopts), fdef.FieldDesc))
                     # Remove unused FieldOptions
-                    del_opt(fdef.FieldOptions, 'maxc')
-                    if minc != 0:
-                        del_opt(fdef.FieldOptions, 'minc')
+                    del_opt(fdef.FieldOptions, 'maxOccurs')
+                    if minOccurs != 0:
+                        del_opt(fdef.FieldOptions, 'minOccurs')
                     del_opt(fdef.FieldOptions, 'unique')
 
 
 # Replace anonymous types in fields with explicit type definitions
 def unfold_anonymous_types(schema: dict, sys: str) -> NoReturn:
     for tdef in list(schema['types']):
-        if has_fields(tdef.BaseType):
+        if has_fields(tdef.CoreType):
             for fdef in tdef.Fields:
                 # If FieldOptions contains a type option, create an explicit type
-                if fto := ftopts_s2d(fdef.FieldOptions)[1]:
+                if fto := ftopts_s2d(fdef.FieldOptions, fdef.FieldType)[1]:
                     # Move all type options to new type
                     newopts = [fdef.FieldOptions.pop(get_optx(fdef.FieldOptions, o)) for o in fto]
                     name = epname(newopts, sys)              # If enum/pointer option, use derived enum typename
@@ -128,15 +128,15 @@ def unfold_derived_enum(schema: dict, sys: str) -> NoReturn:
 
     def enum_items(rtype: str) -> list:
         tdef = schema['types'][typex[rtype]]
-        if tdef.BaseType == 'Enumerated':
+        if tdef.CoreType == 'Enumerated':
             return [[f.ItemID, f.ItemValue, f.ItemDesc] for f in tdef.Fields]
-        fields = tdef.Fields if has_fields(tdef.BaseType) else []
+        fields = tdef.Fields if has_fields(tdef.CoreType) else []
         return [[f.FieldID, f.FieldName, f.FieldDesc] for f in fields]
 
     def pointer_items(rtype: str) -> list:
         def pathnames(rtype: str, base='') -> Generator[list, None, None]:  # Walk subfields of referenced type
             tdef = schema['types'][typex[rtype]]  # TODO: proper error handling for built-in or non-existing reference
-            if has_fields(tdef.BaseType):
+            if has_fields(tdef.CoreType):
                 for f in tdef.Fields:
                     if OPTION_ID['dir'] in f.FieldOptions:
                         if f.FieldType in typex:
@@ -147,7 +147,7 @@ def unfold_derived_enum(schema: dict, sys: str) -> NoReturn:
 
     enums = {}
     for tdef in list(schema['types']):  # Replace enum/pointer options in Enumerated types with explicit items
-        if tdef.BaseType == 'Enumerated':
+        if tdef.CoreType == 'Enumerated':
             to = tdef.TypeOptions
             if rname := epname(to, sys):
                 optx = get_optx(to, 'enum')
@@ -159,7 +159,7 @@ def unfold_derived_enum(schema: dict, sys: str) -> NoReturn:
 
     # Create new Enumerated enum/pointer types if they don't already exist
     for tdef in list(schema['types']):
-        if tdef.BaseType in ('ArrayOf', 'MapOf'):
+        if tdef.CoreType in ('ArrayOf', 'MapOf'):
             update_eref(enums, tdef.TypeOptions, 'vtype')
             update_eref(enums, tdef.TypeOptions, 'ktype')
 
@@ -170,8 +170,8 @@ def unfold_map_of_enum(schema: dict) -> NoReturn:
     """
     typex = {t[TypeName]: n for n, t in enumerate(schema['types'])}       # Build type index
     for n, tdef in enumerate(schema['types']):
-        to = topts_s2d(tdef.TypeOptions)
-        if tdef.BaseType == 'MapOf' and schema['types'][typex[to['ktype']]][BaseType] == 'Enumerated':
+        to = topts_s2d(tdef.TypeOptions, tdef.CoreType)
+        if tdef.CoreType == 'MapOf' and schema['types'][typex[to['ktype']]][CoreType] == 'Enumerated':
             newfields = [GenFieldDefinition(f[ItemID], f[ItemValue], to['vtype'], [], f[ItemDesc]) for f in schema['types'][typex[to['ktype']]][Fields]]
             schema['types'][n] = TypeDefinition(tdef.TypeName, 'Map', [], tdef.TypeDesc, newfields)
 

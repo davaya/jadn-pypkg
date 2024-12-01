@@ -13,7 +13,7 @@
   "types": [
     ["Schema", "Record", [], "Definition of a JADN package", [
       [1, "meta", "Metadata", ["[0"], "Information about this package"],
-      [2, "types", "ArrayOf", ["*Type", "}-1", "q"], "Types defined in this package"]
+      [2, "types", "Type", ["[1", "]-1", "q"], "Types defined in this package"]
     ]],
 
     ["Metadata", "Map", [], "Information about this package", [
@@ -24,10 +24,10 @@
       [5, "comment", "String", ["{1", "[0"], "Comment"],
       [6, "copyright", "String", ["{1", "[0"], "Copyright notice"],
       [7, "license", "String", ["{1", "[0"], "SPDX licenseId of this package"],
-      [8, "namespaces", "ArrayOf", ["*PrefixNs", "{1", "[0"], "Referenced packages"],
-      [9, "roots", "ArrayOf", ["*TypeName", "{1", "[0"], "Roots of the type hierarchy defined by this package"],
+      [8, "namespaces", "PrefixNs", ["[0", "]-1", "q"], "Referenced packages"],
+      [9, "roots", "TypeName", ["[0", "]-1", "q"], "Roots of the type tree(s) in this package"],
       [10, "config", "Config", ["[0"], "Configuration variables"],
-      [11, "jadn_version", "String", ["{1", "[0"], "JADN specification version"]
+      [11, "jadn_version", "Namespace", ["[0"], "JADN Metaschema package"]
     ]],
 
     ["PrefixNs", "Array", [], "Prefix corresponding to a namespace IRI", [
@@ -36,46 +36,27 @@
     ]],
 
     ["Config", "Map", ["{1"], "Config vars override JADN defaults", [
-      [1, "$MaxBinary", "Integer", ["{1", "[0"], "Package max octets, default = 255"],
-      [2, "$MaxString", "Integer", ["{1", "[0"], "Package max characters, default = 255"],
-      [3, "$MaxElements", "Integer", ["{1", "[0"], "Package max items/properties, default = 255"],
-      [4, "$Sys", "String", ["{1", "}1", "[0"], "System character for TypeName, Default = '.'"],
+      [1, "$MaxBinary", "Integer", ["y1", "[0"], "Package max octets, default = 255"],
+      [2, "$MaxString", "Integer", ["y1", "[0"], "Package max characters, default = 255"],
+      [3, "$MaxElements", "Integer", ["y1", "[0"], "Package max items/properties, default = 255"],
+      [4, "$Sys", "String", ["{1", "}1", "[0"], "System character for TypeName, default = '.'"],
       [5, "$TypeName", "String", ["/regex", "[0"], "Default = ^[A-Z][-.A-Za-z0-9]{0,63}$"],
       [6, "$FieldName", "String", ["/regex", "[0"], "Default = ^[a-z][_A-Za-z0-9]{0,63}$"],
       [7, "$NSID", "String", ["/regex", "[0"], "Default = ^([A-Za-z][A-Za-z0-9]{0,7})?$"]
     ]],
 
     ["Namespace", "String", ["/uri"], "Unique name of a package", []],
-
-    ["NSID", "String", ["%$NSID"], "", []],
-
-    ["TypeName", "String", ["%$TypeName"], "", []],
-
-    ["FieldName", "String", ["%$FieldName"], "", []],
-
-    ["TypeRef", "String", [], "Derived pattern ($NSID ':')? $TypeName", []],
+    ["NSID", "String", ["%$NSID"], "Namespace prefix matching $NSID", []],
+    ["TypeName", "String", ["%$TypeName"], "Name of a logical type", []],
+    ["FieldName", "String", ["%$FieldName"], "Name of a field in a structured type", []],
+    ["TypeRef", "String", [], "Reference to a type, matching ($NSID ':')? $TypeName", []],
 
     ["Type", "Array", [], "", [
       [1, "type_name", "TypeName", [], ""],
-      [2, "base_type", "BaseType", [], ""],
+      [2, "core_type", "Enumerated", ["#JADN-Type"], ""],
       [3, "type_options", "Options", [], ""],
       [4, "type_description", "Description", [], ""],
       [5, "fields", "JADN-Type", ["&2"], ""]
-    ]],
-
-    ["BaseType", "Enumerated", [], "", [
-      [1, "Binary", ""],
-      [2, "Boolean", ""],
-      [3, "Integer", ""],
-      [4, "Number", ""],
-      [5, "String", ""],
-      [6, "Enumerated", ""],
-      [7, "Choice", ""],
-      [8, "Array", ""],
-      [9, "ArrayOf", ""],
-      [10, "Map", ""],
-      [11, "MapOf", ""],
-      [12, "Record", ""]
     ]],
 
     ["JADN-Type", "Choice", [], "", [
@@ -113,12 +94,12 @@
       [5, "field_description", "Description", [], ""]
     ]],
 
-    ["FieldID", "Integer", ["{0"], "", []],
+    ["FieldID", "Integer", ["y0"], "", []],
 
-    ["Options", "ArrayOf", ["*Option", "}10"], "", []],
+    ["Options", "ArrayOf", ["*Option", "q"], "", []],
 
     ["Option", "String", ["{1"], "", []],
 
-    ["Description", "String", ["}2048"], "", []]
+    ["Description", "String", [], "", []]
   ]
 }
