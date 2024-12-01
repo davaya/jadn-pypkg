@@ -146,9 +146,9 @@ def w_ref(tname: str, ctx: dict) -> dict:
     nsid, tn = tname.split(':', maxsplit=1) if ':' in tname else [None, tname]
     assert not is_builtin(tn)
     if nsid:
-        imp = {'$ref': f"{ctx['info_imps'][nsid]}/definitions/{tn}"} if ctx['import_style'] == 'ref' and ctx['info_imps'] is not None else {}
+        imp = {'$ref': f"{ctx['meta_imps'][nsid]}/definitions/{tn}"} if ctx['import_style'] == 'ref' and ctx['meta_imps'] is not None else {}
         ctx['imported_types'][nsid].update({tn: imp})
-        return {'$ref': f'#/imports/{nsid}/{tn}'}
+        return {'$ref': f'#/namespaces/{nsid}/{tn}'}
     return {'$ref': f'#/definitions/{tn}'}
 
 
@@ -396,21 +396,21 @@ def json_schema_dumps(schema: dict, verbose=True, enum_style='enum', import_styl
     #  any: ignore types defined in other modules, validate anything
     #  ref: generate $ref keywords that must be resolved before the JSON Schema can validate referenced types
 
-    info = schema.get('info', {})
+    meta = schema.get('meta', {})
     td = {t[TypeName]: t for t in schema['types']}    # Build index of type definitions
-    exports = [e for e in info.get('exports', []) if e in td]
-    if isinstance(ns := info.get('namespaces', {}), dict):
+    roots = [e for e in meta.get('roots', []) if e in td]
+    if isinstance(ns := meta.get('namespaces', {}), dict):
         imported_types = {k: {} for k in ns}
     elif isinstance(ns, list):
         imported_types = {k[0]: {} for k in ns}
     ctx = {  # Translation context
-        'config': get_config(info),
+        'config': get_config(meta),
         'type_defs': td,
         'verbose': verbose,
         'enum_style': enum_style,
         'imported_types': imported_types,
         'import_style': import_style,
-        'info_imps': info['imports'] if 'imports' in info else None
+        'meta_imps': meta['namespaces'] if 'namespaces' in meta else None
     }
 
     def tt(tdef: list, ctx: dict):  # Return type definition with title
@@ -421,16 +421,16 @@ def json_schema_dumps(schema: dict, verbose=True, enum_style='enum', import_styl
 
     return json.dumps(dmerge(
         {'$schema': 'http://json-schema.org/draft-07/schema#'},
-        {'$id': info['package']} if 'package' in info else {},
-        {'title': info['title']} if 'title' in info else {},    # TODO: use items from META_ORDER
-        {'version': info['version']} if 'version' in info else {},
-        {'description': info['description']} if 'description' in info else {},
-        {'comments': info['comments']} if 'comments' in info else {},
-        {'copyright': info['copyright']} if 'copyright' in info else {},
-        {'license': info['license']} if 'license' in info else {},
-        w_export(exports, ctx),
-        {'definitions': {t: tt(td[t], ctx) for t in (exports + [t for t in td if t not in exports])}},
-        {'imports': imported_types} if imported_types else {}
+        {'$id': meta['package']} if 'package' in meta else {},
+        {'title': meta['title']} if 'title' in meta else {},    # TODO: use items from META_ORDER
+        {'version': meta['version']} if 'version' in meta else {},
+        {'description': meta['description']} if 'description' in meta else {},
+        {'comments': meta['comments']} if 'comments' in meta else {},
+        {'copyright': meta['copyright']} if 'copyright' in meta else {},
+        {'license': meta['license']} if 'license' in meta else {},
+        w_export(roots, ctx),
+        {'definitions': {t: tt(td[t], ctx) for t in (roots + [t for t in td if t not in roots])}},
+        {'namespaces': imported_types} if imported_types else {}
     ), indent=2)
 
 
