@@ -22,7 +22,7 @@ def get_format_validate_function(format_table: FormatTable, base_type: str, form
     except KeyError:
         if format_kw in FORMAT_SERIALIZE:
             return _format_ok           # no value constraints on this keyword
-        raise
+        raise ValueError(f'Unknown format {format_kw}')
 
 
 # Regex from https://stackoverflow.com/questions/201323/how-to-validate-an-email-address-using-a-regular-expression
