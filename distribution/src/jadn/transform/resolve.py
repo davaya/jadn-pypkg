@@ -29,11 +29,11 @@ class SchemaPackage:
             self.source = source.name
 
         try:
-            self.package = self.schema['info']['package']
+            self.package = self.schema['meta']['package']
         except KeyError:
             raise_error(f'Schema package {self.source} must have a package ID')
 
-        self.namespaces = self.schema['info']['namespaces'] if 'namespaces' in self.schema['info'] else {}
+        self.namespaces = self.schema['meta']['namespaces'] if 'namespaces' in self.schema['meta'] else {}
         self.clear()
 
     def load(self) -> None:     # Validate schema, build type dependencies and external references
@@ -138,7 +138,7 @@ def resolve(sm: SchemaPackage, types: set[str], packages: dict, sys: str = '$') 
 # Add referenced types to schema. dirname => other schema files
 def resolve_imports(schema: dict, dirname: str, no_nsid: tuple[str, ...] = ()):
     sys = '$'  # Character reserved for use in tool-generated type names
-    # if 'namespaces' not in schema['info']:
+    # if 'namespaces' not in schema['meta']:
     #    return schema
     root = SchemaPackage(schema)
     packages = {root.package: root}
@@ -155,7 +155,7 @@ def resolve_imports(schema: dict, dirname: str, no_nsid: tuple[str, ...] = ()):
             print(f'* Duplicate package {sm.package}, Using: {packages[sm.package].source}, Ignoring: {fn}')
         for i, m in sm.namespaces.items():
             nsids[m].append('' if i in no_nsid else i)
-    resolve(root, root.schema['info']['exports'] if 'exports' in root.schema['info'] else set(), packages)
+    resolve(root, root.schema['meta']['exports'] if 'exports' in root.schema['meta'] else set(), packages)
 
     for t in root.used.copy():
         if t[0] in (OPTION_ID['enum'], OPTION_ID['pointer']):
@@ -165,7 +165,7 @@ def resolve_imports(schema: dict, dirname: str, no_nsid: tuple[str, ...] = ()):
 
     # Copy all needed types from other packages into root
     nsids[root.package] = ['']
-    sc = {'info': {k: v for k, v in root.schema['info'].items() if k != 'namespaces'}, 'types': []}    # Remove namespaces
+    sc = {'meta': {k: v for k, v in root.schema['meta'].items() if k != 'namespaces'}, 'types': []}    # Remove namespaces
     for sm in [root] + [m for m in packages.values() if m.package != root.package]:
         sc['types'] += [merge_typedef(t, sm.package, sm.namespaces, nsids, sys) for t in sm.schema['types'] if t[TypeName] in sm.used]
     return sc

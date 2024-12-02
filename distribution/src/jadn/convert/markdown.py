@@ -44,10 +44,10 @@ def markdown_dumps(schema: dict, style: dict = None) -> str:
         w.update(style)   # Override any specified style options
 
     text = ''
-    info = schema['info'] if 'info' in schema else {}
-    mlist = [k for k in META_ORDER if k in info]
-    for k in mlist + list(set(info) - set(mlist)):      # Display info elements in fixed order
-        text += f'{k:>14}: {json.dumps(info[k])}\n'     # TODO: wrap to width, continuation-line parser
+    meta = schema['meta'] if 'meta' in schema else {}
+    mlist = [k for k in META_ORDER if k in meta]
+    for k in mlist + list(set(meta) - set(mlist)):      # Display meta elements in fixed order
+        text += f'{k:>14}: {json.dumps(meta[k])}\n'     # TODO: wrap to width, continuation-line parser
 
     for td in schema['types']:
         if len(td) > Fields and td[Fields]:
@@ -103,8 +103,8 @@ def markdown_dump(schema: dict, fname: Union[bytes, str, int], source='', style=
 # Convert MARKDOWN to JADN
 def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
     if line.split('//', maxsplit=1)[0].strip():
-        p_info = r'^\s*([-\w]+):\s*(.+?)\s*$'
-        if m := re.match(p_info, line):
+        p_meta = r'^\s*([-\w]+):\s*(.+?)\s*$'
+        if m := re.match(p_meta, line):
             return 'M', [m.group(1), m.group(2)]
 
         p_type = fr'^{p_tname}{p_assign}{p_tstr}{p_tdesc}$'
@@ -133,7 +133,7 @@ def line2jadn(line: str, tdef: list) -> Tuple[str, list]:
 
 
 def markdown_loads(doc: str) -> dict:
-    info = {}
+    meta = {}
     types = []
     fields = None
     for line in doc.splitlines():
@@ -145,11 +145,11 @@ def markdown_loads(doc: str) -> dict:
                 cleanup_tagid(fields)
                 fields = None
             if t == 'M':
-                info.update({v[0]: json.loads(v[1])})
+                meta.update({v[0]: json.loads(v[1])})
             elif t == 'T':
                 types.append(v)
                 fields = types[-1][Fields]
-    return {'info': info, 'types': types} if info else {'types': types}
+    return {'meta': meta, 'types': types} if meta else {'types': types}
 
 
 def markdown_load(fname: Union[bytes, str, int]) -> dict:

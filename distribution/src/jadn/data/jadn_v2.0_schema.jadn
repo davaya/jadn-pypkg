@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "JADN Metaschema",
-    "package": "http://oasis-open.org/jadn/v2.0/schema",
+    "package": "http://oasis-open.org/openc2/jadn/v2.0/schema",
     "description": "Syntax of a JSON Abstract Data Notation (JADN) package.",
     "license": "CC-BY-4.0",
     "roots": ["Schema"],
@@ -78,13 +78,13 @@
 
     ["Items", "ArrayOf", ["*Item"], "", []],
 
+    ["Fields", "ArrayOf", ["*Field"], "", []],
+
     ["Item", "Array", [], "", [
       [1, "item_id", "FieldID", [], ""],
       [2, "item_value", "String", [], ""],
       [3, "item_description", "Description", [], ""]
     ]],
-
-    ["Fields", "ArrayOf", ["*Field"], "", []],
 
     ["Field", "Array", [], "", [
       [1, "field_id", "FieldID", [], ""],

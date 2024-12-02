@@ -120,7 +120,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
         # nodes and s are available in caller scope
         if td[CoreType] == 'Enumerated':
             return ''
-        fopts, ftopts = ftopts_s2d(fd[FieldOptions])
+        fopts, ftopts = ftopts_s2d(fd[FieldOptions], fd[FieldType])
         fieldtype = ftopts['vtype'] if fd[FieldType] in {'ArrayOf', 'MapOf'} else fd[FieldType]
         if fieldtype in nodes:
             mult_f = multiplicity_str(fopts)
@@ -158,7 +158,7 @@ def diagram_dumps(schema: dict, style: dict = {}) -> str:
     }[s['format']]
 
     text = ''
-    for k, v in schema.get('info', {}).items():
+    for k, v in schema.get('meta', {}).items():
         text += f"{fmt['comment']} {k}: {v}\n"
     text += f"\n{fmt['start']}\n  " + '\n  '.join(fmt['header']) + '\n\n'
 

@@ -143,8 +143,8 @@ def check(schema: dict) -> dict:
 
 def analyze(schema: dict) -> dict:
     items = jadn.build_deps(schema)
-    info = schema.get('info', {})
-    roots = info.get('roots', info.get('exports', []))      # Exports is deprecated
+    meta = schema.get('meta', {})
+    roots = meta.get('roots', [])
     defs = set(items)
     dep_refs = {v for d in items for v in items[d]}
     refs = set(dep_refs) | set(roots)
