@@ -264,7 +264,8 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
     p_func = r'(?:\(([^)]+)\))?'                    # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
     p_rangepat = r'\{(.*)\}'                        # 4 'minLength', 'maxLength', 'pattern'
     p_format = r'\s+\/(\w[-\w]*)'                   # 5 'format'
-    p_kw = r'\s+(unique|set|unordered|sequence)'    # 6 multiplicity
+    p_flag = r'\s+(unique|set|unordered|sequence|abstract|final)'    # 6 flags
+    p_attr = r'\s+(restricts|extends):(.+)'
     pattern = fr'^{p_name}{p_id}{p_func}(.*?)\s*$'
     m = re.match(pattern, typestring)
     if m is None:
@@ -301,8 +302,10 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
                 raise_error(f'unrecognized arg "{opt}", expected pattern or range')
         for opt in re.findall(p_format, rest):
             topts.update({'format': opt})
-        for opt in re.findall(p_kw, rest):
+        for opt in re.findall(p_flag, rest):
             topts.update({opt: True})
+        for opt in re.findall(p_attr, rest):
+            topts.update({opt[0]: opt[1]})
     return tname, opts_d2s(topts), fo
 
 
@@ -366,24 +369,21 @@ def jadn2typestr(tname: str, topts: list[OPTION_TYPES]) -> str:
     if v := opts.pop('format', None):
         txt += f' /{v}'
 
-    if opts.pop('unique', None):
-        txt += ' unique'
+    for opt in ('unique', 'set', 'unordered', 'sequence', 'abstract', 'final'):
+        if o := opts.pop(opt, None):
+            txt += (' ' + opt)
 
-    if opts.pop('set', None):
-        txt += ' set'
+    for opt in ('extends', 'restricts'):
+        if o := opts.pop(opt, None):
+            txt += f" {opt}:{o}"
 
-    if opts.pop('unordered', None):
-        txt += ' unordered'
-
-    if opts.pop('sequence', None):
-        txt += ' sequence'
     return f"{tname}{txt}{f' ?{opts}?' if opts else ''}"  # Flag unrecognized options
 
 
 def multiplicity_str(opts: dict) -> str:
     lo = opts.get('minOccurs', 1)
     hi = opts.get('maxOccurs', 1)
-    hs = '*' if hi < 1 else str(hi)
+    hs = '*' if hi <= MAX_DEFAULT else str(hi)
     return f'{lo}..{hs}' if lo != 1 or hi != 1 else '1'
 
 

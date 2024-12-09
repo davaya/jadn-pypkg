@@ -25,6 +25,37 @@ class JADN(TestCase):
         self.assertDictEqual(self.tc.encode('Schema', self.schema), self.schema)
         self.assertDictEqual(self.tc.decode('Schema', self.schema), self.schema)
 
+    prim1 = ['Foo']                             # Bad - no CoreType
+    prim2 = ['Foo', 'String']                   # Good = Prim5
+    prim3 = ['Foo', 'String', []]               # Good = Prim5
+    prim4 = ['Foo', 'String', [], '']           # Good = Prim5
+    prim5 = ['Foo', 'String', [], '', []]       # Good
+    prim6 = ['Foo', 'String', [], '', [], '']   # Bad - extra
+    enum1 = ['Foo', 'Enumerated', [], '', [[1]]]
+    enum2 = ['Foo', 'Enumerated', [], '', [[1, 'OK']]]
+    enum3 = ['Foo', 'Enumerated', [], '', [[1, 'OK', '']]]
+    enum4 = ['Foo', 'Enumerated', [], '', [[1, 'OK', '', '']]]
+
+    def test_jadn_type_defaults(self):
+        def st(typedef: list) -> list:
+            return self.tc.encode('Schema', {'types': [typedef]})['types'][0]
+
+        self.tc.set_mode(verbose_rec=True, verbose_str=True)
+        with self.assertRaises(ValueError):
+            self.assertListEqual(st(self.prim1), self.prim1)
+        self.assertListEqual(st(self.prim2), self.prim2)
+        self.assertListEqual(st(self.prim3), self.prim3)
+        self.assertListEqual(st(self.prim4), self.prim4)
+        self.assertListEqual(st(self.prim5), self.prim5)
+        with self.assertRaises(ValueError):
+            self.assertListEqual(self.tc.encode('Schema', st(self.prim6)), self.prim6)
+
+        with self.assertRaises(ValueError):
+            self.assertListEqual(st(self.enum1), self.enum1)
+        self.assertListEqual(st(self.enum2), self.enum2)
+        self.assertListEqual(st(self.enum3), self.enum3)
+        with self.assertRaises(ValueError):
+            self.assertListEqual(st(self.enum4), self.enum4)
 
 class BadSchema(TestCase):
     schema_bad_item_fields = {

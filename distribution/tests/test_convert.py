@@ -1,13 +1,13 @@
 """
 Test JADN Schema Conversions
-Conversions -> JADN to ...
+Convert JADN to/from: JIDL, HTML, Markdown
+Translate JADN to concrete schemas: JSON Schema, XSD, Protobuf, CDDL
 """
 import jadn
 import os
 import unittest
 
 
-# TODO: Read and Write JIDL and HTML, Write Markdown, JSON Schema, XSD
 dir_path = os.path.abspath(os.path.dirname(__file__))
 quickstart_schema = {
     'types': [
@@ -46,9 +46,9 @@ class BasicConvert:
         with open(os.path.join(dir_path, 'jadn-v2.0-examples-uni.jadn')) as fp:
             self._convert(jadn.load(fp))
 
-    # def test_6_examples_uni(self):
-    #    with open(os.path.join(dir_path, 'jadn-v2.0-features.jadn')) as fp:
-    #        self._convert(jadn.load(fp))
+    def test_6_inherit(self):
+        with open(os.path.join(dir_path, 'jadn-v2.0-inherit.jadn')) as fp:
+            self._convert(jadn.load(fp))
 
 
 class HtmlConvert(BasicConvert, unittest.TestCase):

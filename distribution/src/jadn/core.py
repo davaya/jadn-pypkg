@@ -113,8 +113,10 @@ def check(schema: dict) -> dict:
         # Ordinal indexes
         if type_def.CoreType in ('Array', 'Record'):
             if invalid := list_get_default([(f, n) for n, f in enumerate(fields, 1) if f[FieldID] != n], 0):
-                field, idx = invalid
-                raise_error(f'Item id error: {type_def.TypeName}({type_def.CoreType}) [{field[FieldName]}] -- {field[FieldID]} should be {idx}')
+                to = jadn.topts_s2d(type_def.TypeOptions)
+                if set(to) - {'extends', 'restricts'}:
+                    field, idx = invalid
+                    raise_error(f'Item id error: {type_def.TypeName}({type_def.CoreType}) [{field[FieldName]}] -- {field[FieldID]} should be {idx}')
 
         # Full Fields -> Array, Choice, Map, Record
         if flen > FieldDesc:  # Full field, not an Enumerated item
@@ -122,7 +124,7 @@ def check(schema: dict) -> dict:
                 fo, fto = jadn.ftopts_s2d(field.FieldOptions, field.FieldType)
                 minOccurs = fo.get('minOccurs', 1)
                 maxOccurs = fo.get('maxOccurs', 1)
-                if minOccurs < 0 or (maxOccurs >= 0 and maxOccurs < minOccurs):
+                if minOccurs < 0 or (maxOccurs > 0 and maxOccurs < minOccurs):
                     raise_error(f'{type_def.TypeName}.{field.FieldName} bad multiplicity {minOccurs} {maxOccurs}')
 
                 if tf := fo.get('tagid', None):

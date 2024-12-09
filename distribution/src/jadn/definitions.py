@@ -178,17 +178,18 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
     0x43: ('combine', lambda x: x, 18),       # 'C', Choice instance is a logical combination (anyOf, allOf, oneOf)
     0x61: ('abstract', lambda x: True, 19),   # 'a', Inheritance: abstract, non-instantiatable
     0x72: ('restricts', lambda x: x, 20),     # 'r', Inheritance: restriction - subset of referenced type
-    0x65: ('extends', lambda x: True, 21),    # 'e', Inheritance: extension - superset of referenced type
-    0x21: ('default', lambda x: x, 22),       # '!', Default or constant value of instances of this type
+    0x65: ('extends', lambda x: x, 21),    # 'e', Inheritance: extension - superset of referenced type
+    0x66: ('final', lambda x: True, 22),      # 'f', Inheritance: final - cannot have subtype
+    0x21: ('default', lambda x: x, 23),       # '!', Default value
 }
 
 FIELD_OPTIONS = {
-    0x5b: ('minOccurs', int, 23),             # '[', min cardinality, default = 1, 0 = field is optional
-    0x5d: ('maxOccurs', int, 24),             # ']', max cardinality, default = 1, <0 = inherited or none, not 1 = array
-    0x26: ('tagid', int, 25),                 # '&', field that specifies the type of this field
-    0x3c: ('dir', lambda x: True, 26),        # '<', pointer enumeration treats field as a collection
-    0x4b: ('key', lambda x: True, 27),        # 'K', field is a primary key for this type
-    0x4c: ('link', lambda x: True, 28),       # 'L', field is a link (foreign key) to an instance of FieldType
+    0x5b: ('minOccurs', int, 24),             # '[', min cardinality, default = 1, 0 = field is optional
+    0x5d: ('maxOccurs', int, 25),             # ']', max cardinality, default = 1, <0 = inherited or none, not 1 = array
+    0x26: ('tagid', int, 26),                 # '&', field that specifies the type of this field
+    0x3c: ('dir', lambda x: True, 27),        # '<', pointer enumeration treats field as a collection
+    0x4b: ('key', lambda x: True, 28),        # 'K', field is a primary key for this type
+    0x4c: ('link', lambda x: True, 29),       # 'L', field is a link (foreign key) to an instance of FieldType
 }
 
 OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD_OPTIONS
@@ -212,7 +213,8 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'combine':  chr(67),
     'abstract': chr(97),
     'restricts': chr(114),
-    'extends':  chr(120),
+    'extends':  chr(101),
+    'final': chr(102),
     'default':  chr(33),
     'minOccurs':    chr(91),
     'maxOccurs':    chr(93),
@@ -222,8 +224,8 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'link':     chr(76),
 }
 
-MAX_DEFAULT = -1            # maxOccurs sentinal value: Upper size limit defaults to JADN or package limit
-MAX_UNLIMITED = -2          # maxOccurs sentinal value: Upper size limit does not exist
+MAX_DEFAULT = -1            # maxOccurs sentinel value: Upper size limit defaults to JADN or package limit
+MAX_UNLIMITED = -2          # maxOccurs sentinel value: Upper size limit does not exist
 
 REQUIRED_TYPE_OPTIONS = {
     'Binary': [],
@@ -240,7 +242,7 @@ REQUIRED_TYPE_OPTIONS = {
     'Record': [],
 }
 
-ALLOWED_TYPE_OPTIONS_ALL = ['abstract', 'restricts', 'extends', 'default']
+ALLOWED_TYPE_OPTIONS_ALL = ['default', 'abstract', 'extends', 'restricts', 'final']
 
 ALLOWED_TYPE_OPTIONS = {
     'Binary': ['format', 'minLength', 'maxLength'],
