@@ -264,8 +264,8 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
     p_func = r'(?:\(([^)]+)\))?'                    # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
     p_rangepat = r'\{(.*)\}'                        # 4 'minLength', 'maxLength', 'pattern'
     p_format = r'\s+\/(\w[-\w]*)'                   # 5 'format'
-    p_flag = r'\s+(unique|set|unordered|sequence|abstract|final)'    # 6 flags
-    p_attr = r'\s+(restricts|extends):(.+)'
+    p_flag = r'\s+(unique|set|unordered|sequence|abstract|final)'    # 6 rest: flags
+    p_attr = r'\s+(restricts|extends)\((.+)\)'      # 6 rest: TODO: parse extends/restricts separately for better error
     pattern = fr'^{p_name}{p_id}{p_func}(.*?)\s*$'
     m = re.match(pattern, typestring)
     if m is None:
@@ -290,11 +290,11 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
                 topts.update({'pattern': m.group(1)})
             elif len(x := opt.split('..', maxsplit=1)) == 2:
                 a, b = x
-                if tname in ('Integer', 'Number'):  # TODO: switch to min/max Inclusive/Exclusive
+                if tname in ('Integer', 'Number'):
                     fn = {'Integer': int, 'Number': float}[tname]
                     topts.update({} if a == '*' else {'minInclusive': fn(a)})
                     topts.update({} if b == '*' else {'maxInclusive': fn(b)})
-                else:    # TODO: switch to min/max Length, apply vtype
+                else:
                     a = '*' if a != '*' and int(a) == 0 else a   # Default min size = 0
                     topts.update({} if a == '*' else {'minLength': int(a)})
                     topts.update({} if b == '*' else {'maxLength': int(b)})
@@ -321,7 +321,7 @@ def jadn2typestr(tname: str, topts: list[OPTION_TYPES]) -> str:
             return f'Pointer[{optv[1:]}]'
         return optv
 
-    # Size range (single-ended) - default is {0..*}
+    # Length range (single-ended) - default is {0..*}
     def _lrange(ops: dict) -> str:
         lo = ops.pop('minLength', 0)
         hi = ops.pop('maxLength', MAX_DEFAULT)
@@ -335,12 +335,6 @@ def jadn2typestr(tname: str, topts: list[OPTION_TYPES]) -> str:
         lox = opts.pop('minExclusive', '*')
         hix = opts.pop('maxExclusive', '*')
         return f'{{{lo}..{hi}}}' if lo != '*' or hi != '*' else ''
-
-    # Value range (double-ended) - default is {*..*}
-    def _frange(ops: dict) -> str:
-        lo = ops.pop('minf', '*')
-        hi = ops.pop('maxf', '*')
-        return f'{lo}..{hi}' if lo != '*' or hi != '*' else ''
 
     opts = topts_s2d(topts, tname)
     txt = '#' if opts.pop('id', None) else ''   # SIDE EFFECT: remove known options from opts.
@@ -375,7 +369,7 @@ def jadn2typestr(tname: str, topts: list[OPTION_TYPES]) -> str:
 
     for opt in ('extends', 'restricts'):
         if o := opts.pop(opt, None):
-            txt += f" {opt}:{o}"
+            txt += f" {opt}({o})"
 
     return f"{tname}{txt}{f' ?{opts}?' if opts else ''}"  # Flag unrecognized options
 
@@ -384,7 +378,7 @@ def multiplicity_str(opts: dict) -> str:
     lo = opts.get('minOccurs', 1)
     hi = opts.get('maxOccurs', 1)
     hs = '*' if hi <= MAX_DEFAULT else str(hi)
-    return f'{lo}..{hs}' if lo != 1 or hi != 1 else '1'
+    return f'{hi}' if 0 <= hi == lo else f'{lo}..{hs}'  # 0 <= hi and hi == lo
 
 
 def id_type(td: list) -> bool:    # True if FieldName is a label in description

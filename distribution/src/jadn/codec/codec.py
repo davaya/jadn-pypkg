@@ -138,16 +138,6 @@ def _check_range(ts: SymbolTableField, val):
     return val
 
 
-def _check_frange(ts: SymbolTableField, val):
-    op = ts.TypeOpts
-    tn = ts.TypeDef.TypeName
-    if 'minf' in op and val < op['minf']:
-        raise_error(f'{tn}: {val} < minimum {op["minf"]}')
-    if 'maxf' in op and val > op['maxf']:
-        raise_error(f'{tn}: {val} < maximum {op["maxf"]}')
-    return val
-
-
 def _check_size(ts: SymbolTableField, val):
     op = ts.TypeOpts
     tn = ts.TypeDef.TypeName

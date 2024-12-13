@@ -67,7 +67,9 @@ def jidl_dumps(schema: dict, style: dict = None) -> str:
                 fs = f'{fd[ItemID]:>{w["id"]}} {fname}'
                 wf = w['id'] + w['name'] + 2
             else:
-                fdef += '' if fmult == '1' else ' optional' if fmult == '0..1' else ' [' + fmult + ']'
+                fdef += '' if fmult == '1' \
+                    else ' optional' if fmult == '0..1' \
+                    else ' [' + fmult + ']'
                 fdesc = ' // ' + fdesc if fdesc else ''
                 wn = 0 if idt else w['name']
                 fs = f'{fd[FieldID]:>{w["id"]}} {fname:<{wn}} {fdef}'

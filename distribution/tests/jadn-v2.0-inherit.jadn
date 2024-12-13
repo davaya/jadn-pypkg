@@ -2,40 +2,51 @@
   "meta": {
     "package": "http://example.com/jadn-2.0",
     "description": "Test type inheritance options: extends, restricts, abstract, final",
-    "roots": ["Base"]
+    "roots": ["Class1", "Class2", "Class3"]
   },
 
   "types": [
-    ["Base", "Record", ["a"], "Abstract type, cannot be instantiated", [
+    ["Class1", "Record", ["a"], "Abstract type, cannot be instantiated", [
       [1, "id", "Integer", ["K"], "Primary key"],
       [2, "name", "String", ["[0"], ""]
     ]],
 
-    ["Base2", "Record", ["f"], "Final type, cannot be extended or restricted", [
+    ["Class2", "Record", ["f"], "Final type, cannot be extended or restricted", [
       [1, "id", "Integer", ["K"], "Primary key"],
       [2, "name", "String", ["[0"], ""]
     ]],
 
-    ["Base3", "Record", ["a", "f"], "Abstract final type: Error - cannot be instantiated or extended", [
+    ["Class3", "Record", ["a", "f"], "Abstract final type: Error - cannot be instantiated or extended", [
       [1, "id", "Integer", ["K"], "Primary key"],
       [2, "name", "String", ["[0"], ""]
     ]],
 
-    ["Person", "Record", ["eBase"], "Add new field", [
+    ["Person1", "Record", ["eClass1"], "Add new field", [
       [1, "email", "String", ["/email"], ""]
     ]],
 
-    ["Building1", "Record", ["rBase"], "Remove optional field", [
-      [2, "name", "String", ["]0"], "max cardinality 0 - removed"]
+    ["Person2", "Record", ["a", "eClass1"], "Add new field to make abstract type", [
+      [1, "email", "String", ["/email"], ""]
     ]],
 
-    ["Building2", "Record", ["rBase"], "Error - remove required field", [
-      [1, "id", "Integer", ["]0"], "cannot be both required and not allowed"]
+    ["Person3", "Record", ["eClass2"], "Err - can't extend final type", [
+      [1, "email", "String", ["/email"], ""]
     ]],
 
-    ["Building3", "Record", ["rBase"], "Error - restrictions cannot add new fields", [
-      [2, "name", "String", ["]0"], "not allowed"],
-      [3, "building_id", "String", [], ""]
+    ["Person4", "Record", ["eClass1"], "Err - extend cannot remove fields", [
+      [2, "name", "String", ["[0", "]0"], "max cardinality 0 - remove"]    ]],
+
+    ["Building1", "Record", ["rClass1"], "Remove optional field", [
+      [2, "name", "String", ["[0", "]0"], "max cardinality 0 - removed"]
+    ]],
+
+    ["Building2", "Record", ["rClass1"], "Error - remove required field", [
+      [1, "id", "Integer", ["[0", "]0"], "cannot be both required and not allowed"]
+    ]],
+
+    ["Building3", "Record", ["rClass1"], "Error - restrictions cannot add new fields", [
+      [2, "name", "String", ["[0","]0"], "not allowed"],
+      [3, "addr", "String", [], ""]
     ]]
   ]
 }
