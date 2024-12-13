@@ -1,0 +1,44 @@
+// JIDL ABNF Grammar
+
+start: schema
+schema: META? TYPE_DEF+
+
+META:       META_ITEM+
+META_ITEM:  "Foo: bar"
+
+SYS:        "."
+TYPE_NAME:  /[A-Z][-.A-Za-z0-9]{0,63}/   // Includes SYS
+FIELD_NAME: /[a-z][_A-Za-z0-9]{0,63}/
+NSID:       /([A-Za-z][A-Za-z0-9]{0,7})?/
+TYPE_REF:   (NSID ":")? TYPE_NAME
+
+TYPE_DEF: TYPE_NAME "="
+    | "Binary"  BINARY_OPTS DESC
+    | "Boolean" BOOLEAN_OPTS DESC
+    | "Integer" INTEGER_OPTS DESC
+    | "Number"  NUMBER_OPTS DESC
+    | "String"  STRING_OPTS DESC
+    | "ArrayOf" ARRAYOF_OPTS DESC
+    | "MapOf"   MAPOF_OPTS DESC
+    | "Array"   ARRAY_OPTS DESC FIELD*
+    | "Map"     MAP_OPTS DESC FIELD*
+    | "Record"  RECORD_OPTS DESC FIELD*
+    | "Enumerated" ENUMERATED_OPTS DESC ITEM*
+    | "Choice"  CHOICE_OPTS DESC FIELD*
+
+BINARY_OPTS:    "@"
+BOOLEAN_OPTS:   "@"
+INTEGER_OPTS:   "@"
+NUMBER_OPTS:    "@"
+STRING_OPTS:    "@"
+ARRAYOF_OPTS:   "@"
+MAPOF_OPTS:     "@"
+ARRAY_OPTS:     "@"
+MAP_OPTS:       "@"
+RECORD_OPTS:    "@"
+ENUMERATED_OPTS: "@"
+CHOICE_OPTS:    "@"
+
+DESC:       "//"
+FIELD:      "$" DESC
+ITEM:       "%" DESC
