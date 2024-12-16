@@ -1,44 +1,66 @@
 // JIDL ABNF Grammar
 
 start: schema
-schema: META? TYPE_DEF+
+schema: meta? type+
 
-META:       META_ITEM+
-META_ITEM:  "Foo: bar"
+meta:       meta_item+
+meta_item:  "Foo: bar"
 
+type: TYPE_NAME "=" tdef
+
+tdef:
+    | BINARY    binary_opts desc?
+    | BOOLEAN   boolean_opts desc?
+    | INTEGER   integer_opts desc?
+    | NUMBER    number_opts desc?
+    | STRING    string_opts desc?
+    | ARRAYOF   arrayof_opts desc?
+    | MAPOF     mapof_opts desc?
+    | ARRAY     array_opts desc? field*
+    | MAP       map_opts desc? field*
+    | RECORD    record_opts desc? field*
+    | ENUMERATED enumerated_opts desc item*
+    | CHOICE    choice_opts desc? field*
+
+BINARY:         "Binary"
+binary_opts:    common_opts
+BOOLEAN:        "Boolean"
+boolean_opts:   common_opts
+INTEGER:        "Integer"
+integer_opts:   common_opts
+NUMBER:         "Number"
+number_opts:    common_opts
+STRING:         "String"
+string_opts:    common_opts
+ARRAYOF:        "ArrayOf"
+arrayof_opts:   common_opts
+MAPOF:          "MapOf"
+mapof_opts:     common_opts
+ARRAY:          "Array"
+array_opts:     common_opts
+MAP:            "Map"
+map_opts:       common_opts
+RECORD:         "Record"
+record_opts:    common_opts
+ENUMERATED:     "Enumerated"
+enumerated_opts: common_opts
+CHOICE:         "Choice"
+choice_opts:    common_opts
+
+common_opts:    "abstract"
+                | "final"
+
+field:      FIELD_ID FIELD_NAME type_ref desc?
+item:       FIELD_ID VALUE desc?
+type_ref:   (NSID ":")? TYPE_NAME
+desc:       "//" (FIELD_NAME "::")? /.+/?
+
+FIELD_ID:   /\d+/
+VALUE:      /.+/
 SYS:        "."
 TYPE_NAME:  /[A-Z][-.A-Za-z0-9]{0,63}/   // Includes SYS
 FIELD_NAME: /[a-z][_A-Za-z0-9]{0,63}/
-NSID:       /([A-Za-z][A-Za-z0-9]{0,7})?/
-TYPE_REF:   (NSID ":")? TYPE_NAME
+NSID:       /[A-Za-z][A-Za-z0-9]{0,7}/
 
-TYPE_DEF: TYPE_NAME "="
-    | "Binary"  BINARY_OPTS DESC
-    | "Boolean" BOOLEAN_OPTS DESC
-    | "Integer" INTEGER_OPTS DESC
-    | "Number"  NUMBER_OPTS DESC
-    | "String"  STRING_OPTS DESC
-    | "ArrayOf" ARRAYOF_OPTS DESC
-    | "MapOf"   MAPOF_OPTS DESC
-    | "Array"   ARRAY_OPTS DESC FIELD*
-    | "Map"     MAP_OPTS DESC FIELD*
-    | "Record"  RECORD_OPTS DESC FIELD*
-    | "Enumerated" ENUMERATED_OPTS DESC ITEM*
-    | "Choice"  CHOICE_OPTS DESC FIELD*
-
-BINARY_OPTS:    "@"
-BOOLEAN_OPTS:   "@"
-INTEGER_OPTS:   "@"
-NUMBER_OPTS:    "@"
-STRING_OPTS:    "@"
-ARRAYOF_OPTS:   "@"
-MAPOF_OPTS:     "@"
-ARRAY_OPTS:     "@"
-MAP_OPTS:       "@"
-RECORD_OPTS:    "@"
-ENUMERATED_OPTS: "@"
-CHOICE_OPTS:    "@"
-
-DESC:       "//"
-FIELD:      "$" DESC
-ITEM:       "%" DESC
+%ignore WS
+%import common.WS
