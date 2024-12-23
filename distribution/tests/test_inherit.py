@@ -14,10 +14,29 @@ class Inherit(unittest.TestCase):
         if sa['undefined']:
             print('Warning - undefined:', sa['undefined'])
         self.codec = jadn.codec.Codec(self.schema, verbose_rec=True, verbose_str=True)
+    """
+    JADN DataTypes with inheritance options. Errors in schema (marked ERR) or messages:
+    
+    Class1 - abstract id, name?
+    Class2 - final id, name?
+    Class3 - abstract, final id, name?
+    Person1 - eClass1 +email
+    Person2 - abstract, eClass1 +email
+    Person3 - ERR eClass2
+    Person4 - ERR eClass1 -email
+    Person5 - ePerson1 +phone?
+    Person6 - ERR ePerson1 +name
+    Person7 - rPerson1 +name
+    Building1 - rClass1 -name
+    Building2 - ERR rClass1 -id
+    Building3 - ERR rClass1 -name +addr
+    """
 
     c1 = {'id': 42, 'name': 'Fred'}
     p1 = {'id': 42, 'email': 'fred@example.com'}
     p2 = {'id': 42, 'name': 'Fred', 'email': 'fred@example.com'}
+    p3 = {'id': 42, 'email': 'fred@example.com'}
+    p4 = {'id': 42, 'name': 'Fred', 'email': 'fred@example.com', 'phone': '010-555-1234'}
     b1 = {'id': 42}
     b2 = {}
     b3 = {'id': 42, 'addr': "Spring Street"}
@@ -39,6 +58,9 @@ class Inherit(unittest.TestCase):
         self.assertEqual(self.codec.encode('Person2', self.c1), self.c1)  # OK
         self.assertEqual(self.codec.encode('Person2', self.p1), self.p1)  # OK
         self.assertEqual(self.codec.encode('Person2', self.p2), self.p2)  # OK
+        self.assertEqual(self.codec.encode('Person5', self.p4), self.p4)  # OK
+        self.assertEqual(self.codec.encode('Person5', self.p1), self.p1)  # OK
+        self.assertEqual(self.codec.encode('Person7', self.p3), self.p3)  # OK
 
     def test_restrict(self):
         self.assertEqual(self.codec.encode('Building1', self.b1), self.b1)  # OK

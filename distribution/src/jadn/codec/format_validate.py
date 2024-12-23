@@ -9,7 +9,7 @@ ValidationFunction = Callable[[Any], Any]
 FormatTable = Dict[str, Dict[str, ValidationFunction]]
 
 
-def _format_ok(val: Any) -> bool:
+def _format_ok(val: Any=None, fmt: str=None) -> bool:
     return True
 
 
@@ -20,6 +20,8 @@ def get_format_validate_function(format_table: FormatTable, base_type: str, form
     try:
         return format_table[base_type][format_kw]
     except KeyError:
+        if format_table[base_type].get(kw := format_kw[0] + '#', None):
+            return format_table[base_type][kw]
         if format_kw in FORMAT_SERIALIZE:
             return _format_ok           # no value constraints on this keyword
         raise ValueError(f'Unknown format {format_kw}')
@@ -27,7 +29,7 @@ def get_format_validate_function(format_table: FormatTable, base_type: str, form
 
 # Regex from https://stackoverflow.com/questions/201323/how-to-validate-an-email-address-using-a-regular-expression
 #   A more comprehensive email address validator is available at http://isemail.info/about
-def s_email(sval: str) -> str:
+def s_email(sval: str, fmt: str='') -> str:
     if not isinstance(sval, type('')):
         raise TypeError
     rfc5322_re = (
@@ -42,7 +44,7 @@ def s_email(sval: str) -> str:
 
 
 # From https://stackoverflow.com/questions/2532053/validate-a-hostname-string
-def s_hostname(sval: str) -> str:
+def s_hostname(sval: str, fmt: str='') -> str:
     if not isinstance(sval, type('')):
         raise TypeError
     hostname = sval[:]      # Copy since we're modifying input
@@ -64,15 +66,15 @@ def val_binary(bval: bytes, condition: Callable) -> bytes:
     raise ValueError
 
 
-def b_mac_addr(bval: bytes) -> bytes:       # Length of MAC addr must be 48 or 64 bits
+def b_mac_addr(bval: bytes, fmt: str='') -> bytes:       # Length of MAC addr must be 48 or 64 bits
     return val_binary(bval, lambda x: len(x) == 6 or len(x) == 8)
 
 
-def b_uuid(bval: bytes) -> bytes:           # UUID is 128 bits
+def b_uuid(bval: bytes, fmt: str='') -> bytes:           # UUID is 128 bits
     return val_binary(bval, lambda x: len(x) == 16)
 
 
-def a_tag_uuid(aval: [str, bytes]) -> [str, bytes]:
+def a_tag_uuid(aval: [str, bytes], fmt: str='') -> [str, bytes]:
     if (    len(aval) == 2 and
             isinstance(aval[0], str) and
             isinstance(aval[1], bytes) and
@@ -81,11 +83,11 @@ def a_tag_uuid(aval: [str, bytes]) -> [str, bytes]:
     raise TypeError
 
 
-def b_ipv4_addr(bval: bytes) -> bytes:      # IPv4 address
+def b_ipv4_addr(bval: bytes, fmt: str='') -> bytes:      # IPv4 address
     return val_binary(bval, lambda x: len(x) == 4)
 
 
-def b_ipv6_addr(bval: bytes) -> bytes:      # IPv4 address
+def b_ipv6_addr(bval: bytes, fmt: str='') -> bytes:      # IPv4 address
     return val_binary(bval, lambda x: len(x) == 16)
 
 
@@ -97,11 +99,11 @@ def _ipnet(aval: [bytes, int], condition: Callable[[list], bool]) -> [bytes, int
     raise ValueError
 
 
-def a_ipv4_net(aval: [bytes, int]) -> [bytes, int]:       # IPv4 address and netmask
+def a_ipv4_net(aval: [bytes, int], fmt: str='') -> [bytes, int]:       # IPv4 address and netmask
     return _ipnet(aval, lambda x: len(x[0]) == 4 and 0 <= x[1] <= 32)
 
 
-def a_ipv6_net(aval: [bytes, int]) -> [bytes, int]:       # IPv6 address and netmask
+def a_ipv6_net(aval: [bytes, int], fmt: str='') -> [bytes, int]:       # IPv6 address and netmask
     return _ipnet(aval, lambda x: len(x[0]) == 16 and 0 <= x[1] <= 128)
 
 
@@ -113,20 +115,19 @@ def val_int(ival: int, condition: Callable[[int], bool]) -> int:
     raise ValueError
 
 
-def i_i8(ival: int) -> int:
-    return val_int(ival, lambda x: -2**7 <= x < 2**7)
+def i_signed(ival: int, fmt: str) -> int:
+    n = int(fmt[1:])
+    return val_int(ival, lambda x: -(2**(n-1)) <= x < 2**(n-1))
 
 
-def i_i16(ival: int) -> int:
-    return val_int(ival, lambda x: -2**15 <= x < 2**15)
+def i_unsigned(ival: int, fmt: str) -> int:
+    n = int(fmt[1:])
+    return val_int(ival, lambda x: 0 <= x < 2**n)
 
 
-def i_i32(ival: int) -> int:
-    return val_int(ival, lambda x: -2**31 <= x < 2**31)
-
-
-def i_i64(ival: int) -> int:
-    return val_int(ival, lambda x: -2**63 <= x < 2**63)
+def n_754(ival: float, fmt: str) -> float:
+    n = int(fmt[1:])
+    return True     # TODO: check significand and exponent against IEEE 754 ranges for n-bit float
 
 
 # Semantic validation functions
@@ -147,10 +148,11 @@ FORMAT_VALIDATE_FUNCTIONS = {
         'tag-uuid': a_tag_uuid,
     },
     'Integer': {
-        'i8': i_i8,
-        'i16': i_i16,
-        'i32': i_i32,
-        'i64': i_i64,
+        'i#': i_signed,
+        'u#': i_unsigned,
+    },
+    'Number': {
+        'f#': n_754,
     }
 }
 
@@ -165,7 +167,7 @@ FORMAT_VALIDATE_FUNCTIONS = {
 def format_validators() -> FormatTable:  # Generate validation function table
     # Create a closure for a JSON Schema format keyword
     def make_jsonschema_validator(format_kw: str) -> Callable[[str], str]:
-        def validate(val: str) -> str:
+        def validate(val: str, fmt: str='') -> str:
             try:
                 jsonschema.validate(
                     instance=val,

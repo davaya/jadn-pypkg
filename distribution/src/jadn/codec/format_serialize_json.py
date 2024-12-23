@@ -163,32 +163,29 @@ FORMAT_CONVERT_MULTIPART_FUNCTIONS = {
 }
 
 
-def int2datems(dt: int) -> str:
+def int2date_ms(dt: int) -> str:
     y = datetime.isoformat(datetime.fromtimestamp(dt/1000., timezone.utc))
     if m := re.match(r'^(.+)(\.\d\d\d)(\d\d\d)(.+)$', y):   # strip microseconds to milliseconds
         y = m.group(1) + m.group(2) + m.group(4)
     return y
 
 
-def datems2int(dts: str) -> int:
+def date_ms2int(dts: str) -> int:
     x = datetime.fromisoformat(dts.upper().replace('Z', '+00:00').replace(' ', 'T'))
     return int(1000 * datetime.timestamp(x))
 
 
 # No special sized integer serialization in JSON.  Define these for packed encoding.
 FORMAT_CONVERT_INTEGER_FUNCTIONS = {
-    'datetime-ms': (int2datems, datems2int),      # RFC 3339 milliseconds from epoch
-    'i8': (_format_pass, _format_pass),
-    'i16': (_format_pass, _format_pass),
-    'i32': (_format_pass, _format_pass),
-    'i64': (_format_pass, _format_pass)
+    'datetime-ms': (int2date_ms, date_ms2int),      # RFC 3339 milliseconds from epoch
+    'i#': (_format_pass, _format_pass),
+    'u#': (_format_pass, _format_pass),
+    'd#': (_format_pass, _format_pass)
 }
 
 # No special serialization in JSON. Define these for CBOR encoding.
 FORMAT_CONVERT_NUMBER_FUNCTIONS = {
-    'f16': (_format_pass, _format_pass),
-    'f32': (_format_pass, _format_pass),
-    'f64': (_format_pass, _format_pass)
+    'f#': (_format_pass, _format_pass)
 }
 
 

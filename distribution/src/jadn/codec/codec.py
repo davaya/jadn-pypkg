@@ -93,19 +93,21 @@ def _check_type(ts: SymbolTableField, val: Any, vtype: type, fail=False) -> None
 
 
 def _format_encode(ts: SymbolTableField, val: Any) -> Any:
+    fmt = ts.TypeOpts.get('format', None)
     try:
-        ts.FormatValidate(val)
+        ts.FormatValidate(val, fmt)
     except ValueError:
-        raise_error(f'{ts.TypeDef.TypeName}: {val} is not format "{ts.TypeOpts["format"]}"')
+        raise_error(f'{ts.TypeDef.TypeName}: {val} is not format "{fmt}"')
     return ts.FormatEncode(val)
 
 
 def _format_decode(ts: SymbolTableField, val: Any) -> Any:
     aval = ts.FormatDecode(val)
+    fmt = ts.TypeOpts.get('format', None)
     try:
-        ts.FormatValidate(aval)
+        ts.FormatValidate(aval, fmt) if fmt else ts.FormatValidate(val)
     except ValueError:
-        raise_error(f'{ts.TypeDef.TypeName}: {val} is not format "{ts.TypeOpts["format"]}"')
+        raise_error(f'{ts.TypeDef.TypeName}: {val} is not format "{fmt}"')
     return aval
 
 

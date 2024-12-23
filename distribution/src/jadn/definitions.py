@@ -178,7 +178,7 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
     0x43: ('combine', lambda x: x, 18),       # 'C', Choice instance is a logical combination (anyOf, allOf, oneOf)
     0x61: ('abstract', lambda x: True, 19),   # 'a', Inheritance: abstract, non-instantiatable
     0x72: ('restricts', lambda x: x, 20),     # 'r', Inheritance: restriction - subset of referenced type
-    0x65: ('extends', lambda x: x, 21),    # 'e', Inheritance: extension - superset of referenced type
+    0x65: ('extends', lambda x: x, 21),       # 'e', Inheritance: extension - superset of referenced type
     0x66: ('final', lambda x: True, 22),      # 'f', Inheritance: final - cannot have subtype
     0x21: ('default', lambda x: x, 23),       # '!', Default value
 }
@@ -292,16 +292,14 @@ FORMAT_VALIDATE = {         # Semantic validation formats defined by JADN
     'ipv6-addr': 'Binary',      # IPv6 address as specified in RFC 8200 Section 3
     'ipv4-net': 'Array',        # Binary IPv4 address and Integer prefix length, RFC 4632 Section 3.1
     'ipv6-net': 'Array',        # Binary IPv6 address and Integer prefix length, RFC 4291 Section 2.3
-    'i8': 'Integer',            # Signed 8 bit integer [-128 .. 127]
-    'i16': 'Integer',           # Signed 16 bit integer [-32768 .. 32767]
-    'i32': 'Integer',           # Signed 32 bit integer [-2147483648 .. 2147483647]
-    'i64': 'Integer',           # Signed 64 bit integer [-2^63 .. 2^63 -1]
-    # 'u#': 'Integer',            # Unsigned '#'-bit integer or bit field where #>0, [0 .. 2^# -1]
+    'i#': 'Integer',            # #-bit signed integer, range [-2^(#-1) .. 2^(#-1)-1]
+    'u#': 'Integer',            # #-bit field or unsigned integer, range = [0 .. 2^#-1]
+    'f#': 'Number',             # #-bit float, significand and exponent ranges as defined in IEEE 754
 }
 
 FORMAT_SERIALIZE = {        # Data representation formats for one or more serializations
     'eui': 'Binary',            # IEEE EUI, 'hex-byte-colon' text representation, (e.g., 00:1B:44:11:3A:B7)
-    'uuid': 'Binary',           # RFC 4122 UUID with text, (e.g., e81415a7-4c8d-45cd-a658-6b51b7a8f45d)
+    'uuid': 'Binary',           # RFC 4122 UUID text representation, (e.g., e81415a7-4c8d-45cd-a658-6b51b7a8f45d)
     'tag-uuid': 'Array',        # UUID with prefixed tag, (e.g., action-e81415a7-4c8d-45cd-a658-6b51b7a8f45d)
     'ipv4-addr': 'Binary',      # IPv4 'dotted-quad' text representation, RFC 2673 Section 3.2
     'ipv6-addr': 'Binary',      # IPv6 text representation, RFC 4291 Section 2.2
@@ -310,15 +308,11 @@ FORMAT_SERIALIZE = {        # Data representation formats for one or more serial
     'b': 'Binary',              # Base64url - RFC 4648 Section 5 (default text representation of Binary type)
     'x': 'Binary',              # Hex - base16 - lowercase out, case-folding in
     'X': 'Binary',              # Hex - RFC 4648 Section 8 - uppercase only
-    'datetime-ms': 'Integer',   # Milliseconds from the epoch, RFC 3339 date-time text representation
-    'i8': 'Integer',            # 8 bit field - these affect packed (RFC 791 style) serializations
-    'i16': 'Integer',           # 16 bit field
-    'i32': 'Integer',           # 32 bit field
-    'i64': 'Integer',           # 64 bit field
-    # 'u#': 'Integer',            # #-bit field
-    'f16': 'Number',            # IEEE 754 Half-Precision Float - these affect CBOR serialization
-    'f32': 'Number',            # IEEE 754 Single-Precision Float
-    'f64': 'Number',            # IEEE 754 Double-Precision Float (default binary representation of Number type)
+    'datetime-ms': 'Integer',       # remove
+    'i#': 'Integer',            # n-bit signed integer, n should be 8*2^N (8, 16, 32, 64, ...)
+    'u#': 'Integer',            # n-bit field or unsigned integer
+    'd#': 'Integer',            # n-digit fixed precision integer scale = 10^n (1=deci, 2=centi, 3=milli, ...)
+    'f#': 'Number',             # n-bit IEEE 754 Float (16=half precision, 32=single, 64=double, 128=quad, ...)
 }
 
 VALID_FORMATS = {**FORMAT_JS_VALIDATE, **FORMAT_VALIDATE, **FORMAT_SERIALIZE}
@@ -328,10 +322,10 @@ DEFAULT_CONFIG = {          # Configuration values to use if not specified in sc
     '$MaxString': 255,          # Maximum number of characters for String types
     '$MaxElements': 255,        # Maximum number of items/properties for container types
     '$Sys': '.',                # System reserved character for TypeName
-    '$TypeName': '^[A-Z][-.A-Za-z0-9]{0,63}$',     # Type Name regex
-    '$FieldName': '^[a-z][_A-Za-z0-9]{0,63}$',     # Field Name regex
+    '$TypeName': '^[A-Z][-.A-Za-z0-9]{0,63}$',     # Type Name regex, must include $Sys
+    '$FieldName': '^[a-z][_A-Za-z0-9]{0,63}$',     # Field Name regex, must exclude $Sys
     '$NSID': '^([A-Za-z][A-Za-z0-9]{0,7})?$',      # Namespace ID regex
-    '$TypeRef': '^$'            # Placeholder.  Actual pattern is ($NSID ':')? $TypeName
+    '$TypeRef': '^$'            # Placeholder for derived pattern ($NSID ':')? $TypeName
 }
 
 EXTENSIONS = {

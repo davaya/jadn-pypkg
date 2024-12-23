@@ -22,19 +22,32 @@
     ]],
 
     ["Person1", "Record", ["eClass1"], "Add new field", [
-      [1, "email", "String", ["/email"], ""]
+      [3, "email", "String", ["/email"], "Required email address"]
     ]],
 
     ["Person2", "Record", ["a", "eClass1"], "Add new field to make abstract type", [
-      [1, "email", "String", ["/email"], ""]
+      [3, "email", "String", ["/email"], ""]
     ]],
 
     ["Person3", "Record", ["eClass2"], "Err - can't extend final type", [
-      [1, "email", "String", ["/email"], ""]
+      [3, "email", "String", ["/email"], ""]
     ]],
 
     ["Person4", "Record", ["eClass1"], "Err - extend cannot remove fields", [
-      [2, "name", "String", ["[0", "]0"], "max cardinality 0 - remove"]    ]],
+      [2, "name", "String", ["[0", "]0"], "max cardinality 0 - remove"]
+    ]],
+
+    ["Person5", "Record", ["ePerson1"], "Second level", [
+      [4, "phone", "String", ["[0"], "Optional phone number"]
+    ]],
+
+    ["Person6", "Record", ["ePerson1"], "Err - extension can't restrict", [
+      [2, "name", "String", ["[1"], "Require name"]
+    ]],
+
+    ["Person7", "Record", ["rPerson1"], "Make optional field required", [
+      [2, "name", "String", ["[1"], "Require name"]
+    ]],
 
     ["Building1", "Record", ["rClass1"], "Remove optional field", [
       [2, "name", "String", ["[0", "]0"], "max cardinality 0 - removed"]
@@ -45,7 +58,7 @@
     ]],
 
     ["Building3", "Record", ["rClass1"], "Error - restrictions cannot add new fields", [
-      [2, "name", "String", ["[0","]0"], "not allowed"],
+      [2, "name", "String", ["[0","]0"], "remove optional field"],
       [3, "addr", "String", [], ""]
     ]]
   ]

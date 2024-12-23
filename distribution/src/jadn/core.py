@@ -5,6 +5,7 @@ import json
 import jsonschema
 import numbers
 import os
+import re
 import jadn
 
 from datetime import datetime
@@ -43,7 +44,9 @@ def check_typeopts(type_name: str, base_type: str, topts: dict) -> None:
 
     # TODO: if format defines array, add minLength/maxLength (prevents adding default max)
     if fmt := topts.get('format'):
-        if fmt not in VALID_FORMATS or base_type != VALID_FORMATS[fmt]:
+        if m := re.match(r'^([iudf])(\d+)$', fmt):
+            pass    # bit/digit count formats OK  TODO: auto-align with definitions
+        elif fmt not in VALID_FORMATS or base_type != VALID_FORMATS[fmt]:
             raise_error(f'Unsupported format {fmt} in {type_name} {base_type}')
     if 'enum' in topts and 'pointer' in topts:
         raise_error(f'Type cannot be both Enum and Pointer {type_name} {base_type}')
@@ -114,7 +117,7 @@ def check(schema: dict) -> dict:
         if type_def.CoreType in ('Array', 'Record'):
             if invalid := list_get_default([(f, n) for n, f in enumerate(fields, 1) if f[FieldID] != n], 0):
                 to = jadn.topts_s2d(type_def.TypeOptions)
-                if set(to) - {'extends', 'restricts'}:
+                if 'extends' not in to and 'restricts' not in to:
                     field, idx = invalid
                     raise_error(f'Item id error: {type_def.TypeName}({type_def.CoreType}) [{field[FieldName]}] -- {field[FieldID]} should be {idx}')
 
@@ -124,7 +127,7 @@ def check(schema: dict) -> dict:
                 fo, fto = jadn.ftopts_s2d(field.FieldOptions, field.FieldType)
                 minOccurs = fo.get('minOccurs', 1)
                 maxOccurs = fo.get('maxOccurs', 1)
-                if minOccurs < 0 or (maxOccurs > 0 and maxOccurs < minOccurs):
+                if minOccurs < 0 or (0 < maxOccurs < minOccurs):
                     raise_error(f'{type_def.TypeName}.{field.FieldName} bad multiplicity {minOccurs} {maxOccurs}')
 
                 if tf := fo.get('tagid', None):
