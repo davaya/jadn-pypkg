@@ -159,6 +159,8 @@ def topts_s2d(olist: Union[list[OPTION_TYPES], tuple[OPTION_TYPES, ...]], typena
     for o in topts:
         k, v, _ = TYPE_OPTIONS[ord(o[0])]
         t = v if v else ptype
+        if t is None:
+            raise_error(f"Invalid type option for {typename}: {k}={o[1:]}")
         opts[k] = t(o[1:])
     return opts
 
