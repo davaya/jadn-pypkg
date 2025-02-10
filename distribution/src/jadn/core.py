@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any, TextIO, Union
 from urllib.parse import urlparse
 from .definitions import (
-    TypeName, FieldID, FieldName, FieldType, FieldDesc, FIELD_LENGTH,
+    TypeName, FieldID, FieldName, FieldType, FieldDesc, Fields, FIELD_LENGTH,
     OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS_ALL,
     VALID_FORMATS, is_builtin, has_fields
 )
@@ -73,29 +73,31 @@ def check(schema: dict) -> dict:
 
     # Additional checks not included in schema
     types = {}
-    for type_def in schema_types:
+    for td in schema_types:
         collisions = []
-        if type_def.TypeName in types:
-            collisions.append(type_def.TypeName)
+        if td.TypeName in types:
+            collisions.append(td.TypeName)
         if collisions:
             raise_error(f'Colliding type definitions {collisions}')
-        types[type_def.TypeName] = type_def
-        if is_builtin(type_def.TypeName):
-            raise_error(f'Reserved type name {type_def.TypeName}')
-        if not is_builtin(type_def.CoreType):
-            raise_error(f'Invalid base type {type_def.TypeName}: {type_def.CoreType}')
-        type_opts = jadn.topts_s2d(type_def.TypeOptions, type_def.CoreType)
-        check_typeopts(type_def.TypeName, type_def.CoreType, type_opts)
+        types[td.TypeName] = td
+        if is_builtin(td.TypeName):
+            raise_error(f'Reserved type name {td.TypeName}')
+        if not is_builtin(td.CoreType):
+            raise_error(f'Invalid base type {td.TypeName}: {td.CoreType}')
+        type_opts = jadn.topts_s2d(td.TypeOptions, td.CoreType)
+        check_typeopts(td.TypeName, td.CoreType, type_opts)
 
         # Check fields
-        fields = type_def.Fields
+        fields = td.Fields
         # Defined fields if there shouldn't be any
         if ('enum' in type_opts or 'pointer' in type_opts) and fields:
-            raise_error(f'{type_def.TypeName}({type_def.CoreType}) should not have defined fields with the option enum/pointer')
+            raise_error(f'{td.TypeName}({td.CoreType}) should not have defined fields with the option enum/pointer')
         # Invalid anonymous field types
         for fd in fields:
+            fdefault = [None, None, ''] if td.CoreType == 'Enumerated' else [None, None, None, [], '']
+            fd[:len(fd)] += fdefault[len(fd):]
             if has_fields(fd[FieldType]):
-                raise_error(f'{type_def[TypeName]}/{fd[FieldName]}({fd[FieldID]}): Invalid type "{fd[FieldType]}"')
+                raise_error(f'{td[TypeName]}/{fd[FieldName]}({fd[FieldID]}): Invalid type "{fd[FieldType]}"')
 
         # Duplicates
         def duplicates(seq):
@@ -103,23 +105,23 @@ def check(schema: dict) -> dict:
             return set(x for x in seq if x in seen or seen.add(x))
 
         if dd := duplicates((f[FieldID] for f in fields)):
-            raise_error(f'Duplicate fieldID: {type_def.TypeName} {dd}')
+            raise_error(f'Duplicate fieldID: {td.TypeName} {dd}')
         if dd := duplicates((f[FieldName] for f in fields)):
-            raise_error(f'Duplicate field name {type_def.TypeName} {dd}')
+            raise_error(f'Duplicate field name {td.TypeName} {dd}')
 
-        # Invalid definitions of field
-        flen = FIELD_LENGTH[type_def.CoreType]  # Field item count
+        # Invalid definitions of field - TODO: delete: schema checks field length, defaults are filled
+        flen = FIELD_LENGTH[td.CoreType]  # Field item count
         if invalid := list_get_default([f for f in fields if len(f) != flen], 0):
-            raise_error(f'Bad field id=`{invalid[FieldID]}` in {type_def.TypeName} length, {len(invalid)} should be {flen}')
+            raise_error(f'Bad field {td.TypeName}.{invalid[FieldID]}: length {len(invalid)} should be {flen}')
 
         # Specific checks
         # Ordinal indexes
-        if type_def.CoreType in ('Array', 'Record'):
+        if td.CoreType in ('Array', 'Record'):
             if invalid := list_get_default([(f, n) for n, f in enumerate(fields, 1) if f[FieldID] != n], 0):
-                to = jadn.topts_s2d(type_def.TypeOptions)
+                to = jadn.topts_s2d(td.TypeOptions)
                 if 'extends' not in to and 'restricts' not in to:
                     field, idx = invalid
-                    raise_error(f'Item id error: {type_def.TypeName}({type_def.CoreType}) [{field[FieldName]}] -- {field[FieldID]} should be {idx}')
+                    raise_error(f'Item id error: {td.TypeName}({td.CoreType}) [{field[FieldName]}] -- {field[FieldID]} should be {idx}')
 
         # Full Fields -> Array, Choice, Map, Record
         if flen > FieldDesc:  # Full field, not an Enumerated item
@@ -128,21 +130,22 @@ def check(schema: dict) -> dict:
                 minOccurs = fo.get('minOccurs', 1)
                 maxOccurs = fo.get('maxOccurs', 1)
                 if minOccurs < 0 or (0 < maxOccurs < minOccurs):
-                    raise_error(f'{type_def.TypeName}.{field.FieldName} bad multiplicity {minOccurs} {maxOccurs}')
+                    raise_error(f'{td.TypeName}.{field.FieldName} bad multiplicity {minOccurs} {maxOccurs}')
 
                 if tf := fo.get('tagid', None):
                     if tf not in {f[FieldID] for f in fields}:
-                        raise_error(f'{type_def.TypeName}/{field.FieldName}({field.FieldType}) choice has bad external tag {tf}')
+                        raise_error(f'{td.TypeName}/{field.FieldName}({field.FieldType}) choice has bad external tag {tf}')
+
                 if is_builtin(field.FieldType):
-                    check_typeopts(f'{type_def.TypeName}/{field.FieldName}', field.FieldType, fto)
+                    check_typeopts(f'{td.TypeName}/{field.FieldName}', field.FieldType, fto)
                 elif fto:
                     # unique option will be moved to generated ArrayOf
                     allowed = {'unique', } if maxOccurs != 1 else set()
                     if set(fto) - allowed:
-                        raise_error(f'{type_def.TypeName}/{field.FieldName}({field.FieldType}) cannot have Type options {fto}')
+                        raise_error(f'{td.TypeName}/{field.FieldName}({field.FieldType}) cannot have Type options {fto}')
                 if 'dir' in fo:
                     if is_builtin(field.FieldType) and not has_fields(field.FieldType):  # TODO: check defined type
-                        raise_error(f'{type_def.TypeName}/{field.FieldName}: {field.FieldType} cannot be dir')
+                        raise_error(f'{td.TypeName}/{field.FieldName}: {field.FieldType} cannot be dir')
     return schema
 
 
@@ -182,6 +185,16 @@ def load_any(fp: TextIO) -> dict:
     return loader(fp)
 
 
+def normalize(schema: dict[dict, list]) -> dict:
+    tdefault = [None, None, [], '', []]
+    for td in schema['types']:
+        fdef = [2, ''] if td.CoreType == 'Enumerated' else [3, [], '']
+        for fd in td[Fields]:
+            for fp in range(len(fdef) + fdef[0], fdef[0], -1):
+                if fd[fp] == fdef[fp]:
+                    fd = fd[:fp]
+
+
 def dumps_rec(val: Any, level: int = 0, indent: int = 2, strip: bool = False) -> str:
     if isinstance(val, (numbers.Number, type(''))):
         return json.dumps(val, ensure_ascii=False)
@@ -206,7 +219,7 @@ def dumps_rec(val: Any, level: int = 0, indent: int = 2, strip: bool = False) ->
 
 
 def dumps(schema: dict, strip: bool = False) -> str:
-    return dumps_rec(schema, strip=strip)
+    return dumps_rec(normalize(schema), strip=strip)
 
 
 def dump(schema: dict, fname: Union[str, bytes, int], source: str = '', strip: bool = False) -> None:

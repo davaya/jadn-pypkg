@@ -57,6 +57,7 @@ class JADN(TestCase):
         with self.assertRaises(ValueError):
             self.assertListEqual(st(self.enum4), self.enum4)
 
+
 class BadSchema(TestCase):
     schema_bad_item_fields = {
         'types': [

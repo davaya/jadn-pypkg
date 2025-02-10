@@ -180,16 +180,18 @@ TYPE_OPTIONS = {        # Option ID: (name, value type, canonical order) # ASCII
     0x72: ('restricts', lambda x: x, 20),     # 'r', Inheritance: restriction - subset of referenced type
     0x65: ('extends', lambda x: x, 21),       # 'e', Inheritance: extension - superset of referenced type
     0x66: ('final', lambda x: True, 22),      # 'f', Inheritance: final - cannot have subtype
-    0x21: ('default', lambda x: x, 23),       # '!', Default value
+    0x75: ('default', lambda x: x, 23),       # 'u', Default value
+    0x76: ('const', lambda x: x, 24),         # 'v', Constant value
 }
 
 FIELD_OPTIONS = {
-    0x5b: ('minOccurs', int, 24),             # '[', min cardinality, default = 1, 0 = field is optional
-    0x5d: ('maxOccurs', int, 25),             # ']', max cardinality, default = 1, <0 = inherited or none, not 1 = array
-    0x26: ('tagid', int, 26),                 # '&', field that specifies the type of this field
-    0x3c: ('dir', lambda x: True, 27),        # '<', pointer enumeration treats field as a collection
-    0x4b: ('key', lambda x: True, 28),        # 'K', field is a primary key for this type
-    0x4c: ('link', lambda x: True, 29),       # 'L', field is a link (foreign key) to an instance of FieldType
+    0x5b: ('minOccurs', int, 25),             # '[', min cardinality, default = 1, 0 = field is optional
+    0x5d: ('maxOccurs', int, 26),             # ']', max cardinality, default = 1, <0 = inherited or none, not 1 = array
+    0x26: ('tagid', int, 27),                 # '&', field that specifies the type of this field
+    0x3c: ('dir', lambda x: True, 28),        # '<', pointer enumeration treats field as a collection
+    0x4b: ('key', lambda x: True, 29),        # 'K', field is the primary key for TypeName
+    0x4c: ('link', lambda x: True, 30),       # 'L', field is a link (foreign key) to an instance of FieldType
+    0x4e: ('not', lambda x: True, 31)         # 'N', field is not an instance of FieldType
 }
 
 OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD_OPTIONS
@@ -214,14 +216,16 @@ OPTION_ID = {   # Pre-computed reverse index - MUST match TYPE_OPTIONS and FIELD
     'abstract': chr(97),
     'restricts': chr(114),
     'extends':  chr(101),
-    'final': chr(102),
-    'default':  chr(33),
+    'final':    chr(102),
+    'default':  chr(117),
+    'const':    chr(118),
     'minOccurs':    chr(91),
     'maxOccurs':    chr(93),
     'tagid':    chr(38),
     'dir':      chr(60),
     'key':      chr(75),
     'link':     chr(76),
+    'not':      chr(78),
 }
 
 MAX_DEFAULT = -1            # maxOccurs sentinel value: Upper size limit defaults to JADN or package limit

@@ -252,14 +252,15 @@ def cleanup_tagid(fields: list[list]) -> list[list]:
 
 def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
     def parseopt(optstr: str) -> str:
-        m1 = re.match(r'^\s*([-$:\w]+)(?:\[([^]]+)])?$', optstr)   # Typeref: nsid:Name$qualifier
+        m1 = re.match(r'^\s*(!?[-$:\w]+)(?:\[([^]]+)])?$', optstr)   # Typeref: nsid:Name$qualifier
         if m1 is None:
             raise_error(f'TypeString2JADN: unexpected function: {optstr}')
         return OPTION_ID[m1.group(1).lower()] + m1.group(2) if m1.group(2) else m1.group(1)
 
     topts = {}
     fo = []
-    p_name = r'\s*=?\s*([-.:\w]+)'                  # 1 type name TODO: Use $TypeRef
+    p_name = r'\s*=?\s*(!?[-.:\w]+)'                  # 1 type name TODO: Use $TypeRef
+    # p_name = r'\s*([-.:\w]+)'                     # 1 type name TODO: Use $TypeRef
     p_id = r'(#?)'                                  # 2 'id'
     p_func = r'(?:\(([^)]+)\))?'                    # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
     p_rangepat = r'\{(.*)\}'                        # 4 'minLength', 'maxLength', 'pattern'
@@ -271,6 +272,9 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
     if m is None:
         raise_error(f'TypeString2JADN: "{typestring}" does not match pattern {pattern}')
     tname = m.group(1)
+    if tname[0] == '!':
+        fo += [OPTION_ID['not']]
+        tname = tname[1:]
     topts.update({'id': True} if m.group(2) else {})
     if m.group(3):                      # (ktype, vtype), Enum(), Pointer(), Choice() options
         opts = [parseopt(x) for x in m.group(3).split(',', maxsplit=1)]
@@ -300,7 +304,7 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
                     topts.update({} if b == '*' else {'maxLength': int(b)})
             else:
                 raise_error(f'unrecognized arg "{opt}", expected pattern or range')
-        for opt in re.findall(p_format, rest):
+        for opt in re.findall(p_format, rest):  # TODO: allow multiple formats
             topts.update({'format': opt})
         for opt in re.findall(p_flag, rest):
             topts.update({opt: True})
@@ -404,12 +408,20 @@ def jadn2fielddef(fdef: list, tdef: list) -> tuple[str, str, str, str]:
             tf = [f[FieldName] for f in tdef[Fields] if f[FieldID] == tagid][0]
             tf = f'(TagId[{tf if tf else tagid}])'
         ft = jadn2typestr(f'{fdef[FieldType]}{tf}', opts_d2s(fto))
-        ftyperef = f'Key({ft})' if 'key' in fo else f'Link({ft})' if 'link' in fo else ft
+        fnot = '!' if 'not' in fo else ''
+        ftyperef = f'Key({ft})' if 'key' in fo else f'Link({ft})' if 'link' in fo else fnot + ft
         fmult = multiplicity_str(fo)
     return fname, ftyperef, fmult, fdesc
 
 
 def fielddef2jadn(fid: int, fname: str, fstr: str, fmult: str, fdesc: str) -> list:
+    def fopts_s2d(olist: list) -> dict:
+        fd = {}
+        for o in olist:
+            k, v, _ = FIELD_OPTIONS[ord(o[0])]
+            fd[k] = o[1:]
+        return fd
+
     ftyperef = ''
     fo = {}
     if fstr:
@@ -433,9 +445,10 @@ def fielddef2jadn(fid: int, fname: str, fstr: str, fmult: str, fdesc: str) -> li
             fo.update({'maxOccurs': maxOccurs} if maxOccurs != 1 else {})
         elif fmult:
             fo.update({'minOccurs': -1, 'maxOccurs': -1})
-        if fopts:
-            assert len(fopts) == 1 and fopts[0][0] == OPTION_ID['tagid']    # Update if additional field options defined
-            fo.update({'tagid': fopts[0][1:]})      # if field name, MUST update to id after all fields have been read
+        fo.update(fopts_s2d(fopts))
+        # if fopts:
+        #     assert len(fopts) == 1 and fopts[0][0] == OPTION_ID['tagid']    # Update if additional field options defined
+        #     fo.update({'tagid': fopts[0][1:]})      # if field name, MUST update to id after all fields have been read
     if fdesc:
         m = re.match(r'^(?:\s*\/\/)?\s*(.*)$', fdesc)
         fdesc = m.group(1)
