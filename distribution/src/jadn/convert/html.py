@@ -80,7 +80,8 @@ def html_dumps(schema: dict) -> str:
                 with tag('div', klass='tCaption'):
                     with tag('div', klass='jTdef'):  # container for type definition column
                         tag('div', tdef.TypeName, klass='jTname')
-                        tag('div', f' = {jadn2typestr(tdef.CoreType, tdef.TypeOptions)}', klass='jTstr')
+                        tag('div', ' = ')
+                        tag('div', jadn2typestr(tdef.CoreType, tdef.TypeOptions), klass='jTstr')
                     tag('div', tdef.TypeDesc or '', klass='jTdesc')
 
                 if len(tdef) > Fields:

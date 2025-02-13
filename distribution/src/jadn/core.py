@@ -1,6 +1,7 @@
 """
 Load, validate, prettyprint, and dump JSON Abstract Encoding Notation (JADN) schemas
 """
+import copy
 import json
 import jsonschema
 import numbers
@@ -12,7 +13,7 @@ from datetime import datetime
 from typing import Any, TextIO, Union
 from urllib.parse import urlparse
 from .definitions import (
-    TypeName, FieldID, FieldName, FieldType, FieldDesc, Fields, FIELD_LENGTH,
+    TypeName, CoreType, FieldID, FieldName, FieldType, FieldDesc, Fields, FIELD_LENGTH,
     OPTION_ID, REQUIRED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS, ALLOWED_TYPE_OPTIONS_ALL,
     VALID_FORMATS, is_builtin, has_fields
 )
@@ -185,17 +186,7 @@ def load_any(fp: TextIO) -> dict:
     return loader(fp)
 
 
-def normalize(schema: dict[dict, list]) -> dict:
-    tdefault = [None, None, [], '', []]
-    for td in schema['types']:
-        fdef = [2, ''] if td.CoreType == 'Enumerated' else [3, [], '']
-        for fd in td[Fields]:
-            for fp in range(len(fdef) + fdef[0], fdef[0], -1):
-                if fd[fp] == fdef[fp]:
-                    fd = fd[:fp]
-
-
-def dumps_rec(val: Any, level: int = 0, indent: int = 2, strip: bool = False) -> str:
+def pprint(val: Any, level: int = 0, indent: int = 2, strip: bool = False) -> str:
     if isinstance(val, (numbers.Number, type(''))):
         return json.dumps(val, ensure_ascii=False)
 
@@ -204,22 +195,35 @@ def dumps_rec(val: Any, level: int = 0, indent: int = 2, strip: bool = False) ->
     sep2 = ',\n' if strip else ',\n\n'
     if isinstance(val, dict):
         sep = ',\n' if level > 0 else sep2
-        lines = sep.join(f'{sp2}"{k}": {dumps_rec(val[k], level + 1, indent, strip)}' for k in val)
+        lines = sep.join(f'{sp2}"{k}": {pprint(val[k], level + 1, indent, strip)}' for k in val)
         return f'{{\n{lines}\n{sp}}}'
     if isinstance(val, list):
         sep = ',\n' if level > 1 else sep2
         nest = val and isinstance(val[0], list)  # Not an empty list
         if nest:
-            vals = [f"{sp2}{dumps_rec(v, level, indent, strip)}" for v in val]
+            vals = [f"{sp2}{pprint(v, level, indent, strip)}" for v in val]
             spn = level * indent * ' '
             return f"[\n{sep.join(vals)}\n{spn}]"
-        vals = [f"{dumps_rec(v, level + 1, indent, strip)}" for v in val]
+        vals = [f"{pprint(v, level + 1, indent, strip)}" for v in val]
         return f"[{', '.join(vals)}]"
     return '???'
 
 
+def strip_trailing_defaults(schema: dict[dict, list]) -> dict:
+    tdef = [None, None, [], '', []]
+    for td in schema['types']:
+        fdef = [None, None, ''] if td[CoreType] == 'Enumerated' else [None, None, None, [], '']
+        for fd in td[Fields]:
+            while fd and fd[-1] == fdef[len(fd)-1]:
+                fd.pop()
+        while td and td[-1] == tdef[len(td)-1]:
+            td.pop()
+    return schema
+
+
 def dumps(schema: dict, strip: bool = False) -> str:
-    return dumps_rec(normalize(schema), strip=strip)
+    sc1 = {'meta': schema['meta'], 'types': copy.deepcopy(schema['types'])}
+    return pprint(strip_trailing_defaults(sc1), strip=strip)
 
 
 def dump(schema: dict, fname: Union[str, bytes, int], source: str = '', strip: bool = False) -> None:

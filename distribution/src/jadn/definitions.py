@@ -246,14 +246,15 @@ REQUIRED_TYPE_OPTIONS = {
     'Record': [],
 }
 
-ALLOWED_TYPE_OPTIONS_ALL = ['default', 'abstract', 'extends', 'restricts', 'final']
+ALLOWED_TYPE_OPTIONS_ALL = ['const', 'default', 'abstract', 'extends', 'restricts', 'final']
 
 ALLOWED_TYPE_OPTIONS = {
     'Binary': ['format', 'minLength', 'maxLength'],
     'Boolean': [],
     'Integer': ['format', 'minInclusive', 'maxInclusive', 'minExclusive', 'maxExclusive'],
     'Number': ['format', 'minInclusive', 'maxInclusive', 'minExclusive', 'maxExclusive'],
-    'String': ['format', 'pattern', 'minLength', 'maxLength'],
+    'String': ['format', 'pattern', 'minLength', 'maxLength',
+               'minInclusive', 'maxInclusive', 'minExclusive', 'maxExclusive'],
     'Enumerated': ['id', 'enum', 'pointer'],
     'Choice': ['id', 'combine'],
     'Array': ['format', 'minLength', 'maxLength'],

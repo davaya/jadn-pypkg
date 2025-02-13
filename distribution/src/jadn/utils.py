@@ -96,7 +96,7 @@ def build_deps(schema: dict[str, list]) -> dict[str, list[str]]:
     """
     def get_refs(tdef: list) -> list[str]:  # Return all type references from a type definition
         # Options whose value is/has a type name: strip option id
-        oids = [OPTION_ID['ktype'], OPTION_ID['vtype']]
+        oids = [OPTION_ID['ktype'], OPTION_ID['vtype'], OPTION_ID['extends'], OPTION_ID['restricts']]
         # Options that enumerate fields: keep option id
         oids2 = [OPTION_ID['enum'], OPTION_ID['pointer']]
         refs = [to[1:] for to in tdef[TypeOptions] if to[0] in oids and not is_builtin(to[1:])]
@@ -261,11 +261,10 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
 
     topts = {}
     fo = []
-    p_name = r'\s*=?\s*(!?[-.:\w]+)'                  # 1 type name TODO: Use $TypeRef
-    # p_name = r'\s*([-.:\w]+)'                     # 1 type name TODO: Use $TypeRef
+    p_name = r'\s*(!?[-.:\w]+)'                     # 1 type name TODO: Use $TypeRef
     p_id = r'(#?)'                                  # 2 'id'
     p_func = r'(?:\(([^)]+)\))?'                    # 3 'ktype', 'vtype', 'enum', 'pointer', 'tagid'
-    p_rangepat = r'\{(.*)\}'                        # 4 'minLength', 'maxLength', 'pattern'
+    p_lengthpat = r'\{(.*)\}'                        # 4 'minLength', 'maxLength', 'pattern'
     p_format = r'\s+\/(\w[-\w]*)'                   # 5 'format'
     p_flag = r'\s+(unique|set|unordered|sequence|abstract|final)'    # 6 rest: flags
     p_attr = r'\s+(restricts|extends)\((.+)\)'      # 6 rest: TODO: parse extends/restricts separately for better error
@@ -291,21 +290,33 @@ def typestr2jadn(typestring: str) -> tuple[str, list[str], list]:
             topts.update(topts_s2d([opts[0]]) if ord(opts[0][0]) in TYPE_OPTIONS else {})
             fo += [opts[0]] if ord(opts[0][0]) in FIELD_OPTIONS else []         # TagId option
     if rest := m.group(4):
-        for opt in re.findall(p_rangepat, rest):
-            if m := re.match('pattern=\"(.+)\"', opt):
-                topts.update({'pattern': m.group(1)})
-            elif len(x := opt.split('..', maxsplit=1)) == 2:
-                a, b = x
-                if tname in ('Integer', 'Number'):
-                    fn = {'Integer': int, 'Number': float}[tname]
-                    topts.update({} if a == '*' else {'minInclusive': fn(a)})
-                    topts.update({} if b == '*' else {'maxInclusive': fn(b)})
-                else:
+        # Matches     group(3) = [   group(7) = ]   group(8) = rest
+        # [x,y] rest  group(4) = x   group(6) = y
+        # [x] rest    group(4) = x
+        # x rest      group(2) = x
+        rangepat = r'^\s*=\s*(([-\d.]+)|([[(])([-\d.]+)(\s*,\s*([-*\d.]+))?([])]))(.*)$'
+        if m := re.match(rangepat, rest):
+            rest = m.group(8)
+            fn = {'Integer': int, 'Number': float}[tname]
+            if x := m.group(2):
+                topts.update({'const': fn(x)})
+            elif x := m.group(4):
+                y = y if (y := m.group(6)) else x
+                lo = {'[': 'minInclusive', '(': 'minExclusive'}[m.group(3)]
+                hi = {']': 'maxInclusive', ')': 'maxExclusive'}[m.group(7)]
+                topts.update({lo: fn(x)})
+                topts.update(({hi: fn(y)} if y != '*' else {}))
+        else:
+            for opt in re.findall(p_lengthpat, rest):
+                if m := re.match('pattern=\"(.+)\"', opt):
+                    topts.update({'pattern': m.group(1)})
+                elif len(x := opt.split('..', maxsplit=1)) == 2:
+                    a, b = x
                     a = '*' if a != '*' and int(a) == 0 else a   # Default min size = 0
                     topts.update({} if a == '*' else {'minLength': int(a)})
                     topts.update({} if b == '*' else {'maxLength': int(b)})
-            else:
-                raise_error(f'unrecognized arg "{opt}", expected pattern or range')
+                else:
+                    raise_error(f'unrecognized arg "{opt}", expected pattern or range')
         for opt in re.findall(p_format, rest):  # TODO: allow multiple formats
             topts.update({'format': opt})
         for opt in re.findall(p_flag, rest):
@@ -328,19 +339,22 @@ def jadn2typestr(tname: str, topts: list[OPTION_TYPES]) -> str:
         return optv
 
     # Length range (single-ended) - default is {0..*}
+    # min/max Length: {}
     def _lrange(ops: dict) -> str:
         lo = ops.pop('minLength', 0)
         hi = ops.pop('maxLength', MAX_DEFAULT)
         hs = '*' if hi == MAX_DEFAULT else '.' if hi == MAX_UNLIMITED else str(hi)
         return f'{{{lo}..{hs}}}' if lo != 0 or hs != '*' else ''
 
-    # Value range (double-ended) - default is {*..*}
+    # Value range (double-ended) - default is [*..*]
+    # min/max Inclusive: []
+    # min/max Exclusive: ()
     def _vrange(ops: dict) -> str:
-        lo = ops.pop('minInclusive', '*')
-        hi = ops.pop('maxInclusive', '*')
-        lox = opts.pop('minExclusive', '*')
-        hix = opts.pop('maxExclusive', '*')
-        return f'{{{lo}..{hi}}}' if lo != '*' or hi != '*' else ''
+        lc = '(' if 'minExclusive' in ops else '['
+        hc = ')' if 'maxExclusive' in ops else ']'
+        lo = ops.pop('minInclusive', ops.pop('minExclusive', '*'))
+        hi = ops.pop('maxInclusive', ops.pop('maxExclusive', '*'))
+        return f'={lc}{lo}, {hi}{hc}' if lo != '*' or hi != '*' else ''
 
     opts = topts_s2d(topts, tname)
     txt = '#' if opts.pop('id', None) else ''   # SIDE EFFECT: remove known options from opts.
