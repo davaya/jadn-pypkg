@@ -52,26 +52,26 @@
     ["TypeRef", "String", [], "Reference to a type, matching ($NSID ':')? $TypeName", []],
 
     ["Type", "Array", [], "", [
-      [1, "type_name", "TypeName", [], ""],
+      [1, "type_name", "TypeName"],
       [2, "core_type", "Enumerated", ["#JADN-Type"], ""],
-      [3, "type_options", "Options", ["[0"], ""],
+      [3, "type_options", "TypeOptions", ["[0", "&2"], ""],
       [4, "type_description", "Description", ["[0"], ""],
       [5, "fields", "JADN-Type", ["[0", "&2"], ""]
     ]],
 
     ["JADN-Type", "Choice", [], "", [
-      [1, "Binary", "Empty", [], ""],
-      [2, "Boolean", "Empty", [], ""],
-      [3, "Integer", "Empty", [], ""],
-      [4, "Number", "Empty", [], ""],
-      [5, "String", "Empty", [], ""],
-      [6, "Enumerated", "Items", [], ""],
-      [7, "Choice", "Fields", [], ""],
-      [8, "Array", "Fields", [], ""],
-      [9, "ArrayOf", "Empty", [], ""],
-      [10, "Map", "Fields", [], ""],
-      [11, "MapOf", "Empty", [], ""],
-      [12, "Record", "Fields", [], ""]
+      [1, "Binary", "Empty"],
+      [2, "Boolean", "Empty"],
+      [3, "Integer", "Empty"],
+      [4, "Number", "Empty"],
+      [5, "String", "Empty"],
+      [6, "Enumerated", "Items"],
+      [7, "Choice", "Fields"],
+      [8, "Array", "Fields"],
+      [9, "ArrayOf", "Empty"],
+      [10, "Map", "Fields"],
+      [11, "MapOf", "Empty"],
+      [12, "Record", "Fields"]
     ]],
 
     ["Empty", "Array", ["}0"], "", []],
@@ -81,15 +81,15 @@
     ["Fields", "ArrayOf", ["*Field"], "", []],
 
     ["Item", "Array", [], "", [
-      [1, "item_id", "FieldID", [], ""],
-      [2, "item_value", "String", [], ""],
+      [1, "item_id", "FieldID"],
+      [2, "item_value", "String"],
       [3, "item_description", "Description", ["[0"], ""]
     ]],
 
     ["Field", "Array", [], "", [
-      [1, "field_id", "FieldID", [], ""],
-      [2, "field_name", "FieldName", [], ""],
-      [3, "field_type", "TypeRef", [], ""],
+      [1, "field_id", "FieldID"],
+      [2, "field_name", "FieldName"],
+      [3, "field_type", "TypeRef"],
       [4, "field_options", "Options", ["[0"], ""],
       [5, "field_description", "Description", ["[0"], ""]
     ]],
@@ -97,6 +97,116 @@
     ["FieldID", "Integer", ["y0"], "", []],
 
     ["Options", "ArrayOf", ["*Option", "q"], "", []],
+
+    ["TypeOptions", "Choice", [], "", [
+      [1, "Binary", "BinaryOpts"],
+      [2, "Boolean", "BooleanOpts"],
+      [3, "Integer", "IntegerOpts"],
+      [4, "Number", "NumberOpts"],
+      [5, "String", "StringOpts"],
+      [6, "Enumerated", "EnumeratedOpts"],
+      [7, "Choice", "ChoiceOpts"],
+      [8, "Array", "ArrayOpts"],
+      [9, "ArrayOf", "ArrayOfOpts"],
+      [10, "Map", "MapOpts"],
+      [11, "MapOf", "MapOfOpts"],
+      [12, "Record", "RecordOpts"]
+    ]],
+
+    ["BooleanOpts", "Choice", [], "", [
+      [1, "const", "Boolean"],
+      [2, "default", "Boolean"]
+    ]],
+
+    ["BinaryOpts", "Choice", [], "", [
+      [1, "const", "Binary"],
+      [2, "default", "Binary"],
+      [3, "minLength", "Integer", ["{0"]],
+      [4, "maxLength", "Integer"]
+    ]],
+
+    ["IntegerOpts", "Choice", [], "", [
+      [1, "const", "Integer"],
+      [2, "default", "Integer"],
+      [3, "minInclusive", "Integer"],
+      [4, "maxInclusive", "Integer"],
+      [5, "minExclusive", "Integer"],
+      [6, "maxExclusive", "Integer"]
+    ]],
+
+    ["NumberOpts", "Choice", [], "", [
+      [1, "const", "Number"],
+      [2, "default", "Number"],
+      [3, "minInclusive", "Number"],
+      [4, "maxInclusive", "Number"],
+      [5, "minExclusive", "Number"],
+      [6, "maxExclusive", "Number"]
+    ]],
+
+    ["StringOpts", "Choice", [], "", [
+      [1, "const", "String"],
+      [2, "default", "String"],
+      [3, "minInclusive", "String"],
+      [4, "maxInclusive", "String"],
+      [5, "minExclusive", "String"],
+      [6, "maxExclusive", "String"],
+      [7, "pattern", "String", ["/regex"]],
+      [8, "minLength", "Integer", ["{0"]],
+      [9, "maxLength", "Integer"]
+    ]],
+
+    ["ArrayOfOpts", "Choice", [], "", [
+      [1, "minLength", "Integer", ["{0"]],
+      [2, "maxLength", "Integer"],
+      [3, "set", "Boolean"],
+      [4, "unique", "Boolean"],
+      [5, "unordered", "Boolean"],
+      [6, "vtype", "TypeRef"]
+    ]],
+
+    ["ArrayOpts", "Choice", [], "", [
+      [1, "minLength", "Integer", ["{0"]],
+      [2, "maxLength", "Integer"],
+      [3, "set", "Boolean"]
+    ]],
+
+    ["MapOfOpts", "Choice", [], "", [
+      [1, "minLength", "Integer", ["{0"]],
+      [2, "maxLength", "Integer"],
+      [3, "ordered", "Boolean"],
+      [4, "ktype", "TypeRef"],
+      [5, "vtype", "TypeRef"]
+    ]],
+
+    ["MapOpts", "Choice", [], "", [
+      [1, "minLength", "Integer", ["{0"]],
+      [2, "maxLength", "Integer"],
+      [3, "ordered", "Boolean"],
+      [4, "id", "Boolean"]
+    ]],
+
+    ["RecordOpts", "Choice", [], "", [
+      [1, "minLength", "Integer", ["{0"]],
+      [2, "maxLength", "Integer"],
+      [3, "ordered", "Boolean"]
+    ]],
+
+    ["EnumeratedOpts", "Choice", [], "", [
+      [1, "id", "Boolean"],
+      [2, "enum", "TypeRef"],
+      [3, "pointer", "TypeRef"]
+    ]],
+
+    ["ChoiceOpts", "Choice", [], "", [
+      [1, "id", "Boolean"],
+      [2, "combine", "Combine"]
+    ]],
+
+    ["Combine", "Enumerated", [], "", [
+      [1, "A", "allOf"],
+      [2, "O", "anyOf"],
+      [3, "X", "oneOf"]
+    ]],
 
     ["Option", "String", ["{1"], "", []],
 
