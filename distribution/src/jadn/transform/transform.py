@@ -171,7 +171,7 @@ def unfold_map_of_enum(schema: dict) -> NoReturn:
     typex = {t[TypeName]: n for n, t in enumerate(schema['types'])}       # Build type index
     for n, tdef in enumerate(schema['types']):
         to = topts_s2d(tdef.TypeOptions, tdef.CoreType)
-        if tdef.CoreType == 'MapOf' and schema['types'][typex[to['ktype']]][CoreType] == 'Enumerated':
+        if tdef.CoreType == 'MapOf' and (x:=typex.get(to['ktype'], '')) and schema['types'][x][CoreType] == 'Enumerated':
             newfields = [GenFieldDefinition(f[ItemID], f[ItemValue], to['vtype'], [], f[ItemDesc]) for f in schema['types'][typex[to['ktype']]][Fields]]
             schema['types'][n] = TypeDefinition(tdef.TypeName, 'Map', [], tdef.TypeDesc, newfields)
 
